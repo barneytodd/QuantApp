@@ -47,7 +47,7 @@ def get_prices(symbol: str, start: date = None, end: date = None, db: Session = 
 @app.get("/api/metrics/{symbol}", response_model=schemas.StatsOut)
 def get_stats(symbol: str, start: date = None, end: date = None, db: Session = Depends(get_db)):
     rows = crud.get_prices(db, symbol, start, end)
-    if not rows:
+    if not rows: 
         raise HTTPException(status_code=404, detail="no price data")
     df = pd.DataFrame([{
         "date": r.date,
