@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Select from "react-select";
-import Chart from "../Chart/Chart";
-import ChartLegend from "../Chart/ChartLegend";
+import Chart from "./chart/Chart";
+import ChartLegend from "./chart/ChartLegend";
 import Slider from "./Slider";
 import MetricCard from "./MetricCard";
 

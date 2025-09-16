@@ -1,4 +1,4 @@
-import { computeSMA } from "./indicators"
+import { computeSMA } from "./indicators";
 
 function computeDailyReturns(equityCurve) {
   let returns = [];
@@ -24,7 +24,7 @@ function computeMetrics(equityCurve, riskFreeRate = 0.01) {
   // Annualized metrics
   const meanAnnual = meanDaily * tradingDays;
   const volAnnual = stdDaily * Math.sqrt(tradingDays);
-  const sharpe = (meanAnnual - riskFreeRate) / volAnnual;
+  const sharpe = volAnnual > 0 ? (meanAnnual - riskFreeRate) / volAnnual : 0;
 
   // Max drawdown
   let peak = equityCurve[0].value;
@@ -39,64 +39,119 @@ function computeMetrics(equityCurve, riskFreeRate = 0.01) {
     mean_return: meanAnnual,
     annualised_volatility: volAnnual,
     sharpe_ratio: sharpe,
-    max_drawdown: maxDrawdown,
+    max_drawdown: maxDrawdown * 100, // %
+  };
+}
+
+function computeTradeStats(trades) {
+  if (trades.length === 0) return null;
+
+  const wins = trades.filter(t => t.returnPct > 0);
+  const losses = trades.filter(t => t.returnPct <= 0);
+
+  const totalWin = wins.reduce((a, t) => a + t.returnPct*t.entryPrice, 0);
+  const totalLoss = losses.reduce((a, t) => a + Math.abs(t.returnPct*t.entryPrice), 0);
+
+  return {
+    numTrades: trades.length,
+    winRate: (wins.length / trades.length) * 100,
+    avgWin: wins.length ? totalWin / wins.length : 0,
+    avgLoss: losses.length ? -totalLoss / losses.length : 0,
+    profitFactor: totalLoss > 0 ? totalWin / totalLoss : Infinity,
+    bestTrade: trades.reduce((a, b) => (a.pnl > b.pnl ? a : b)),
+    worstTrade: trades.reduce((a, b) => (a.pnl < b.pnl ? a : b)),
   };
 }
 
 export function backtestSMA(data, shortPeriod, longPeriod, initialCapital = 10000) {
-    if (!data || data.length === 0) return null;
-    // Ensure data has time + close
-    const prices = data.map(d => ({
-        time: d.date,
-        close: d.close,
-    }));
+  if (!data || data.length === 0) return null;
 
-    // Compute moving averages
-    const shortSMA = computeSMA(prices, shortPeriod);
-    const longSMA = computeSMA(prices, longPeriod);
+  const prices = data.map(d => ({
+    time: d.date,
+    close: d.close,
+  }));
 
-    let capital = initialCapital;
-    let position = 0; 
-    let equityCurve = [];
+  const shortSMA = computeSMA(prices, shortPeriod);
+  const longSMA = computeSMA(prices, longPeriod);
 
-    for (let i = 0; i < prices.length; i++) {
-        const p = prices[i];
-        const short = shortSMA[i]?.value;
-        const long = longSMA[i]?.value;
-        if (!short || !long) {
-        equityCurve.push({ date: p.time, value: capital });
-        continue;
-        }
+  let capital = initialCapital;
+  let position = 0; 
+  let equityCurve = [];
+  let trades = [];
+  let entryPrice = null;
+  let entryDate = null;
 
-        // Buy signal
-        if (short > long && position === 0) {
-        position = capital / p.close; // buy shares
-        capital = 0;
-        }
+  for (let i = 0; i < prices.length; i++) {
+    const p = prices[i];
+    const short = shortSMA[i]?.value;
+    const long = longSMA[i]?.value;
 
-        // Sell signal
-        if (short < long && position > 0) {
-        capital = position * p.close; // sell all
-        position = 0;
-        }
-
-        // Update equity
-        const totalValue = capital + position * p.close;
-        equityCurve.push({ date: p.time, value: totalValue });
+    if (!short || !long) {
+      equityCurve.push({ date: p.time, value: capital + position * p.close });
+      continue;
     }
 
-    // Final liquidation
-    if (position > 0) {
-        capital = position * prices[prices.length - 1].close;
-        position = 0;
+    // Buy signal
+    if (short > long && position === 0) {
+      position = capital / p.close; 
+      capital = 0;
+      entryPrice = p.close;
+      entryDate = p.time;
     }
-        
-    const metrics = computeMetrics(equityCurve);
-    
-    return {
+
+    // Sell signal
+    if (short < long && position > 0) {
+      const exitPrice = p.close;
+      const pnl = position * exitPrice - initialCapital; // relative to initial capital
+      const returnPct = ((exitPrice - entryPrice) / entryPrice) * 100;
+      trades.push({
+        entryDate,
+        exitDate: p.time,
+        entryPrice,
+        exitPrice,
+        pnl,
+        returnPct,
+        holdingPeriod: trades.length, // placeholder until we compute properly
+      });
+
+      capital = position * exitPrice;
+      position = 0;
+      entryPrice = null;
+      entryDate = null;
+    }
+
+    const totalValue = capital + position * p.close;
+    equityCurve.push({ date: p.time, value: totalValue });
+  }
+
+  // Final liquidation
+  if (position > 0) {
+    const lastPrice = prices[prices.length - 1].close;
+    const pnl = position * lastPrice - initialCapital;
+    const returnPct = ((lastPrice - entryPrice) / entryPrice) * 100;
+    trades.push({
+      entryDate,
+      exitDate: prices[prices.length - 1].time,
+      entryPrice,
+      exitPrice: lastPrice,
+      pnl,
+      returnPct,
+    });
+
+    capital = position * lastPrice;
+    position = 0;
+  }
+      
+  const metrics = computeMetrics(equityCurve);
+  const tradeStats = computeTradeStats(trades);
+
+  return {
+    initialCapital,
     finalCapital: capital,
-    equityCurve,
     returnPct: (capital / initialCapital - 1) * 100,
+    equityCurve,
     metrics,
-    };
+    trades,
+    tradeStats,
+  };
 }

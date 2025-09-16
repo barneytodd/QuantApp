@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { createChart, CandlestickSeries, LineSeries, createSeriesMarkers } from "lightweight-charts";
-import { computeSMA, computeEMA, detectCrossovers, computeBollingerBands } from "../../utils/indicators";
+import { computeSMA, computeEMA, detectCrossovers, computeBollingerBands } from "../../../utils/indicators";
 
 
 // Build the price analysis chart
