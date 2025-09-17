@@ -1,4 +1,4 @@
-import { computeDrawdowns } from "../../../utils/chartCalcs";
+import { computeDrawdowns } from "./chartCalcs";
 import {
   LineChart,
   Line,

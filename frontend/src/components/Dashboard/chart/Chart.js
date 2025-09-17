@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
-import { createChart, CandlestickSeries, LineSeries, createSeriesMarkers } from "lightweight-charts";
-import { computeSMA, computeEMA, detectCrossovers, computeBollingerBands } from "../../../utils/indicators";
+import { createChart, CandlestickSeries, LineSeries } from "lightweight-charts";
+import { computeSMA, computeEMA, computeBollingerBands } from "../../../utils/indicators";
 
 
 // Build the price analysis chart
@@ -16,8 +16,6 @@ function Chart({ data, shortSMAPeriod, longSMAPeriod, emaPeriod, bollingerPeriod
   const lowerBollingerRef = useRef(null);
   const midBollingerRef = useRef(null);
   const upperBollingerRef = useRef(null);
-  const proxyRef = useRef(null);
-  const markersRef = useRef(null);
   const shortSMADataRef = useRef(null);
   const longSMADataRef = useRef(null);
 
@@ -92,15 +90,6 @@ function Chart({ data, shortSMAPeriod, longSMAPeriod, emaPeriod, bollingerPeriod
       color: "#999999",
       lineWidth: 2,
     })
-
-    // proxy series for buy/sell markers
-    const proxySeries = chart.addSeries(LineSeries, {
-      color: 'transparent',
-      lineWidth: 2,
-    });
-
-    // buy/sell markers
-    const seriesMarkers = createSeriesMarkers(proxySeries);
     
     // store refs
     chartRef.current = chart;
@@ -111,8 +100,6 @@ function Chart({ data, shortSMAPeriod, longSMAPeriod, emaPeriod, bollingerPeriod
     lowerBollingerRef.current = lowerBollingerSeries;
     midBollingerRef.current = midBollingerSeries;
     upperBollingerRef.current = upperBollingerSeries;
-    proxyRef.current = proxySeries;
-    markersRef.current = seriesMarkers;
 
     // handle resize
     const ro = new ResizeObserver(() => {
@@ -176,34 +163,6 @@ function Chart({ data, shortSMAPeriod, longSMAPeriod, emaPeriod, bollingerPeriod
       lowerBollingerRef.current.setData([]);
       midBollingerRef.current.setData([]);
       upperBollingerRef.current.setData([])
-    }
-
-
-    // Add buy/sell markers
-    if (showLongSMA && showShortSMA) {
-      // proxy data for buy/sell markers
-      const proxyData = formattedData.map((d, i) => ({
-        time: d.time.slice(0, 10),
-        value: i < longSMAPeriod ? d.close : longSMADataRef.current[i].value,
-      }));
-
-      proxyRef.current.setData(proxyData);
-
-      // calculate buy/sell markers at points where short and long SMA lines cross
-      const signals = detectCrossovers(shortSMADataRef.current, longSMADataRef.current, data, shortSMAPeriod, longSMAPeriod);
-
-      const markers = signals.map(signal => ({
-        time: signal.time,
-        position: signal.type === "buy" ? "belowBar" : "aboveBar",
-        color: signal.type === "buy" ? "green" : "red",
-        shape: signal.type === "buy" ? "arrowUp" : "arrowDown",
-        text: signal.type.toUpperCase(),
-      }));
-        
-      markersRef.current.setMarkers(markers);
-    }
-    else {
-      markersRef.current.setMarkers([])
     }
 
     // set price data

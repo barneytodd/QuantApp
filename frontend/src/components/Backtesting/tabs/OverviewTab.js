@@ -1,5 +1,5 @@
 import EquityChart from "../charts/EquityChart";
-import { mapBenchmark } from "../../../utils/chartCalcs";
+import { mapBenchmark } from "../charts/chartCalcs";
 
 export function OverviewTab({ result, benchmark }) {
 

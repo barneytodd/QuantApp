@@ -1,4 +1,4 @@
-import { getPnlHistogram } from "../../../utils/chartCalcs";
+import { getPnlHistogram } from "./chartCalcs";
 import {
   BarChart,
   Bar,

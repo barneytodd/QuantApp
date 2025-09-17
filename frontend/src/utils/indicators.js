@@ -73,38 +73,29 @@ export function computeBollingerBands(prices, period = 20, stdDevMultiplier = 2)
   return bands;
 }
 
-// detect where short and long SMA series cross for buy/sell markers
-export function detectCrossovers(shortSMA, longSMA, ohlcv, shortPeriod, longPeriod) {
-  const signals = [];
-  const startIndex = Math.max(shortPeriod, longPeriod);
+export function computeRSI(data, period = 14) {
+  if (data.length < period) return [];
 
-  for (let i = startIndex; i < shortSMA.length; i++) {
-    // Skip if SMA values are missing
-    if (!shortSMA[i]?.value || !longSMA[i]?.value) continue;
-    if (!shortSMA[i - 1]?.value || !longSMA[i - 1]?.value) continue;
-    if (!ohlcv[i]) continue;
+  let gains = [];
+  let losses = [];
+  let rsi = [];
 
-    // Buy signal
-    if (shortSMA[i - 1].value <= longSMA[i - 1].value &&
-        shortSMA[i].value > longSMA[i].value) {
-      signals.push({
-        time: shortSMA[i].time,
-        type: "buy",
-        value: ohlcv[i].close,
-        smaValue: shortSMA[i].value
-      });
-    }
+  for (let i = 1; i < data.length; i++) {
+    const change = data[i].close - data[i - 1].close;
+    gains.push(change > 0 ? change : 0);
+    losses.push(change < 0 ? -change : 0);
 
-    // Sell signal
-    if (shortSMA[i - 1].value >= longSMA[i - 1].value &&
-        shortSMA[i].value < longSMA[i].value) {
-      signals.push({
-        time: shortSMA[i].time,
-        type: "sell",
-        value: ohlcv[i].close,
-        smavalue: shortSMA[i].value
-      });
+    if (i >= period) {
+      const avgGain = gains.slice(-period).reduce((a, b) => a + b, 0) / period;
+      const avgLoss = losses.slice(-period).reduce((a, b) => a + b, 0) / period;
+      const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+      const value = 100 - 100 / (1 + rs);
+
+      rsi.push({ date: data[i].date, value });
+    } else {
+      rsi.push({ date: data[i].date, value: null });
     }
   }
-  return signals;
+
+  return rsi;
 }

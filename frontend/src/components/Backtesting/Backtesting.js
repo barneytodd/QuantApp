@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import Select from "react-select";
-import Chart from "../Dashboard/chart/Chart";
-import { backtestSMA } from "../../utils/backtest";
+import { strategies } from "./strategies/strategyRegistry";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { RiskExposureTab } from "./tabs/RiskExposureTab";
 import { TradeAnalyticsTab } from "./tabs/TradeAnalyticsTab";
@@ -10,17 +9,18 @@ import { TradeAnalyticsTab } from "./tabs/TradeAnalyticsTab";
 function Backtesting() {
   const [symbols, setSymbols] = useState([]);
   const [selectedSymbol, setSelectedSymbol] = useState(null);
-  const [shortPeriod, setShortPeriod] = useState(20);
-  const [longPeriod, setLongPeriod] = useState(50);
   const [backtestResult, setBacktestResult] = useState(null);
   const [strategyType, setStrategyType] = useState(null);
   const [benchmarkData, setBenchmarkData] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [params, setParams] = useState({});
 
   const strategyTypeOptions = useMemo(
-    () => [
-      { value: "Moving average crossover", label: "Moving Average Crossover" },
-    ],
+    () =>
+      Object.entries(strategies).map(([key, strat]) => ({
+        value: key,
+        label: strat.label,
+      })),
     []
   );
 
@@ -42,14 +42,27 @@ function Backtesting() {
       });
   }, [strategyTypeOptions]);
 
+  useEffect(() => {
+    if (strategyType) {
+      const defaults = Object.fromEntries(
+        strategies[strategyType.value].params.map(p => [p.name, p.default])
+      );
+      setParams(defaults);
+    }
+  }, [strategyType]);
+
+
   const runBacktest = async () => {
-    if (!selectedSymbol) return;
+    if (!selectedSymbol || !strategyType) return;
     const res = await fetch(
       `http://localhost:8000/api/ohlcv/${selectedSymbol?.value}?limit=500`
     );
     const data = await res.json();
-    const result = backtestSMA(data, shortPeriod, longPeriod, 10000);
+
+    const strategy = strategies[strategyType.value].run;
+    const result = strategy(data, params, 10000);
     setBacktestResult(result);
+
     setActiveTab("overview");
   };
 
@@ -97,29 +110,20 @@ function Backtesting() {
         <div className="bg-white shadow rounded-xl p-4 col-span-1 md:col-span-2">
           <h3 className="text-lg font-semibold mb-3">Parameters</h3>
           <div className="flex flex-wrap gap-6 items-center">
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">
-                Short SMA Period
-              </label>
-              <input
-                type="number"
-                value={shortPeriod}
-                onChange={(e) => setShortPeriod(Number(e.target.value))}
-                className="border p-2 rounded w-28"
-              />
-            </div>
+            {strategyType && strategies[strategyType.value].params.map((param) => (
+              <div key={param.name} className="flex items-center gap-2">
+                <span>{param.label}:</span>
+                <input
+                  type={param.type}
+                  value={params[param.name]}
+                  onChange={(e) =>
+                    setParams((prev) => ({ ...prev, [param.name]: Number(e.target.value) }))
+                  }
+                  className="border p-1 rounded"
+                />
+              </div>
+            ))}
 
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">
-                Long SMA Period
-              </label>
-              <input
-                type="number"
-                value={longPeriod}
-                onChange={(e) => setLongPeriod(Number(e.target.value))}
-                className="border p-2 rounded w-28"
-              />
-            </div>
 
             <div className="flex gap-3 mt-5">
               <button
