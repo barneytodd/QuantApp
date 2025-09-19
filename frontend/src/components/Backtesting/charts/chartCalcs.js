@@ -18,27 +18,25 @@ export function mapBenchmark(ohlcv, initialCapital = 10000) {
   }));
 }
 
-export function getPnlHistogram(trades, bins = 20) {
+export function getTradeHistogram(trades, mode, bins = 20) {
   if (!trades || trades.length === 0) return [];
 
-  const pnls = trades.map((t) => t.pnl);
 
-  const min = Math.min(...pnls);
-  const max = Math.max(...pnls);
-  
-  // Prevent division by zero if all trades have same P&L
+  const results = mode === "pnl" ? trades.map((t) => t.pnl) : trades.map((t) => t.returnPct);
+  const min = Math.min(...results);
+  const max = Math.max(...results);
   const binSize = max === min ? 1 : (max - min) / bins;
 
-  const histogram = Array(bins).fill(0);
+  // Group counts per bin per symbol
+  const histogram = Array.from({ length: bins }, (_, i) => ({
+    bin: (min + binSize * (i + 0.5)).toFixed(2), // bin center
+  }));
 
-  pnls.forEach((p) => {
-    const index = Math.min(Math.floor((p - min) / binSize), bins - 1);
-    histogram[index]++;
+  trades.forEach((t) => {
+    const index = mode === "pnl" ? Math.min(Math.floor((t.pnl - min) / binSize), bins - 1) : Math.min(Math.floor((t.returnPct - min) / binSize), bins - 1);
+    const sym = t.symbol;
+    histogram[index][sym] = (histogram[index][sym] || 0) + 1;
   });
 
-  // Compute bin center values for the x-axis
-  return histogram.map((count, i) => ({
-    bin: (min + binSize * (i + 0.5)).toFixed(2),
-    count,
-  }));
+  return histogram;
 }

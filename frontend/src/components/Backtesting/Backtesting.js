@@ -1,18 +1,19 @@
 import { useEffect, useState, useMemo } from "react";
-import Select from "react-select";
+import Select, { components } from "react-select";
 import { strategies } from "./strategies/strategyRegistry";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { RiskExposureTab } from "./tabs/RiskExposureTab";
 import { TradeAnalyticsTab } from "./tabs/TradeAnalyticsTab";
+import { combineResults } from "./backtestEngine";
 
 
 function Backtesting() {
   const [symbols, setSymbols] = useState([]);
-  const [selectedSymbol, setSelectedSymbol] = useState(null);
-  const [backtestResult, setBacktestResult] = useState(null);
+  const [selectedSymbols, setSelectedSymbols] = useState([]);
+  const [backtestResult, setBacktestResult] = useState([]);
   const [strategyType, setStrategyType] = useState(null);
   const [benchmarkData, setBenchmarkData] = useState(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(null);
   const [params, setParams] = useState({});
 
   const strategyTypeOptions = useMemo(
@@ -29,8 +30,9 @@ function Backtesting() {
     fetch("http://localhost:8000/api/symbols")
       .then((res) => res.json())
       .then((data) => {
-        setSymbols(data.map((s) => ({ value: s, label: s })));
-        setSelectedSymbol({ value: data[0], label: data[0] });
+        setSymbols(data
+          .filter((s) => s !== "SPY")
+          .map((s) => ({ value: s, label: s })));
       });
 
     setStrategyType(strategyTypeOptions[0]);
@@ -51,23 +53,102 @@ function Backtesting() {
     }
   }, [strategyType]);
 
-
   const runBacktest = async () => {
-    if (!selectedSymbol || !strategyType) return;
-    const res = await fetch(
-      `http://localhost:8000/api/ohlcv/${selectedSymbol?.value}?limit=500`
-    );
-    const data = await res.json();
+    if (selectedSymbols.length === 0 || !strategyType) return;
+    let results = [];
+    for (let i=0; i<selectedSymbols.length; i++) {
+      const res = await fetch(
+        `http://localhost:8000/api/ohlcv/${selectedSymbols[i]?.value}?limit=500`
+      );
+      const data = await res.json();
 
-    const strategy = strategies[strategyType.value].run;
-    const result = strategy(data, params, 10000);
-    setBacktestResult(result);
+      const strategy = strategies[strategyType.value].run;
+      const result = await strategy(data, params, 10000/selectedSymbols.length); 
+      results.push(result);
+    }
+    results.push(combineResults(results));
+    console.log("results", results)
+    setBacktestResult([...results]);
+    console.log("back", backtestResult)
 
     setActiveTab("overview");
   };
+  
+  useEffect(() => {
+    console.log("backtestResult updated:", backtestResult);
+  }, [backtestResult]);
 
   const optimiseParameters = async () => {
     return;
+  };
+
+  // Option with a readonly checkbox (prevents React warning)
+  const Option = (props) => (
+    <components.Option {...props}>
+      <input
+        type="checkbox"
+        checked={props.isSelected}
+        readOnly
+        style={{ marginRight: 8 }}
+      />
+      <span>{props.label}</span>
+    </components.Option>
+  );
+
+  // MenuList that adds a Select all / Clear all control at the top
+  const MenuList = (props) => {
+    const { options } = props; // all options shown in this menu
+    const { value = [], onChange } = props.selectProps; // selected options array and onChange
+
+    const allSelected = value.length === options.length && options.length > 0;
+
+    const toggleSelectAll = (e) => {
+      // prevent the menu from closing and the click from bubbling
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (allSelected) {
+        // clear selection
+        onChange([], { action: "clear" });
+      } else {
+        // select all options (pass the same option objects the Select is using)
+        onChange(options, { action: "select-option" });
+      }
+    };
+
+    return (
+      <components.MenuList {...props}>
+        <div
+          style={{
+            padding: 8,
+            borderBottom: "1px solid #eee",
+            // sticky header while scrolling
+            position: "sticky",
+            top: 0,
+            background: "white",
+            zIndex: 1,
+          }}
+        >
+          <button
+            type="button"
+            // use onMouseDown to prevent the menu from losing focus and closing
+            onMouseDown={(e) => toggleSelectAll(e)}
+            style={{
+              cursor: "pointer",
+              border: "none",
+              background: "transparent",
+              padding: 0,
+              fontWeight: 600,
+              color: "#2563eb",
+            }}
+          >
+            {allSelected ? "Clear all" : "Select all"}
+          </button>
+        </div>
+
+        {props.children}
+      </components.MenuList>
+    );
   };
 
   return (
@@ -95,15 +176,19 @@ function Backtesting() {
           <h3 className="text-lg font-semibold mb-3">Symbol</h3>
           <Select
             options={symbols}
-            value={selectedSymbol}
-            onChange={setSelectedSymbol}
+            value={selectedSymbols}
+            onChange={setSelectedSymbols}
+            isMulti
             isSearchable
-            placeholder="Select a ticker"
+            closeMenuOnSelect={false}
+            hideSelectedOptions={false}
+            placeholder="Select tickers"
             menuPortalTarget={document.body}
+            components={{ Option, MenuList }}
             styles={{
               menuPortal: (base) => ({ ...base, zIndex: 9999 }),
             }}
-          />
+          />  
         </div>
 
         {/* Parameters Card */}
@@ -166,12 +251,12 @@ function Backtesting() {
           </div>
 
           {/* Content */}
-          {activeTab === "overview" && <OverviewTab result={backtestResult} benchmark = {benchmarkData} />}
+          {activeTab === "overview" && <OverviewTab results={backtestResult} benchmark = {benchmarkData} />}
           {activeTab === "trade-analytics" && (
-            <TradeAnalyticsTab result={backtestResult} />
+            <TradeAnalyticsTab results={backtestResult} />
           )}
           {activeTab === "risk-exposure" && (
-            <RiskExposureTab result={backtestResult} />
+            <RiskExposureTab results={backtestResult} />
           )}
         </div>
       )}

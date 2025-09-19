@@ -1,4 +1,4 @@
-import { getPnlHistogram } from "./chartCalcs";
+import { getTradeHistogram } from "./chartCalcs";
 import {
   BarChart,
   Bar,
@@ -7,21 +7,42 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  Legend,
 } from "recharts";
 
-export default function TradeHistogram({ trades }) {
-  const histogramData = getPnlHistogram(trades);
+const colorPalette = [
+  "#2563eb", // blue
+  "#f97316", // orange
+  "#16a34a", // green
+  "#db2777", // pink
+  "#eab308", // yellow
+  "#8b5cf6", // purple
+  "#14b8a6", // teal
+];
+
+export default function TradeHistogram({ trades, mode }) {
+  const histogramData = getTradeHistogram(trades, mode);
+
+  const symbols = Array.from(new Set(trades.map((t) => t.symbol)));
 
   return (
     <div className="w-full h-80 bg-white shadow rounded-lg p-4">
-      <h3 className="font-bold mb-2">Trade P&L Histogram</h3>
+      <h3 className="font-bold mb-2">{mode} Histogram</h3>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={histogramData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="bin" tickLine={false} axisLine={false}  tickFormatter={(value) => `$${Math.round(value)}`} />
-          <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="bin" />
+          <YAxis />
           <Tooltip />
-          <Bar dataKey="count" fill="#2563eb" />
+          <Legend />
+          {symbols.map((sym, i) => (
+            <Bar
+              key={sym}
+              dataKey={sym}
+              stackId="pnl"
+              fill={colorPalette[i % colorPalette.length]}
+            />
+          ))}
         </BarChart>
       </ResponsiveContainer>
     </div>

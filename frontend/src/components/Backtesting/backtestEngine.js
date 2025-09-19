@@ -63,6 +63,7 @@ function computeTradeStats(trades) {
 
 
 export function runBacktest(data, params, signalGenerator, initialCapital = 10000) {
+  let symbol = data[0].symbol;
   let capital = initialCapital;
   let position = 0;
   let equityCurve = [];
@@ -83,9 +84,10 @@ export function runBacktest(data, params, signalGenerator, initialCapital = 1000
 
     if (signal === "sell" && position > 0) {
       const exitPrice = price;
-      const pnl = position * exitPrice - initialCapital;
+      const pnl = position * (exitPrice - entryPrice);
       const returnPct = ((exitPrice - entryPrice) / entryPrice) * 100;
       trades.push({
+        symbol,
         entryDate,
         exitDate: data[i].date,
         entryPrice,
@@ -105,9 +107,10 @@ export function runBacktest(data, params, signalGenerator, initialCapital = 1000
   // Final liquidation
   if (position > 0) {
     const lastPrice = data[data.length - 1].close;
-    const pnl = position * lastPrice - initialCapital;
+    const pnl = position * (lastPrice - entryPrice);
     const returnPct = ((lastPrice - entryPrice) / entryPrice) * 100;
     trades.push({
+      symbol,
       entryDate,
       exitDate: data[data.length - 1].date,
       entryPrice,
@@ -119,6 +122,7 @@ export function runBacktest(data, params, signalGenerator, initialCapital = 1000
   }
 
   return {
+    symbol,
     initialCapital,
     finalCapital: capital,
     returnPct: (capital / initialCapital - 1) * 100,
@@ -126,5 +130,51 @@ export function runBacktest(data, params, signalGenerator, initialCapital = 1000
     trades,
     metrics: computeMetrics(equityCurve),
     tradeStats: computeTradeStats(trades),
+  };
+}
+
+export function combineResults(results) {
+  const dateMap = new Map();
+
+  // Collect all unique dates
+  results.forEach(r => {
+    r.equityCurve.forEach(point => {
+      if (!dateMap.has(point.date)) dateMap.set(point.date, []);
+    });
+  });
+
+  // Sum values per date, carrying forward the last known value for each ticker
+  const combinedCurve = Array.from(dateMap.keys())
+    .sort() // ensure chronological order
+    .map(date => {
+      let totalValue = 0;
+
+      results.forEach(r => {
+        // Find the last value on or before this date
+        const lastPoint = [...r.equityCurve]
+          .filter(p => p.date <= date)
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .pop();
+
+        totalValue += lastPoint ? lastPoint.value : 0;
+      });
+
+      return { date, value: totalValue };
+    });
+
+  const combinedTrades = results.flatMap(r => r.trades);
+
+  const initialCapital = results.reduce((sum, r) => sum + r.initialCapital, 0);
+  const finalCapital = combinedCurve[combinedCurve.length - 1].value;
+
+  return {
+    symbol: "overall",
+    initialCapital,
+    finalCapital,
+    returnPct: (finalCapital / initialCapital - 1) * 100,
+    equityCurve: combinedCurve,
+    trades: combinedTrades,
+    metrics: computeMetrics(combinedCurve),
+    tradeStats: computeTradeStats(combinedTrades),
   };
 }
