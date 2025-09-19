@@ -8,6 +8,7 @@ from .database import SessionLocal, engine
 from .services import fetcher
 import pandas as pd
 from datetime import date
+from typing import List
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
@@ -94,25 +95,37 @@ def get_symbols(db: Session = Depends(get_db)):
     rows = db.query(models.Price.symbol).distinct().all()
     return [r[0] for r in rows]
 
-# Ingest historical price data in the background
-@app.post("/api/ohlcv/{symbol}")
-def ingest_symbol(
-    symbol: str,
+# Fetch available symbols from Yahoo Finance based on criteria
+@app.get("/api/fetch_symbols")
+def get_available_symbols():
+    symbols = fetcher.fetch_symbols()
+    if not symbols:
+        raise HTTPException(status_code=404, detail="no symbols found")
+    return symbols
+
+
+# Ingest historical price data
+@app.post("/api/ohlcv/")
+def ingest_symbols(
+    payload: schemas.SymbolPayload,
     background: BackgroundTasks,
-    period: str = "1y",
     db: Session = Depends(get_db)
 ):
-    if background:
-        background.add_task(_ingest_task, symbol, period, db)
-        return {"status": "ingestion started"}
-    else:
-        return _ingest_task(symbol, period, db)
+    symbols = payload.symbols
+    period = payload.period
+
+    # Make it a list if a single symbol is passed
+    if isinstance(symbols, str):
+        symbols = [symbols]
+
+    background.add_task(_ingest_task, symbols, period, db)
+    return {"status": "ingestion started", "symbols": symbols}
 
 
 # Task to fetch and store historical data
-def _ingest_task(symbol: str, period: str, db: Session):
-    records = fetcher.fetch_historical(symbol, period=period)
+def _ingest_task(symbols: List[str], period: str, db: Session):
+    records = fetcher.fetch_historical(symbols, period=period)
     if not records:
         raise HTTPException(status_code=404, detail="No data fetched")
     crud.upsert_prices(db, [schemas.PriceIn(**r) for r in records])
-    return {"symbol": symbol, "rows": len(records)}
+    return {"symbols": symbols, "rows": len(records)}

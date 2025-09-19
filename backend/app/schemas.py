@@ -3,6 +3,7 @@
 from pydantic import BaseModel
 from datetime import date
 from typing import List
+from typing import Union, List
 
 # Defines data structure for incoming price records
 class PriceIn(BaseModel):
@@ -29,3 +30,8 @@ class StatsOut(BaseModel):
     mean_return: float
     sharpe_ratio: float
     max_drawdown: float
+
+# Defines data structure for payload to fetch historical prices
+class SymbolPayload(BaseModel):
+    symbols: Union[str, List[str]]
+    period: str = "1y"
