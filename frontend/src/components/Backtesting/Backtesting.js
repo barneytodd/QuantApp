@@ -1,10 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
-import Select, { components } from "react-select";
+import Select from "react-select";
 import { strategies } from "./strategies/strategyRegistry";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { RiskExposureTab } from "./tabs/RiskExposureTab";
 import { TradeAnalyticsTab } from "./tabs/TradeAnalyticsTab";
 import { combineResults } from "./backtestEngine";
+import { Option, MenuList } from "../select/CustomSelectComponents"
 
 
 function Backtesting() {
@@ -25,7 +26,7 @@ function Backtesting() {
     []
   );
 
-  // get available ticker symbols from backend
+  // get available ticker symbols and benchmark data from backend
   useEffect(() => {
     fetch("http://localhost:8000/api/symbols")
       .then((res) => res.json())
@@ -35,15 +36,20 @@ function Backtesting() {
           .map((s) => ({ value: s, label: s })));
       });
 
-    setStrategyType(strategyTypeOptions[0]);
-
     fetch("http://localhost:8000/api/ohlcv/SPY?limit=500")
       .then((res) => res.json())
       .then((data) => {
         setBenchmarkData(data)
       });
-  }, [strategyTypeOptions]);
 
+  }, []);
+
+  // set default strategy type
+  useEffect(() => {
+    setStrategyType(strategyTypeOptions[0]);
+  }, [strategyTypeOptions])
+
+  // set default parameters for selected strategy type
   useEffect(() => {
     if (strategyType) {
       const defaults = Object.fromEntries(
@@ -53,6 +59,7 @@ function Backtesting() {
     }
   }, [strategyType]);
 
+  // execute backtest logic when 'run backtest' button is pressed
   const runBacktest = async () => {
     if (selectedSymbols.length === 0 || !strategyType) return;
     let results = [];
@@ -67,88 +74,14 @@ function Backtesting() {
       results.push(result);
     }
     results.push(combineResults(results));
-    console.log("results", results)
     setBacktestResult([...results]);
-    console.log("back", backtestResult)
 
     setActiveTab("overview");
   };
   
-  useEffect(() => {
-    console.log("backtestResult updated:", backtestResult);
-  }, [backtestResult]);
-
+  // run parameter optimisation logic (currently just a placeholder)
   const optimiseParameters = async () => {
     return;
-  };
-
-  // Option with a readonly checkbox (prevents React warning)
-  const Option = (props) => (
-    <components.Option {...props}>
-      <input
-        type="checkbox"
-        checked={props.isSelected}
-        readOnly
-        style={{ marginRight: 8 }}
-      />
-      <span>{props.label}</span>
-    </components.Option>
-  );
-
-  // MenuList that adds a Select all / Clear all control at the top
-  const MenuList = (props) => {
-    const { options } = props; // all options shown in this menu
-    const { value = [], onChange } = props.selectProps; // selected options array and onChange
-
-    const allSelected = value.length === options.length && options.length > 0;
-
-    const toggleSelectAll = (e) => {
-      // prevent the menu from closing and the click from bubbling
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (allSelected) {
-        // clear selection
-        onChange([], { action: "clear" });
-      } else {
-        // select all options (pass the same option objects the Select is using)
-        onChange(options, { action: "select-option" });
-      }
-    };
-
-    return (
-      <components.MenuList {...props}>
-        <div
-          style={{
-            padding: 8,
-            borderBottom: "1px solid #eee",
-            // sticky header while scrolling
-            position: "sticky",
-            top: 0,
-            background: "white",
-            zIndex: 1,
-          }}
-        >
-          <button
-            type="button"
-            // use onMouseDown to prevent the menu from losing focus and closing
-            onMouseDown={(e) => toggleSelectAll(e)}
-            style={{
-              cursor: "pointer",
-              border: "none",
-              background: "transparent",
-              padding: 0,
-              fontWeight: 600,
-              color: "#2563eb",
-            }}
-          >
-            {allSelected ? "Clear all" : "Select all"}
-          </button>
-        </div>
-
-        {props.children}
-      </components.MenuList>
-    );
   };
 
   return (

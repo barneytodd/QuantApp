@@ -15,7 +15,7 @@ export function TradeAnalyticsTab({ results }) {
 
   return (
     <div className="space-y-4">
-      {/* Dropdown */}
+      {/* Ticker-view Dropdown */}
       <div className="flex justify-end">
         <select
           className="border rounded p-2 text-sm"

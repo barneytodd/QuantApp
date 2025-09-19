@@ -17,13 +17,12 @@ export function OverviewTab({ results, benchmark }) {
   const equityData = useMemo(() => {
     if (selectedTicker !== "overall") return [selectedResult];
 
-    // For overall, include all tickers
     return results;
   }, [results, selectedTicker, selectedResult]);
 
   return (
     <div className="space-y-4">
-      {/* Dropdown */}
+      {/* Ticker-view Dropdown */}
       <div className="flex justify-end">
         <select
           className="border rounded p-2 text-sm"

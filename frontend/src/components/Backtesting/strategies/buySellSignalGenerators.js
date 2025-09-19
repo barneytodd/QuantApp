@@ -1,5 +1,6 @@
 import { computeSMA, computeBollingerBands, computeRSI } from "../../../utils/indicators";
 
+// calculate buy/sell signals for SMA crossover
 export function smaSignalGenerator(data, i, params) {
   const { shortPeriod, longPeriod } = params;
   if (i < longPeriod) return "hold";
@@ -13,7 +14,7 @@ export function smaSignalGenerator(data, i, params) {
   return "hold";
 }
 
-
+// calculate buy/sell signals for bollinger band reversion
 export function bollingerSignalGenerator(data, i, params) {
   const { period, stdDev } = params;
   const bands = computeBollingerBands(data, period, stdDev);
@@ -25,6 +26,7 @@ export function bollingerSignalGenerator(data, i, params) {
   return "hold";
 }
 
+// calculate buy/sell signals for RSI mean reversion
 export function rsiSignalGenerator(data, i, params) {
   const { period, oversold, overbought } = params;
   const rsiSeries = computeRSI(data, period);
@@ -37,7 +39,7 @@ export function rsiSignalGenerator(data, i, params) {
   return "hold";
 }
 
-
+// calculate buy/sell signals for time-series momentum
 export function momentumSignalGenerator(data, i, params) {
   const { lookback } = params;
   if (i < lookback) return "hold";
@@ -45,11 +47,12 @@ export function momentumSignalGenerator(data, i, params) {
   const pastPrice = data[i - lookback].close;
   const currentPrice = data[i].close;
 
-  if (currentPrice > pastPrice) return "buy";  // positive momentum
-  if (currentPrice < pastPrice) return "sell"; // negative momentum
+  if (currentPrice > pastPrice) return "buy"; 
+  if (currentPrice < pastPrice) return "sell"; 
   return "hold";
 }
 
+// calculate buy/sell signal for breakout strategy
 export function breakoutSignalGenerator(data, i, params) {
   const { lookback } = params;
   if (i < lookback) return "hold";
@@ -67,6 +70,7 @@ export function breakoutSignalGenerator(data, i, params) {
   return "hold";
 }
 
+// calculate buy/sell signals for pairs trading
 export function pairsSignalGenerator(data, i, params) {
   const { symbol1, symbol2, lookback, entryZ, exitZ } = params;
 

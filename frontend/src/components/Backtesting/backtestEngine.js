@@ -1,3 +1,4 @@
+// compute returns for strategy backtest
 function computeDailyReturns(equityCurve) {
   let returns = [];
   for (let i = 1; i < equityCurve.length; i++) {
@@ -8,6 +9,7 @@ function computeDailyReturns(equityCurve) {
   return returns;
 }
 
+// compute metrics for strategy backtest
 function computeMetrics(equityCurve, riskFreeRate = 0.01) {
   const returns = computeDailyReturns(equityCurve);
   if (returns.length === 0) return null;
@@ -37,10 +39,11 @@ function computeMetrics(equityCurve, riskFreeRate = 0.01) {
     mean_return: meanAnnual,
     annualised_volatility: volAnnual,
     sharpe_ratio: sharpe,
-    max_drawdown: maxDrawdown * 100, // %
+    max_drawdown: maxDrawdown * 100,
   };
 }
 
+// compute trade stats for strategy backtest
 function computeTradeStats(trades) {
   if (trades.length === 0) return null;
 
@@ -61,7 +64,7 @@ function computeTradeStats(trades) {
   };
 }
 
-
+// run backtest for selected strategy
 export function runBacktest(data, params, signalGenerator, initialCapital = 10000) {
   let symbol = data[0].symbol;
   let capital = initialCapital;
@@ -133,6 +136,7 @@ export function runBacktest(data, params, signalGenerator, initialCapital = 1000
   };
 }
 
+// combine multi-stock backtest results to get overall portfolio results
 export function combineResults(results) {
   const dateMap = new Map();
 
@@ -145,7 +149,7 @@ export function combineResults(results) {
 
   // Sum values per date, carrying forward the last known value for each ticker
   const combinedCurve = Array.from(dateMap.keys())
-    .sort() // ensure chronological order
+    .sort() 
     .map(date => {
       let totalValue = 0;
 

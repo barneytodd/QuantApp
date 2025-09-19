@@ -1,3 +1,4 @@
+// compute running drawdown values
 export function computeDrawdowns(equityCurve) {
   let peak = equityCurve[0].value;
   return equityCurve.map((point) => {
@@ -7,17 +8,19 @@ export function computeDrawdowns(equityCurve) {
   });
 }
 
+// map benchmark data to allow for charting
 export function mapBenchmark(ohlcv, initialCapital = 10000) {
   if (!ohlcv || ohlcv.length === 0) return [];
 
   const firstClose = ohlcv[0].close;
 
   return ohlcv.map((d) => ({
-    date: d.date, // keep same date as backtest
-    value: (d.close / firstClose) * initialCapital, // normalize to initial capital
+    date: d.date, 
+    value: (d.close / firstClose) * initialCapital, 
   }));
 }
 
+// compute histogram values for trade data
 export function getTradeHistogram(trades, mode, bins = 20) {
   if (!trades || trades.length === 0) return [];
 
@@ -29,7 +32,7 @@ export function getTradeHistogram(trades, mode, bins = 20) {
 
   // Group counts per bin per symbol
   const histogram = Array.from({ length: bins }, (_, i) => ({
-    bin: (min + binSize * (i + 0.5)).toFixed(2), // bin center
+    bin: (min + binSize * (i + 0.5)).toFixed(2),
   }));
 
   trades.forEach((t) => {

@@ -1,6 +1,8 @@
 import { runBacktest } from "../backtestEngine";
 import { smaSignalGenerator, bollingerSignalGenerator, rsiSignalGenerator, momentumSignalGenerator, breakoutSignalGenerator, pairsSignalGenerator } from "./buySellSignalGenerators";
 
+// wrappers for backtest function for each strategy type
+
 export function backtestSMA(data, params, initialCapital) {
   return runBacktest(data, params, smaSignalGenerator, initialCapital);
 }

@@ -20,6 +20,7 @@ const colorPalette = [
   "#14b8a6", // teal
 ];
 
+// build trade histogram
 export default function TradeHistogram({ trades, mode }) {
   const histogramData = getTradeHistogram(trades, mode);
 

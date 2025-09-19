@@ -1,5 +1,4 @@
 import { backtestSMA, backtestBollinger, backtestRSI, backtestMomentum, backtestBreakout, backtestPairs } from "./strategyWrappers";
-// import more strategies here...
 
 // registry of strategies
 export const strategies = {

@@ -19,6 +19,7 @@ const colorPalette = [
   "#14b8a6", // teal
 ];
 
+// build equity chart
 export default function EquityChart({ equityData, benchmarkData, highlightOverall }) {
   if (!equityData || equityData.length === 0) return null;
 
@@ -31,16 +32,14 @@ export default function EquityChart({ equityData, benchmarkData, highlightOveral
   // Build list of dates
   let dates;
   if (highlightOverall) {
-    // Overall: union of all tickers
     dates = [
       ...new Set(equityData.flatMap((r) => r.equityCurve.map((p) => p.date))),
     ].sort();
   } else {
-    // Single ticker: use its own equityCurve dates
     dates = equityData[0].equityCurve.map((p) => p.date);
   }
 
-  // Merge data
+  // Merge data for multiple tickers
   const mergedData = dates.map((date) => {
     const point = { date };
 

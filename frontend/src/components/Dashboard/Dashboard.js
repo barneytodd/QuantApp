@@ -1,9 +1,10 @@
   import { useEffect, useState } from "react";
-  import Select, { components } from "react-select";
+  import Select from "react-select";
   import Chart from "./chart/Chart";
   import ChartLegend from "./chart/ChartLegend";
   import Slider from "./Slider";
   import MetricCard from "./MetricCard";
+  import { Option, MenuList } from "../select/CustomSelectComponents"
 
   // create app dashboard
   function Dashboard() {
@@ -83,77 +84,7 @@
         alert("Error uploading data");
       }
     };
-
-    // Option with a readonly checkbox (prevents React warning)
-    const Option = (props) => (
-      <components.Option {...props}>
-        <input
-          type="checkbox"
-          checked={props.isSelected}
-          readOnly
-          style={{ marginRight: 8 }}
-        />
-        <span>{props.label}</span>
-      </components.Option>
-    );
-  
-    // MenuList that adds a Select all / Clear all control at the top
-    const MenuList = (props) => {
-      const { options } = props; // all options shown in this menu
-      const { value = [], onChange } = props.selectProps; // selected options array and onChange
-  
-      const allSelected = value.length === options.length && options.length > 0;
-  
-      const toggleSelectAll = (e) => {
-        // prevent the menu from closing and the click from bubbling
-        e.preventDefault();
-        e.stopPropagation();
-  
-        if (allSelected) {
-          // clear selection
-          onChange([], { action: "clear" });
-        } else {
-          // select all options (pass the same option objects the Select is using)
-          onChange(options, { action: "select-option" });
-        }
-      };
-  
-      return (
-        <components.MenuList {...props}>
-          <div
-            style={{
-              padding: 8,
-              borderBottom: "1px solid #eee",
-              // sticky header while scrolling
-              position: "sticky",
-              top: 0,
-              background: "white",
-              zIndex: 1,
-            }}
-          >
-            <button
-              type="button"
-              // use onMouseDown to prevent the menu from losing focus and closing
-              onMouseDown={(e) => toggleSelectAll(e)}
-              style={{
-                cursor: "pointer",
-                border: "none",
-                background: "transparent",
-                padding: 0,
-                fontWeight: 600,
-                color: "#2563eb",
-              }}
-            >
-              {allSelected ? "Clear all" : "Select all"}
-            </button>
-          </div>
-  
-          {props.children}
-        </components.MenuList>
-      );
-    };
     
-
     // build dashboard
     return (
       <div className="p-4 space-y-4">
@@ -175,7 +106,7 @@
             />
           </div>
 
-          {/* Multi-symbol upload (top-right) */}
+          {/* Multi-symbol upload */}
           <div className="w-80 bg-white rounded-2xl shadow p-4">
             <h3 className="text-lg font-bold mb-2">Upload / Insert Data</h3>
 

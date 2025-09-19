@@ -9,6 +9,7 @@ import {
   CartesianGrid,
 } from "recharts";
 
+// build drawdown chart
 export default function DrawdownChart({ equityCurve }) {
   const drawdownData = computeDrawdowns(equityCurve);
 
