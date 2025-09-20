@@ -64,8 +64,21 @@ function computeTradeStats(trades) {
   };
 }
 
+// calculate commission for each trade 
+function commission(signal = "buy", capital = 0, effective_price = 0, position = 0, commission_pct = 0.001, commission_fixed = 0.0) {
+  let com = 0;
+  if (signal === "buy") {
+    // maximises the size of trade
+    com = (capital * commission_pct + commission_fixed * effective_price) / (effective_price + commission_pct) 
+  }
+  else {
+    com = position * commission_pct + commission_fixed
+  }
+  return com
+}
+
 // run backtest for selected strategy
-export function runBacktest(data, params, signalGenerator, initialCapital = 10000) {
+export function runBacktest(data, params, signalGenerator, initialCapital = 10000, slippage_pct = 0.0005) {
   let symbol = data[0].symbol;
   let capital = initialCapital;
   let position = 0;
@@ -79,7 +92,8 @@ export function runBacktest(data, params, signalGenerator, initialCapital = 1000
     const signal = signalGenerator(data, i, params);
 
     if (signal === "buy" && position === 0) {
-      position = capital / price;
+      const effective_price = price * (1 + slippage_pct);
+      position = (capital - commission(signal, capital, effective_price, 0)) / effective_price;
       capital = 0;
       entryPrice = price;
       entryDate = data[i].date;
@@ -87,8 +101,10 @@ export function runBacktest(data, params, signalGenerator, initialCapital = 1000
 
     if (signal === "sell" && position > 0) {
       const exitPrice = price;
-      const pnl = position * (exitPrice - entryPrice);
-      const returnPct = ((exitPrice - entryPrice) / entryPrice) * 100;
+      const effectiveExitPrice = exitPrice * (1 - slippage_pct);
+      const effectiveEntryPrice = entryPrice * (1 + slippage_pct)
+      const pnl = position * (effectiveExitPrice - effectiveEntryPrice);
+      const returnPct = ((effectiveExitPrice - effectiveEntryPrice) / effectiveEntryPrice) * 100;
       trades.push({
         symbol,
         entryDate,
@@ -98,7 +114,7 @@ export function runBacktest(data, params, signalGenerator, initialCapital = 1000
         pnl,
         returnPct,
       });
-      capital = position * exitPrice;
+      capital = position * effectiveExitPrice - commission(signal, 0, 0, position);
       position = 0;
       entryPrice = null;
       entryDate = null;
@@ -110,8 +126,10 @@ export function runBacktest(data, params, signalGenerator, initialCapital = 1000
   // Final liquidation
   if (position > 0) {
     const lastPrice = data[data.length - 1].close;
-    const pnl = position * (lastPrice - entryPrice);
-    const returnPct = ((lastPrice - entryPrice) / entryPrice) * 100;
+    const effectiveLastPrice = lastPrice * (1 - slippage_pct)
+    const effectiveEntryPrice = entryPrice * (1 + slippage_pct)
+    const pnl = position * (effectiveLastPrice - effectiveEntryPrice);
+    const returnPct = ((effectiveLastPrice - effectiveEntryPrice) / effectiveEntryPrice) * 100;
     trades.push({
       symbol,
       entryDate,
@@ -121,7 +139,7 @@ export function runBacktest(data, params, signalGenerator, initialCapital = 1000
       pnl,
       returnPct,
     });
-    capital = position * lastPrice;
+    capital = position * lastPrice - commission("sell", 0, 0, position);
   }
 
   return {
@@ -160,7 +178,7 @@ export function combineResults(results) {
           .sort((a, b) => a.date.localeCompare(b.date))
           .pop();
 
-        totalValue += lastPoint ? lastPoint.value : 0;
+        totalValue += lastPoint ? lastPoint.value : r.initialCapital;
       });
 
       return { date, value: totalValue };
