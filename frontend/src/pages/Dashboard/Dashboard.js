@@ -2,9 +2,9 @@
   import Select from "react-select";
   import Chart from "./chart/Chart";
   import ChartLegend from "./chart/ChartLegend";
-  import Slider from "./Slider";
-  import MetricCard from "./MetricCard";
-  import { Option, MenuList } from "../select/CustomSelectComponents"
+  import Slider from "../../components/ui/Slider";
+  import MetricCard from "../../components/ui/MetricCard";
+  import { Option, MenuList } from "../../components/ui/CustomSelectComponents"
 
   // create app dashboard
   function Dashboard() {
@@ -33,7 +33,7 @@
 
     // get available ticker symbols from backend
     useEffect(() => {
-      fetch("http://localhost:8000/api/symbols")
+      fetch("http://localhost:8000/api/symbols/db_symbols")
         .then(res => res.json())
         .then(data => {
           setSymbols(data.map(s => ({ value: s, label: s })));
@@ -45,7 +45,7 @@
     useEffect(() => {
       if (!selectedSymbol) return;
 
-      fetch(`http://localhost:8000/api/ohlcv/${selectedSymbol?.value}?limit=200`)
+      fetch(`http://localhost:8000/api/data/ohlcv/${selectedSymbol?.value}?limit=200`)
         .then(res => res.json())
         .then(data => { 
           setOhlcv(data || []); 
@@ -58,7 +58,7 @@
 
     // get available ticker symbols to upload data
     useEffect(() => {
-      fetch("http://localhost:8000/api/fetch_symbols")
+      fetch("http://localhost:8000/api/symbols/fetch_symbols")
         .then(res => res.json())
         .then(data => {
           setUploadSymbols(data.map(s => ({ value: s, label: s })));
@@ -71,7 +71,7 @@
       const symbolValues = selectedUploadSymbols.map(s => s.value);
 
       try {
-        const res = await fetch("http://localhost:8000/api/ohlcv/", {
+        const res = await fetch("http://localhost:8000/api/data/ohlcv/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ symbols: symbolValues, period: "1y" }),

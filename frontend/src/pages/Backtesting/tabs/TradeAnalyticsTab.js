@@ -1,5 +1,7 @@
 import TradeHistogram from "../charts/TradeHistogram";
 import { useState } from "react"
+import MetricCard from "../../../components/ui/MetricCard";
+
 
 export function TradeAnalyticsTab({ results }) {
   const [selectedTicker, setSelectedTicker] = useState("overall");
@@ -33,18 +35,9 @@ export function TradeAnalyticsTab({ results }) {
 
       {/* Trade stats summary */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="bg-white shadow rounded-lg p-4">
-          <p className="text-sm text-gray-500">Trades</p>
-          <p className="text-lg font-bold">{selectedResult.tradeStats.numTrades}</p>
-        </div>
-        <div className="bg-white shadow rounded-lg p-4">
-          <p className="text-sm text-gray-500">Win Rate</p>
-          <p className="text-lg font-bold">{selectedResult.tradeStats.winRate.toFixed(1)}%</p>
-        </div>
-        <div className="bg-white shadow rounded-lg p-4">
-          <p className="text-sm text-gray-500">Profit Factor</p>
-          <p className="text-lg font-bold">{selectedResult.tradeStats.profitFactor.toFixed(2)}</p>
-        </div>
+        <MetricCard label="Trades" value={selectedResult.tradeStats.numTrades ?? "-"} dp={0} />
+        <MetricCard label="Win Rate" value={selectedResult.tradeStats.winRate ?? "-"} dp={1} type="percentage" />
+        <MetricCard label="Profit Factor" value={selectedResult.tradeStats.profitFactor ?? "-"} />
       </div>
       
       {/* Trade table */}

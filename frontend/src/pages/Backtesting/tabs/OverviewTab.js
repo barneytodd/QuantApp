@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import EquityChart from "../charts/EquityChart";
 import { mapBenchmark } from "../charts/chartCalcs";
+import MetricCard from "../../../components/ui/MetricCard";
 
 export function OverviewTab({ results, benchmark }) {
   const [selectedTicker, setSelectedTicker] = useState("overall");
@@ -40,30 +41,10 @@ export function OverviewTab({ results, benchmark }) {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 shadow rounded">
-          <p className="text-sm text-gray-500">Final Capital</p>
-          <p className="text-lg font-bold">
-            ${selectedResult.finalCapital.toFixed(2)}
-          </p>
-        </div>
-        <div className="bg-white p-4 shadow rounded">
-          <p className="text-sm text-gray-500">Return %</p>
-          <p className="text-lg font-bold">
-            {selectedResult.returnPct.toFixed(2)}%
-          </p>
-        </div>
-        <div className="bg-white p-4 shadow rounded">
-          <p className="text-sm text-gray-500">Sharpe Ratio</p>
-          <p className="text-lg font-bold">
-            {selectedResult.metrics.sharpe_ratio?.toFixed(2) ?? "-"}
-          </p>
-        </div>
-        <div className="bg-white p-4 shadow rounded">
-          <p className="text-sm text-gray-500">Max Drawdown</p>
-          <p className="text-lg font-bold">
-            {selectedResult.metrics.max_drawdown?.toFixed(2) ?? "-"}%
-          </p>
-        </div>
+        <MetricCard label="Final Capital"  value={selectedResult.finalCapital ?? "-"} type="currency" />
+        <MetricCard label="Return %" value={selectedResult.returnPct ?? "-"} type="percentage" />
+        <MetricCard label="Sharpe Ratio" value={selectedResult.metrics.sharpe_ratio ?? "-"} />
+        <MetricCard label="Max Drawdown" value={selectedResult.metrics.max_drawdown ?? "-"} type="percentage"/>
       </div>
 
       {/* Equity Curve */}

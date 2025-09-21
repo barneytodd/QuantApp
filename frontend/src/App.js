@@ -1,11 +1,11 @@
 ﻿import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-import Sidebar from "./components/Sidebar/Sidebar";
-import Dashboard from "./components/Dashboard/Dashboard";
-import Backtesting from "./components/Backtesting/Backtesting";
-import TradingSimulatorPage from "./components/TradingSimulator/TradingSimulator";
-import PortfolioAnalysisPage from "./components/PortfolioAnalysis/PortfolioAnalysis";
+import Sidebar from "./components/layout/Sidebar";
+import Dashboard from "./pages/Dashboard/Dashboard";
+import Backtesting from "./pages/Backtesting/Backtesting";
+import TradingSimulatorPage from "./pages/TradingSimulator/TradingSimulator";
+import PortfolioAnalysisPage from "./pages/PortfolioAnalysis/PortfolioAnalysis";
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);

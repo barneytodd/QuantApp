@@ -1,20 +1,16 @@
-# Define database tables
-
 from sqlalchemy import Column, String, Float, Integer, Date, UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
-from .database import Base
+from app.database import Base
 
-# Defines rows in the basic prices table
+# ORM model for historical OHLCV price data
 class Price(Base):
     __tablename__ = "prices"
-    __table_args__ = (UniqueConstraint("symbol", "date", name="uix_symbol_date"), {"schema": "dbo"})
+    __table_args__ = (UniqueConstraint("symbol", "date", name="uix_symbol_date"), {"schema": "dbo", "extend_existing": True})
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    symbol = Column(String(10), nullable=False)  
+    symbol = Column(String(10), nullable=False)
     date = Column(Date, nullable=False)
     open = Column(Float)
     high = Column(Float)
     low = Column(Float)
     close = Column(Float)
     volume = Column(Integer)
-

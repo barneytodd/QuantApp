@@ -1,5 +1,7 @@
 import DrawdownChart from "../charts/DrawdownChart";
 import { useState } from "react";
+import MetricCard from "../../../components/ui/MetricCard";
+
 
 export function RiskExposureTab({ results }) {
   const [selectedTicker, setSelectedTicker] = useState("overall");
@@ -34,18 +36,9 @@ export function RiskExposureTab({ results }) {
 
       {/* Risk metrics */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="bg-white shadow rounded-lg p-4">
-          <p className="text-sm text-gray-500">Annualised Return</p>
-          <p className="text-lg font-bold">{(metrics.mean_return * 100).toFixed(2)}%</p>
-        </div>
-        <div className="bg-white shadow rounded-lg p-4">
-          <p className="text-sm text-gray-500">Volatility</p>
-          <p className="text-lg font-bold">{(metrics.annualised_volatility * 100).toFixed(2)}%</p>
-        </div>
-        <div className="bg-white shadow rounded-lg p-4">
-          <p className="text-sm text-gray-500">Sharpe Ratio</p>
-          <p className="text-lg font-bold">{metrics.sharpe_ratio.toFixed(2)}</p>
-        </div>
+        <MetricCard label="Annualised Return" value={metrics?.mean_return != null ? metrics.mean_return * 100 : "-"} type="percentage" />
+        <MetricCard label="Volatility" value={metrics?.annualised_volatility != null ? metrics.annualised_volatility * 100 : "-"} type="percentage" />
+        <MetricCard label="Sharpe Ratio" value={metrics.sharpe_ratio ?? "-"} />
       </div>
 
       {/* Equity Curve */}

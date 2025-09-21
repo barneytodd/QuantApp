@@ -1,18 +1,28 @@
-# Connect to the SQL database
-
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
 
-# Connection string for db
+# Connection string for MS SQL Server
 SQLALCHEMY_DATABASE_URL = (
-    "mssql+pyodbc://quant_user:QuantProject!25@localhost\SQLEXPRESS/QuantDB?driver=ODBC+Driver+17+for+SQL+Server"
+    "mssql+pyodbc://quant_user:QuantProject!25@localhost\\SQLEXPRESS/QuantDB?driver=ODBC+Driver+17+for+SQL+Server"
 )
 
-# Creates a connection engine to db
-engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True) 
+# Create engine
+engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 
-# Creates a session factory
+# Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Creates a base class which is inherited by all table classes
+# Base class for models
 Base = declarative_base()
+
+# Dependency for FastAPI routes
+def get_db() -> Session:
+    """
+    Provide a database session to FastAPI endpoints.
+    Usage: db: Session = Depends(get_db)
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

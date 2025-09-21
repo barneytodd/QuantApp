@@ -15,7 +15,6 @@ def fetch_historical(symbols: List[str], period: str = "1y", interval: str = "1d
         return []
     records = []
     if isinstance(df.columns, pd.MultiIndex):
-        print(df.head())
         for symbol in df.columns.levels[0]:
             sub_df = df[symbol].copy().reset_index()
             for _, row in sub_df.iterrows():
@@ -70,7 +69,7 @@ def fetch_symbols(page_size=250, pause=0.3):
         print(f"Fetched {len(symbols)} symbols (total {len(all_symbols)})")
 
         offset += page_size
-        time.sleep(pause)  # polite delay to avoid rate-limiting
+        time.sleep(pause) 
 
     all_symbols.sort()
     return all_symbols

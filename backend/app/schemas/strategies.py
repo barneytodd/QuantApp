@@ -1,0 +1,36 @@
+from pydantic import BaseModel
+from typing import List, Dict, Any, Optional
+
+# Request model for running a strategy backtest
+class StrategyRequest(BaseModel):
+    strategy: str
+    symbols: List[str]
+    params: Dict[str, Any]
+    initialCapital: float = 10000
+
+# Response model for backtest results
+class StrategyResponse(BaseModel):
+    symbol: str                    
+    initialCapital: float
+    finalCapital: float
+    returnPct: float
+    equityCurve: List[float]
+    trades: Optional[List[Dict[str, Any]]] = []
+    metrics: Dict[str, Any]        
+    tradeStats: Dict[str, Any]     
+
+    class Config:
+        orm_mode = True
+
+# Internal model for backtest results used within the application
+class BacktestResultIn(BaseModel):
+    strategy_name: str
+    data: Dict[str, Any]  
+    initial_capital: float
+    final_capital: float
+    return_pct: float
+    equity_curve: list
+    trades: list
+
+    class Config:
+        orm_mode = True

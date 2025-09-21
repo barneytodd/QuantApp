@@ -4,8 +4,7 @@ import { strategies } from "./strategies/strategyRegistry";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { RiskExposureTab } from "./tabs/RiskExposureTab";
 import { TradeAnalyticsTab } from "./tabs/TradeAnalyticsTab";
-import { combineResults } from "./backtestEngine";
-import { Option, MenuList } from "../select/CustomSelectComponents"
+import { Option, MenuList } from "../../components/ui/CustomSelectComponents"
 
 
 function Backtesting() {
@@ -28,7 +27,7 @@ function Backtesting() {
 
   // get available ticker symbols and benchmark data from backend
   useEffect(() => {
-    fetch("http://localhost:8000/api/symbols")
+    fetch("http://localhost:8000/api/symbols/db_symbols")
       .then((res) => res.json())
       .then((data) => {
         setSymbols(data
@@ -36,7 +35,7 @@ function Backtesting() {
           .map((s) => ({ value: s, label: s })));
       });
 
-    fetch("http://localhost:8000/api/ohlcv/SPY?limit=500")
+    fetch("http://localhost:8000/api/data/ohlcv/SPY?limit=500")
       .then((res) => res.json())
       .then((data) => {
         setBenchmarkData(data)
@@ -62,21 +61,36 @@ function Backtesting() {
   // execute backtest logic when 'run backtest' button is pressed
   const runBacktest = async () => {
     if (selectedSymbols.length === 0 || !strategyType) return;
-    let results = [];
-    for (let i=0; i<selectedSymbols.length; i++) {
-      const res = await fetch(
-        `http://localhost:8000/api/ohlcv/${selectedSymbols[i]?.value}?limit=500`
-      );
-      const data = await res.json();
 
-      const strategy = strategies[strategyType.value].run;
-      const result = await strategy(data, params, 10000/selectedSymbols.length); 
-      results.push(result);
+    // Prepare payload for backend
+    const payload = {
+      strategy: strategyType.value,
+      symbols: selectedSymbols.map(s => s.value),  // just send symbols
+      params,
+      initialCapital: 10000
+    };
+
+    console.log(payload);
+
+    try {
+      const res = await fetch("http://localhost:8000/api/strategies/backtest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Backtest failed");
+
+      const results = await res.json();
+
+      setBacktestResult(results);        // individual + combined
+      setActiveTab("overview");          // default to overview tab
+    } catch (err) {
+      console.error("Backtest error:", err);
+      alert("Backtest failed. See console for details.");
     }
-    results.push(combineResults(results));
-    setBacktestResult([...results]);
-
-    setActiveTab("overview");
   };
   
   // run parameter optimisation logic (currently just a placeholder)
