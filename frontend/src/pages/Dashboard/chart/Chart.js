@@ -127,47 +127,50 @@ function Chart({ data, shortSMAPeriod, longSMAPeriod, emaPeriod, bollingerPeriod
       close: d.close ? d.close : d.value,
     })) : [];
 
+    candleRef.current.setData(formattedData);
 
     // set data for analysis lines
-    if (showShortSMA) {
-      shortSMADataRef.current = computeSMA(formattedData, shortSMAPeriod);
-      shortSMARef.current.setData(shortSMADataRef.current.filter(d => d.value !== null));
-    }
-    else {
-      shortSMARef.current.setData([]);
-    };
+    
+    const shortSMAData = computeSMA(formattedData, shortSMAPeriod);
+    shortSMARef.current.setData(shortSMAData.filter(d => d.value !== null));
+    shortSMARef.current.applyOptions({
+      color: showShortSMA ? "#ff9900" : "transparent"
+    });
+    
 
-    if (showLongSMA) {
-      longSMADataRef.current = computeSMA(formattedData, longSMAPeriod);
-      longSMARef.current.setData(longSMADataRef.current.filter(d => d.value !== null));
-    }
-    else {
-      longSMARef.current.setData([]);
-    };
+    const longSMAData = computeSMA(formattedData, longSMAPeriod);
+    longSMARef.current.setData(longSMAData.filter(d => d.value !== null));
+    longSMARef.current.applyOptions({
+      color: showLongSMA ? "#3366ff" : "transparent"
+    });
 
-    if (showEMA) {
-      const emaData = computeEMA(formattedData, emaPeriod);
-      emaRef.current.setData(emaData.filter(d => d.value !== null));
-    }
-    else {
-      emaRef.current.setData([]);
-    };
+    const emaData = computeEMA(formattedData, emaPeriod);
+    emaRef.current.setData(emaData.filter(d => d.value !== null));
+    emaRef.current.applyOptions({
+      color: showEMA ? "#ff33cc" : "transparent"
+    });
 
-    if (showBollinger) {
-      const bollingerData = computeBollingerBands(formattedData, bollingerPeriod, bollingerMultiplier);
-      lowerBollingerRef.current.setData(bollingerData.map(d => ({time: d.time, value:d.lower})).filter(d => d.value !== null));
-      midBollingerRef.current.setData(bollingerData.map(d => ({time: d.time, value:d.middle})).filter(d => d.value !== null));
-      upperBollingerRef.current.setData(bollingerData.map(d => ({time: d.time, value:d.upper})).filter(d => d.value !== null))
-    }
-    else {
-      lowerBollingerRef.current.setData([]);
-      midBollingerRef.current.setData([]);
-      upperBollingerRef.current.setData([])
-    }
+    const bollingerData = computeBollingerBands(formattedData, bollingerPeriod, bollingerMultiplier);
+
+    lowerBollingerRef.current.setData(bollingerData.map(d => ({ time: d.time, value: d.lower })).filter(d => d.value !== null));
+    lowerBollingerRef.current.applyOptions({
+      color: showBollinger ? "#999999" : "transparent"
+    });
+
+    midBollingerRef.current.setData(bollingerData.map(d => ({ time: d.time, value: d.middle })).filter(d => d.value !== null));
+    midBollingerRef.current.applyOptions({
+      color: showBollinger ? "#666666" : "transparent"
+    });
+
+    upperBollingerRef.current.setData(bollingerData.map(d => ({ time: d.time, value: d.upper })).filter(d => d.value !== null));
+    upperBollingerRef.current.applyOptions({
+      color: showBollinger ? "#999999" : "transparent"
+    });
+
 
     // set price data
     console.log(formattedData);
-    candleRef.current.setData(formattedData);
+    //candleRef.current.setData(formattedData);
     
     chartRef.current.timeScale().fitContent();
 
