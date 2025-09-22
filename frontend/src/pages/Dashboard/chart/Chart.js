@@ -103,7 +103,8 @@ function Chart({ data, shortSMAPeriod, longSMAPeriod, emaPeriod, bollingerPeriod
 
     // handle resize
     const ro = new ResizeObserver(() => {
-      chart.applyOptions({ width: containerRef.current.clientWidth });
+      if (!containerRef.current || !chartRef.current) return; // <- prevents crash
+      chartRef.current.applyOptions({ width: containerRef.current.clientWidth });
     });
     ro.observe(containerRef.current);
 
