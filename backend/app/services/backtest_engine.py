@@ -95,6 +95,7 @@ def run_backtest(data, params, signal_generator, initial_capital=10000, slippage
             return_pct = (effective_exit - effective_entry) / effective_entry * 100
             trades.append({
                 "symbol": symbol,
+                "direction": "Long",
                 "entryDate": entry_date,
                 "exitDate": row["date"],
                 "entryPrice": entry_price,
@@ -118,6 +119,7 @@ def run_backtest(data, params, signal_generator, initial_capital=10000, slippage
         return_pct = (effective_last - effective_entry) / effective_entry * 100
         trades.append({
             "symbol": symbol,
+            "direction": "Long",
             "entryDate": entry_date,
             "exitDate": data[-1]["date"],
             "entryPrice": entry_price,

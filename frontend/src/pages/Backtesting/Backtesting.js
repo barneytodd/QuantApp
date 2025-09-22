@@ -15,6 +15,9 @@ function Backtesting() {
   const [benchmarkData, setBenchmarkData] = useState(null);
   const [activeTab, setActiveTab] = useState(null);
   const [params, setParams] = useState({});
+  const [pairCandidates, setPairCandidates] = useState([]);  
+  const [selectedPairs, setSelectedPairs] = useState([]);    
+  const [pairSectionVisible, setPairSectionVisible] = useState(true); 
 
   const strategyTypeOptions = useMemo(
     () =>
@@ -58,6 +61,37 @@ function Backtesting() {
     }
   }, [strategyType]);
 
+  const selectPairs = async () => {
+    if (selectedSymbols.length < 2) {
+      alert("Select at least two symbols to generate pairs.");
+      return;
+    }
+
+    const symbolList = selectedSymbols.map(s => s.value);
+
+    try {
+      const res = await fetch("http://localhost:8000/api/pairs/select", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbols: symbolList,
+          w_corr: 0.5,
+          w_coint: 0.5
+        })
+      });
+
+      const data = await res.json();
+      console.log("all", data.all_pairs, "selected", data.selected_pairs)
+      setPairCandidates(data.all_pairs);
+      setSelectedPairs(data.selected_pairs); // default selection from backend
+      setPairSectionVisible(false);           // show the pair section
+    } catch (err) {
+      console.error("Failed to select pairs", err);
+      alert("Failed to fetch pair analysis.");
+    }
+  };
+
+
   // execute backtest logic when 'run backtest' button is pressed
   const runBacktest = async () => {
     if (selectedSymbols.length === 0 || !strategyType) return;
@@ -67,7 +101,8 @@ function Backtesting() {
       strategy: strategyType.value,
       symbols: selectedSymbols.map(s => s.value),  // just send symbols
       params,
-      initialCapital: 10000
+      initialCapital: 10000,
+      pairs: strategyType.value === "pairs_trading" ? selectedPairs : undefined,
     };
 
     console.log(payload);
@@ -158,6 +193,16 @@ function Backtesting() {
 
 
             <div className="flex gap-3 mt-5">
+              {/* Only show Select Pairs button for Pairs Trading */}
+              {strategyType?.value === "pairs_trading" && (
+                <button
+                  onClick={selectPairs}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                >
+                  Select Pairs
+                </button>
+              )}
+
               <button
                 onClick={optimiseParameters}
                 className="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium"
@@ -174,6 +219,78 @@ function Backtesting() {
           </div>
         </div>
       </div>
+          
+      {/* PAIR SELECTION TABLE */}
+      {strategyType?.value === "pairs_trading" && pairCandidates.length > 0 && (
+        <div className="bg-white shadow rounded-xl p-4 mt-6">
+          <div
+            className="flex justify-between items-center cursor-pointer"
+            onClick={() => setPairSectionVisible((v) => !v)}
+          >
+            <h3 className="text-lg font-semibold">Pair Selection</h3>
+            <span>{pairSectionVisible ? "▲" : "▼"}</span>
+          </div>
+
+          {pairSectionVisible && (
+            <table className="w-full mt-4 border-collapse border border-gray-300">
+              <thead>
+                <tr>
+                  <th className="border px-2 py-1">Select</th>
+                  <th className="border px-2 py-1">Stock 1</th>
+                  <th className="border px-2 py-1">Stock 2</th>
+                  <th className="border px-2 py-1">Score</th>
+                  <th className="border px-2 py-1">Correlation</th>
+                  <th className="border px-2 py-1">Cointegration p-value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pairCandidates.map((pair) => {
+                  const isSelected = selectedPairs.some(
+                    (p) =>
+                      p.stock1 === pair.stock1 && p.stock2 === pair.stock2
+                  );
+                  return (
+                    <tr key={`${pair.stock1}-${pair.stock2}`}>
+                      <td className="border px-2 py-1">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedPairs((prev) => [...prev, pair]);
+                            } else {
+                              setSelectedPairs((prev) =>
+                                prev.filter(
+                                  (p) =>
+                                    !(
+                                      p.stock1 === pair.stock1 &&
+                                      p.stock2 === pair.stock2
+                                    )
+                                )
+                              );
+                            }
+                          }}
+                        />
+                      </td>
+                      <td className="border px-2 py-1">{pair.stock1}</td>
+                      <td className="border px-2 py-1">{pair.stock2}</td>
+                      <td className="border px-2 py-1">
+                        {pair.score.toFixed(3)}
+                      </td>
+                      <td className="border px-2 py-1">
+                        {pair.corr.toFixed(3)}
+                      </td>
+                      <td className="border px-2 py-1">
+                        {pair.p_value.toFixed(4)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {/* TABS SECTION */}
       {backtestResult && (

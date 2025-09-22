@@ -71,19 +71,26 @@ def breakout_signal_generator(data, i, params):
 
 # Pairs Trading Signal Generator
 def pairs_signal_generator(data, i, params):
-    s1, s2 = params["symbol1"], params["symbol2"]
-    lookback, entryZ, exitZ = params["lookback"], params["entryZ"], params["exitZ"]
+ 
+    lookback, entryZ, exitZ, stock1, stock2 = params["lookback"], params["entryZ"], params["exitZ"], params["stock1"], params["stock2"]
+
     if i < lookback:
         return "hold"
-    price1, price2 = data[i][s1], data[i][s2]
-    spread_series = [data[j][s1] - data[j][s2] for j in range(i - lookback, i)]
+
+    price1, price2 = data[i][stock1], data[i][stock2]
+
+    # compute spread series for rolling window
+    spread_series = [data[j][stock1] - data[j][stock2] for j in range(i - lookback, i)]
     mean = sum(spread_series) / lookback
     std = (sum((x - mean) ** 2 for x in spread_series) / lookback) ** 0.5
+
+    # z-score of current spread
     z = (price1 - price2 - mean) / std if std != 0 else 0
+
     if z > entryZ:
-        return "short"
+        return "short"   # spread too wide - short stock1, long stock2
     if z < -entryZ:
-        return "long"
+        return "long"    # spread too narrow - long stock1, short stock2
     if abs(z) < exitZ:
-        return "exit"
+        return "exit"    # spread normalized - exit positions
     return "hold"

@@ -46,7 +46,8 @@ export function TradeAnalyticsTab({ results }) {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b">
-              <th classNAme="text-left p-2">Ticker</th>
+              <th className="text-left p-2">Ticker</th>
+              <th className="text-left p-2">Direction</th>
               <th className="text-left p-2">Entry</th>
               <th className="text-left p-2">Exit</th>
               <th className="text-left p-2">Entry Px</th>
@@ -62,6 +63,7 @@ export function TradeAnalyticsTab({ results }) {
               .map((t, i) => (
               <tr key={i} className="border-b">
                 <td className="p-2">{t.symbol}</td>
+                <td className="p-2">{t.direction}</td>
                 <td className="p-2">{t.entryDate}</td>
                 <td className="p-2">{t.exitDate}</td>
                 <td className="p-2">{t.entryPrice.toFixed(2)}</td>

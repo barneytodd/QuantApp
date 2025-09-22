@@ -11,7 +11,7 @@ from .services import fetcher
 import pandas as pd
 from datetime import date
 from typing import List
-from app.api.routes import data, metrics, stats, strategies, symbols
+from app.api.routes import data, metrics, strategies, symbols, pairs
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -40,11 +40,11 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(strategies.router, prefix="/api/strategies")
-app.include_router(data.router, prefix="/api/data")
-app.include_router(metrics.router, prefix="/api/metrics")
-app.include_router(stats.router, prefix="/api/stats")
-app.include_router(symbols.router, prefix="/api/symbols")
+app.include_router(strategies.router, prefix="/api/strategies", tags=["Backtest"])
+app.include_router(data.router, prefix="/api/data", tags=["Data"])
+app.include_router(metrics.router, prefix="/api/metrics", tags=["Metrics"])
+app.include_router(symbols.router, prefix="/api/symbols", tags=["Data"])
+app.include_router(pairs.router, prefix="/api/pairs", tags=["Pairs"])
 
 # Dependency - provides database sessions to endpoints
 def get_db():

@@ -39,15 +39,13 @@ export const strategies = {
     ],
   },
 
-  pairs_trading: {
-    label: "Pairs Trading",
-    params: [
-      { name: "symbol1", label: "Symbol 1", type: "text", default: "AAPL" },
-      { name: "symbol2", label: "Symbol 2", type: "text", default: "MSFT" },
-      { name: "lookback", label: "Lookback Period", type: "number", default: 20 },
-      { name: "entryZ", label: "Entry Z-Score", type: "number", default: 2 },
-      { name: "exitZ", label: "Exit Z-Score", type: "number", default: 0.5 },
-    ],
-  },
+  "pairs_trading": {
+  label: "Pairs Trading",
+  params: [
+    { name: "lookback", label: "Lookback Period", type: "number", default: 20 },
+    { name: "entryZ", label: "Entry Z-Score", type: "number", default: 2 },
+    { name: "exitZ", label: "Exit Z-Score", type: "number", default: 0.5 },
+  ],
+}
 
 };

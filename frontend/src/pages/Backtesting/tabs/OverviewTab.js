@@ -5,7 +5,7 @@ import MetricCard from "../../../components/ui/MetricCard";
 
 export function OverviewTab({ results, benchmark }) {
   const [selectedTicker, setSelectedTicker] = useState("overall");
-
+  
   // List of tickers excluding "overall"
   const tickers = results
     .filter(r => r.symbol && r.symbol !== "overall")
@@ -13,7 +13,7 @@ export function OverviewTab({ results, benchmark }) {
 
   // Selected ticker object
   const selectedResult = results.find(r => r.symbol === selectedTicker);
-
+  console.log(selectedResult)
   // Prepare equity data for the chart
   const equityData = useMemo(() => {
     if (selectedTicker !== "overall") return [selectedResult];

@@ -16,7 +16,7 @@ def get_prices(symbol: str, start: str = None, end: str = None, db: Session = De
 
 # Ingest historical OHLCV data for given symbols and period
 @router.post("/ohlcv/")
-def ingest_symbols(payload: SymbolPayload, background: BackgroundTasks, db: Session = Depends(get_db)):
+def ingest_prices(payload: SymbolPayload, background: BackgroundTasks, db: Session = Depends(get_db)):
     symbols = payload.symbols
     if isinstance(symbols, str):
         symbols = [symbols]

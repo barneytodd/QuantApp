@@ -16,8 +16,6 @@ function Chart({ data, shortSMAPeriod, longSMAPeriod, emaPeriod, bollingerPeriod
   const lowerBollingerRef = useRef(null);
   const midBollingerRef = useRef(null);
   const upperBollingerRef = useRef(null);
-  const shortSMADataRef = useRef(null);
-  const longSMADataRef = useRef(null);
 
   useEffect(() => {
 
