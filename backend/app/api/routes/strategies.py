@@ -2,11 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from app.schemas import StrategyRequest
-from app.services import backtest_engine, pairs_backtest_engine
+from app.services.backtesting.engines import backtest_engine, pairs_backtest_engine
 from app.database import get_db
 from app.crud import get_prices as crud_get_prices
-from app.services.strategy_registry import strategies
-from app.utils.pairs_helper import align_series
+from app.strategies.strategy_registry import strategies
+from app.utils.pairs_helpers import align_series
+from app.utils.db_helpers import fetch_price_data
 
 router = APIRouter()
 
@@ -19,7 +20,6 @@ def run_strategy_backtest(payload: StrategyRequest, db: Session = Depends(get_db
     if not payload.params:
         raise HTTPException(status_code=400, detail="No parameters provided")
 
-
     individual_results = []
 
     if payload.strategy == "pairs_trading":
@@ -28,22 +28,7 @@ def run_strategy_backtest(payload: StrategyRequest, db: Session = Depends(get_db
 
             price_dict = {}
             for symbol in [symbol1, symbol2]:
-                data_rows = crud_get_prices(db, symbol)
-                if not data_rows:
-                    continue
-                
-                # Convert SQLAlchemy objects to dict
-                individual_data = [
-                    {
-                        "date": r.date.isoformat(),
-                        "open": r.open,
-                        "high": r.high,
-                        "low": r.low,
-                        "close": r.close,
-                        "volume": r.volume,
-                        "symbol": r.symbol
-                    } for r in data_rows
-                ]
+                individual_data = fetch_price_data(db, symbol, payload.params["startDate"], payload.params["endDate"])
 
                 price_dict[symbol] = individual_data
             
@@ -54,7 +39,7 @@ def run_strategy_backtest(payload: StrategyRequest, db: Session = Depends(get_db
             params=payload.params,
             stock1 = symbol1,
             stock2 = symbol2,
-            initial_capital=payload.initialCapital / len(payload.pairs) 
+            initial_capital=payload.params["initialCapital"] / len(payload.pairs) 
             )
 
 
@@ -71,28 +56,13 @@ def run_strategy_backtest(payload: StrategyRequest, db: Session = Depends(get_db
         for symbol in payload.symbols:
         
             # Fetch OHLCV data from DB
-            data_rows = crud_get_prices(db, symbol)
-            if not data_rows:
-                continue
-
-            # Convert SQLAlchemy objects to dict
-            data = [
-                {
-                    "date": r.date.isoformat(),
-                    "open": r.open,
-                    "high": r.high,
-                    "low": r.low,
-                    "close": r.close,
-                    "volume": r.volume,
-                    "symbol": r.symbol
-                } for r in data_rows
-            ]
+            data = fetch_price_data(db, symbol, payload.params["startDate"], payload.params["endDate"])
         
             # Run the backtest
             result = strategies[payload.strategy](
                 data=data,
                 params=payload.params,
-                initial_capital=payload.initialCapital / len(payload.symbols)
+                initial_capital=payload.params["initialCapital"] / len(payload.symbols)
             )
 
 

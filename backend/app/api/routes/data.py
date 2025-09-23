@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.schemas import SymbolPayload, PriceOut, PriceIn
 from app.database import get_db
-from app.services import fetcher
+from app.services.data import fetcher
 from app import crud
 
 router = APIRouter()

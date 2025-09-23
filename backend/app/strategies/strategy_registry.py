@@ -1,4 +1,4 @@
-from app.services import strategy_wrappers as sw
+from . import strategy_wrappers as sw
 
 # Registry of available trading strategy backtest functions
 strategies = {

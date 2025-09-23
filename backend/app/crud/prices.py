@@ -2,9 +2,10 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.models.prices import Price
 from app.schemas.prices import PriceIn
+from datetime import date
 
 # Get historical OHLCV data for a symbol, optionally filtered by date range
-def get_prices(db: Session, symbol: str, start: Optional[str] = None, end: Optional[str] = None) -> List[Price]:
+def get_prices(db: Session, symbol: str, start: Optional[date] = None, end: Optional[date] = None) -> List[Price]:
     query = db.query(Price).filter(Price.symbol == symbol)
     if start:
         query = query.filter(Price.date >= start)

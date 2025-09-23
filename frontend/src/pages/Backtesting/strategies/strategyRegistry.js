@@ -1,51 +1,81 @@
-// registry of strategies
 export const strategies = {
-  "sma_crossover": {
+  sma_crossover: {
     label: "Moving Average Crossover",
     params: [
-      { name: "shortPeriod", label: "Short SMA Period", type: "number", default: 20 },
-      { name: "longPeriod", label: "Long SMA Period", type: "number", default: 50 },
+      // --- Basic ---
+      { name: "shortPeriod", label: "Short SMA Period", type: "number", default: 20, category: "basic" },
+      { name: "longPeriod", label: "Long SMA Period", type: "number", default: 50, category: "basic" },
+
+      // --- Advanced ---
+      { name: "positionSizing", label: "Position Sizing (%)", type: "number", default: 100, category: "advanced" },
+      { name: "maxConcurrentPositions", label: "Max Concurrent Positions", type: "number", default: 5, category: "advanced" },
     ],
   },
 
-  "bollinger_reversion": {
+  bollinger_reversion: {
     label: "Bollinger Band Reversion",
     params: [
-      { name: "period", label: "SMA Period", type: "number", default: 20 },
-      { name: "stdDev", label: "Standard Deviations", type: "number", default: 2 },
+      // --- Basic ---
+      { name: "period", label: "SMA Period", type: "number", default: 20, category: "basic" },
+      { name: "stdDev", label: "Standard Deviations", type: "number", default: 2, category: "basic" },
+
+      // --- Advanced ---
+      { name: "bollingerMultiplier", label: "Band Multiplier", type: "number", default: 2, category: "advanced" },
+      { name: "positionSizing", label: "Position Sizing (%)", type: "number", default: 100, category: "advanced" },
     ],
   },
 
-  "rsi_reversion": {
+  rsi_reversion: {
     label: "RSI Mean Reversion",
     params: [
-      { name: "period", label: "RSI Period", type: "number", default: 14 },
-      { name: "oversold", label: "Oversold Threshold", type: "number", default: 30 },
-      { name: "overbought", label: "Overbought Threshold", type: "number", default: 70 },
+      // --- Basic ---
+      { name: "period", label: "RSI Period", type: "number", default: 14, category: "basic" },
+      { name: "oversold", label: "Oversold Threshold", type: "number", default: 30, category: "basic" },
+      { name: "overbought", label: "Overbought Threshold", type: "number", default: 70, category: "basic" },
+
+      // --- Advanced ---
+      { name: "signalSmoothing", label: "Signal Smoothing (EMA)", type: "number", default: 3, category: "advanced" },
+      { name: "positionSizing", label: "Position Sizing (%)", type: "number", default: 100, category: "advanced" },
     ],
   },
 
-  "momentum": {
+  momentum: {
     label: "Time-Series Momentum",
     params: [
-      { name: "lookback", label: "Lookback Period", type: "number", default: 63 }, // ~3 months
+      // --- Basic ---
+      { name: "lookback", label: "Lookback Period", type: "number", default: 63, category: "basic" },
+
+      // --- Advanced ---
+      { name: "holdingPeriod", label: "Holding Period", type: "number", default: 21, category: "advanced" },
+      { name: "volatilityTarget", label: "Volatility Target (%)", type: "number", default: 15, category: "advanced" },
+      { name: "positionSizing", label: "Position Sizing (%)", type: "number", default: 100, category: "advanced" },
     ],
   },
 
-  "breakout": {
+  breakout: {
     label: "Breakout Strategy",
     params: [
-      { name: "lookback", label: "Lookback Period", type: "number", default: 20 }, // ~1 month
+      // --- Basic ---
+      { name: "lookback", label: "Lookback Period", type: "number", default: 20, category: "basic" },
+
+      // --- Advanced ---
+      { name: "breakoutMultiplier", label: "Breakout Threshold Multiplier", type: "number", default: 1.0, category: "advanced" },
+      { name: "positionSizing", label: "Position Sizing (%)", type: "number", default: 100, category: "advanced" },
     ],
   },
 
-  "pairs_trading": {
-  label: "Pairs Trading",
-  params: [
-    { name: "lookback", label: "Lookback Period", type: "number", default: 20 },
-    { name: "entryZ", label: "Entry Z-Score", type: "number", default: 2 },
-    { name: "exitZ", label: "Exit Z-Score", type: "number", default: 0.5 },
-  ],
-}
+  pairs_trading: {
+    label: "Pairs Trading",
+    params: [
+      // --- Basic ---
+      { name: "lookback", label: "Lookback Period", type: "number", default: 20, category: "basic" },
+      { name: "entryZ", label: "Entry Z-Score", type: "number", default: 2, category: "basic" },
+      { name: "exitZ", label: "Exit Z-Score", type: "number", default: 0.5, category: "basic" },
 
+      // --- Advanced ---
+      { name: "maxHolding", label: "Max Holding Days", type: "number", default: 20, category: "advanced" },
+      { name: "hedgeRatio", label: "Hedge Ratio (β)", type: "number", default: 1.0, category: "advanced" },
+      { name: "positionSizing", label: "Position Sizing (%)", type: "number", default: 100, category: "advanced" },
+    ],
+  },
 };

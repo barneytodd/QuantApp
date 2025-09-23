@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.schemas import PairSelectionRequest
 from app.utils.pair_selection import select_pairs_max_weight
-from app.services.pairs_service import analyze_pairs
+from app.services.backtesting.pairs_service import analyze_pairs
 from app.crud import get_prices as crud_get_prices
 from app.database import get_db
 import numpy as np 

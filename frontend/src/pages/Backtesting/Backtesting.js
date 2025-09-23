@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Select from "react-select";
 import { strategies } from "./strategies/strategyRegistry";
+import { globalParams } from "./strategies/globalParams";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { RiskExposureTab } from "./tabs/RiskExposureTab";
 import { TradeAnalyticsTab } from "./tabs/TradeAnalyticsTab";
@@ -14,7 +15,9 @@ function Backtesting() {
   const [strategyType, setStrategyType] = useState(null);
   const [benchmarkData, setBenchmarkData] = useState(null);
   const [activeTab, setActiveTab] = useState(null);
-  const [params, setParams] = useState({});
+  const [basicParams, setBasicParams] = useState({});
+  const [advancedParams, setAdvancedParams] = useState({});
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [pairCandidates, setPairCandidates] = useState([]);  
   const [selectedPairs, setSelectedPairs] = useState([]);    
   const [pairSectionVisible, setPairSectionVisible] = useState(true); 
@@ -54,10 +57,21 @@ function Backtesting() {
   // set default parameters for selected strategy type
   useEffect(() => {
     if (strategyType) {
-      const defaults = Object.fromEntries(
-        strategies[strategyType.value].params.map(p => [p.name, p.default])
+      const allParams = [...globalParams, ...strategies[strategyType.value].params]
+      const basic = allParams.filter((p) => p.category === "basic");
+      const advanced = allParams.filter((p) => p.category === "advanced");
+      console.log(allParams, basic, advanced)
+
+      const basicDefaults = Object.fromEntries(
+        basic.map(p => [p.name, { value: p.default, label: p.label, type: p.type }])
       );
-      setParams(defaults);
+      setBasicParams(basicDefaults);
+
+      const advancedDefaults = Object.fromEntries(
+        advanced.map(p => [p.name, { value: p.default, label: p.label, type: p.type }])
+      );
+      setAdvancedParams(advancedDefaults);
+
     }
   }, [strategyType]);
 
@@ -100,11 +114,18 @@ function Backtesting() {
     const payload = {
       strategy: strategyType.value,
       symbols: selectedSymbols.map(s => s.value),  // just send symbols
-      params,
+      params: {
+        ...Object.fromEntries(
+          Object.entries(basicParams).map(([k, v]) => [k, v.value])
+        ),
+        ...Object.fromEntries(
+          Object.entries(advancedParams).map(([k, v]) => [k, v.value])
+        ),
+      },
       initialCapital: 10000,
       pairs: strategyType.value === "pairs_trading" ? selectedPairs : undefined,
     };
-
+    console.log(basicParams)
     console.log(payload);
 
     try {
@@ -177,21 +198,30 @@ function Backtesting() {
         <div className="bg-white shadow rounded-xl p-4 col-span-1 md:col-span-2">
           <h3 className="text-lg font-semibold mb-3">Parameters</h3>
           <div className="flex flex-wrap gap-6 items-center">
-            {strategyType && strategies[strategyType.value].params.map((param) => (
-              <div key={param.name} className="flex items-center gap-2">
+            {strategyType && Object.entries(basicParams).map(([key, param]) => (
+              <div key={key} className="flex items-center gap-2">
                 <span>{param.label}:</span>
                 <input
                   type={param.type}
-                  value={params[param.name]}
+                  value={param.value}
                   onChange={(e) =>
-                    setParams((prev) => ({ ...prev, [param.name]: Number(e.target.value) }))
+                    setBasicParams((prev) => ({
+                      ...prev,
+                      [key]: { ...prev[key], value: e.target.value }, // store as string temporarily
+                    }))
+                  }
+                  onBlur={(e) =>
+                    setBasicParams((prev) => ({
+                      ...prev,
+                      [key]: { ...prev[key], value: Number(e.target.value) || 0 }, // parse to number
+                    }))
                   }
                   className="border p-1 rounded"
                 />
               </div>
             ))}
 
-
+            {/* Buttons */}
             <div className="flex gap-3 mt-5">
               {/* Only show Select Pairs button for Pairs Trading */}
               {strategyType?.value === "pairs_trading" && (
@@ -202,6 +232,13 @@ function Backtesting() {
                   Select Pairs
                 </button>
               )}
+
+              <button
+                onClick={() => setIsAdvancedOpen(true)}
+                className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg text-sm font-medium"
+              >
+                Advanced Options
+              </button>
 
               <button
                 onClick={optimiseParameters}
@@ -324,6 +361,68 @@ function Backtesting() {
           )}
         </div>
       )}
+
+      {/* Advanced Options Panel */}
+      {isAdvancedOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Overlay */}
+          <div
+            className="flex-1 bg-black bg-opacity-30"
+            onClick={() => setIsAdvancedOpen(false)}
+          ></div>
+
+          {/* Panel */}
+          <div className="w-96 bg-white shadow-xl p-6 overflow-y-auto transition-transform transform translate-x-0">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Advanced Options</h3>
+              <button
+                onClick={() => setIsAdvancedOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            {Object.keys(advancedParams).length > 0 ? (
+              <div className="space-y-4">
+                {Object.entries(advancedParams).map(([key, param]) => (
+                  <div key={key} className="flex items-center gap-2">
+                    <span className="w-40">{param.label}</span>
+                    <input
+                    type={param.type}
+                    value={param.value}
+                    onChange={(e) => {
+                      let value = e.target.value;
+
+                        if (param.type === "number") {
+                          value = value === "" ? "" : Number(value);
+                        }
+
+                        setAdvancedParams((prev) => ({
+                          ...prev,
+                          [key]: { ...prev[key], value },  // ✅ update only value, keep label/type
+                        }));
+                      }}
+                      onBlur={(e) => {
+                        if (param.type === "number" && e.target.value === "") {
+                          setAdvancedParams((prev) => ({
+                            ...prev,
+                            [key]: { ...prev[key], value: 0 },  // or param.default if you prefer
+                          }));
+                        }
+                      }}
+                      className={`border p-1 rounded ${param.type === "date" ? "w-48" : "w-24"}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">No advanced options for this strategy.</p>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

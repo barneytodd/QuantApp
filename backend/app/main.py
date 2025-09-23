@@ -7,7 +7,7 @@ from app.models import Price, Base
 from app.schemas import PriceIn, PriceOut, SymbolPayload, StatsOut
 from app.crud import get_prices, upsert_prices, get_all_symbols
 from .database import SessionLocal, engine
-from .services import fetcher
+from .services.data import fetcher
 import pandas as pd
 from datetime import date
 from typing import List
