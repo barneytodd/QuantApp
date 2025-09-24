@@ -1,0 +1,83 @@
+export default function ParamsCard({
+  basicParams,
+  setBasicParams,
+  strategyType,
+  onSelectPairs,
+  pairsLoading,
+  pairsError,
+  onOpenAdvanced,
+  onOpenOptimiser,
+  onRunBacktest,
+  backtestLoading,
+}) {
+  return (
+    <div className="bg-white shadow rounded-xl p-4 col-span-1 md:col-span-2">
+      <h3 className="text-lg font-semibold mb-3">Parameters</h3>
+      <div className="flex flex-wrap gap-6 items-center">
+        {strategyType &&
+          Object.entries(basicParams).map(([key, param]) => (
+            <div key={key} className="flex items-center gap-2">
+              <span>{param.label}:</span>
+              <input
+                type={param.type}
+                value={param.value}
+                onChange={(e) =>
+                  setBasicParams((prev) => ({
+                    ...prev,
+                    [key]: { ...prev[key], value: e.target.value },
+                  }))
+                }
+                onBlur={(e) =>
+                  setBasicParams((prev) => ({
+                    ...prev,
+                    [key]: { ...prev[key], value: Number(e.target.value) || 0 },
+                  }))
+                }
+                className="border p-1 rounded"
+              />
+            </div>
+          ))}
+
+        <div className="flex gap-3 mt-5">
+            {strategyType?.value === "pairs_trading" && (
+                <>
+                    <button
+                    onClick={onSelectPairs}
+                    disabled={pairsLoading}
+                    className={`px-4 py-2 rounded-lg text-white ${pairsLoading ? "bg-gray-400" : "bg-green-500 hover:bg-green-600"}`}
+                    >
+                    {pairsLoading ? "Selecting..." : "Select Pairs"}
+                    </button>
+
+                    {pairsError && (
+                    <p className="text-red-500 mt-2">{pairsError}</p>
+                    )}
+                </>
+            )}
+
+          <button
+            onClick={onOpenAdvanced}
+            className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            Advanced Options
+          </button>
+
+          <button
+            onClick={onOpenOptimiser}
+            className="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            Optimise Parameters
+          </button>
+
+          <button
+            onClick={onRunBacktest}
+            disabled={backtestLoading}
+            className={`px-4 py-2 rounded-lg text-white ${backtestLoading ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"}`}
+          >
+            {backtestLoading ? "Running..." : "Run Backtest"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
