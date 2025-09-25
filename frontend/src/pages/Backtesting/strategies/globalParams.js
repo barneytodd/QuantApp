@@ -8,7 +8,6 @@ const today = new Date();
 const oneYearAgo = new Date();
 oneYearAgo.setFullYear(today.getFullYear() - 1);
 
-
 // Global parameters apply to ALL strategies
 // These define backtest-wide configuration and risk settings
 export const globalParams = [
@@ -18,6 +17,7 @@ export const globalParams = [
     type: "date",
     default: formatDate(oneYearAgo),
     category: "advanced",
+    optimise: false
   },
   {
     name: "endDate",
@@ -25,6 +25,7 @@ export const globalParams = [
     type: "date",
     default: formatDate(today),
     category: "advanced",
+    optimise: false
   },
   {
     name: "initialCapital",
@@ -32,6 +33,8 @@ export const globalParams = [
     type: "number",
     default: 10000,
     category: "advanced",
+    optimise: false,
+    integer: true
   },
   {
     name: "slippage",
@@ -39,6 +42,8 @@ export const globalParams = [
     type: "number",
     default: 0.05, 
     category: "advanced",
+    optimise: false,
+    integer: false
   },
   {
     name: "transactionCostPct",
@@ -46,6 +51,8 @@ export const globalParams = [
     type: "number",
     default: 0.01, 
     category: "advanced",
+    optimise: false,
+    integer: false
   },
   {
     name: "fixedTransactionCost",
@@ -53,6 +60,8 @@ export const globalParams = [
     type: "number",
     default: 0, 
     category: "advanced",
+    optimise: false,
+    integer: true
   },
   {
     name: "rebalanceFrequency",
@@ -60,6 +69,8 @@ export const globalParams = [
     type: "number",
     default: null, 
     category: "advanced",
+    optimise: false,
+    integer: true
   },
   {
     name: "stopLoss",
@@ -67,6 +78,8 @@ export const globalParams = [
     type: "number",
     default: null,
     category: "advanced",
+    optimise: false,
+    integer: false
   },
   {
     name: "takeProfit",
@@ -74,5 +87,7 @@ export const globalParams = [
     type: "number",
     default: null,
     category: "advanced",
+    optimise: false,
+    integer: false
   },
 ];

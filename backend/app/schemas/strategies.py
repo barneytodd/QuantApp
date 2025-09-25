@@ -6,7 +6,6 @@ class StrategyRequest(BaseModel):
     strategy: str
     symbols: List[str]
     params: Dict[str, Any]
-    initialCapital: float = 10000
     pairs: Optional[List[Dict[str, Any]]] = [] 
 
 # Response model for backtest results

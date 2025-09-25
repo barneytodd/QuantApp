@@ -1,12 +1,12 @@
 import { useState } from "react";
 
 export function useOptimisation() {
-
   const [optimisationResult, setOptimisationResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  
 
-  const optimiseParameters = async ({ symbols, strategyType, basicParams, advancedParams }) => {
+  const optimiseParameters = async ({ symbols, strategyType, basicParams, advancedParams, optimParams }) => {
     setIsLoading(true);
     setError(null);
 
@@ -15,11 +15,13 @@ export function useOptimisation() {
         symbols: symbols.map((s) => s.value),
         strategy: strategyType.value,
         params: {
-          ...Object.fromEntries(Object.entries(basicParams).map(([k, v]) => [k, v.value])),
-          ...Object.fromEntries(Object.entries(advancedParams).map(([k, v]) => [k, v.value])),
+          ...Object.fromEntries(Object.entries(basicParams).map(([k, v]) => [k, {"value": v.value, "type": v.type, "bounds": v.bounds, "optimise": v.optimise, "integer": v.integer, "category": v.category}])),
+          ...Object.fromEntries(Object.entries(advancedParams).map(([k, v]) => [k, {"value": v.value, "type": v.type, "bounds": v.bounds, "optimise": v.optimise, "integer": v.integer, "category": v.category}])),
         },
+        optimParams: {
+          ...Object.fromEntries(Object.entries(optimParams).map(([k, v]) => [k, v.value])),
+        }
       };
-      console.log(payload)
       const res = await fetch("http://localhost:8000/api/params/optimise", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -7,7 +7,7 @@ from app.database import get_db
 from app.crud import get_prices as crud_get_prices
 from app.strategies.strategy_registry import strategies
 from app.utils.pairs_helpers import align_series
-from app.utils.db_helpers import fetch_price_data
+from app.utils.data_helpers import fetch_price_data
 
 router = APIRouter()
 

@@ -11,6 +11,7 @@ from typing import List
 # Fetch historical price data from Yahoo Finance
 def fetch_historical(symbols: List[str], period: str = "1y", interval: str = "1d"):
     df = yf.download(symbols, period=period, interval=interval, progress=False, threads=False, group_by='ticker')
+    print(df.head(), df.tail())
     if df.empty:
         return []
     records = []

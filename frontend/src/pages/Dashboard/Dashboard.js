@@ -15,6 +15,7 @@
 
     const [uploadSymbols, setUploadSymbols] = useState([]);
     const [selectedUploadSymbols, setSelectedUploadSymbols] = useState([]);
+    const [uploadYears, setUploadYears] = useState(null)
     
     const [ohlcv, setOhlcv] = useState([]);
     const [metrics, setMetrics] = useState({});
@@ -74,7 +75,7 @@
         const res = await fetch("http://localhost:8000/api/data/ohlcv/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ symbols: symbolValues, period: "1y" }),
+          body: JSON.stringify({ symbols: symbolValues, period: `${uploadYears}y` }),
         });
         const result = await res.json();
         console.log("Upload result:", result);
@@ -125,6 +126,16 @@
               components={{ Option, MenuList }}
               styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
             />
+
+            <input 
+              class="border p-2 rounded w-48" 
+              type="number" 
+              id="numYears" 
+              value={uploadYears} 
+              onChange={(e) => setUploadYears(Number(e.target.value))}
+              placeholder="Number of years"
+            />
+  
 
             <button
               className="mt-2 w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"

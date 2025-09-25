@@ -30,27 +30,28 @@ export function useStrategyParams() {
         ...globalParams,
         ...strategies[strategyType.value].params,
       ];
+
       const basic = allParams.filter((p) => p.category === "basic");
       const advanced = allParams.filter((p) => p.category === "advanced");
 
       const basicDefaults = Object.fromEntries(
         basic.map((p) => [
           p.name,
-          { value: p.default, label: p.label, type: p.type },
+          { value: p.default, label: p.label, type: p.type, bounds: p.bounds, optimise: p.optimise, integer: p.integer, category: p.category },
         ])
       );
       const advancedDefaults = Object.fromEntries(
         advanced.map((p) => [
           p.name,
-          { value: p.default, label: p.label, type: p.type },
+          { value: p.default, label: p.label, type: p.type, bounds: p.bounds, optimise: p.optimise, integer: p.integer, category: p.category },
         ])
       );
 
       setBasicParams(basicDefaults);
       setAdvancedParams(advancedDefaults);
     }
-  }, [strategyType]);
 
+  }, [strategyType]);
   return {
     strategyType,
     setStrategyType,

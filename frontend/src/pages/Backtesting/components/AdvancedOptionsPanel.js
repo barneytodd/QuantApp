@@ -26,7 +26,7 @@ export default function AdvancedOptionsPanel({
             <label className="block text-sm font-medium">{param.label}</label>
             <input
               type={param.type}
-              value={param.value}
+              value={param.value ?? ""}
               onChange={(e) =>
                 setAdvancedParams((prev) => ({
                   ...prev,

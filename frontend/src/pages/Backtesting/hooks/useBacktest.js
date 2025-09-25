@@ -17,7 +17,6 @@ export function useBacktest() {
           ...Object.fromEntries(Object.entries(basicParams).map(([k, v]) => [k, v.value])),
           ...Object.fromEntries(Object.entries(advancedParams).map(([k, v]) => [k, v.value])),
         },
-        initialCapital: 10000,
         pairs: strategyType.value === "pairs_trading" ? selectedPairs : undefined,
       };
 

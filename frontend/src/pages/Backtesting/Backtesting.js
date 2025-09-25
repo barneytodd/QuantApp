@@ -3,6 +3,7 @@ import { useSymbols } from "./hooks/useSymbols";
 import { useStrategyParams } from "./hooks/useStrategyParams";
 import { useBacktest } from "./hooks/useBacktest";
 import { useOptimisation } from "./hooks/useOptimisation";
+import { useOptimisationParams } from "./hooks/useOptimisationParams";
 import { usePairs } from "./hooks/usePairs";
 
 import StrategySelector from "./components/StrategySelector";
@@ -27,6 +28,7 @@ export default function Backtesting() {
 
   const { symbols, benchmarkData } = useSymbols();
   const { backtestResult, runBacktest, isLoading: backtestLoading } = useBacktest();
+  const { optimParams, setOptimParams } = useOptimisationParams()
   const { optimisationResult, optimiseParameters } = useOptimisation();
   
   const { 
@@ -45,8 +47,10 @@ export default function Backtesting() {
     basicParams,
     setBasicParams,
     advancedParams,
-    setAdvancedParams,
+    setAdvancedParams
   } = useStrategyParams();
+
+  
 
   // --- handlers ---
   const handleRunBacktest = async () => {
@@ -55,7 +59,40 @@ export default function Backtesting() {
   };
 
   const handleOptimise = async () => {
-    await optimiseParameters({ symbols: selectedSymbols, strategyType, basicParams, advancedParams });
+    await optimiseParameters({ symbols: selectedSymbols, strategyType, basicParams, advancedParams, optimParams });
+    console.log(optimisationResult)
+    if (!optimisationResult) {
+      return;
+    }
+
+    if (!optimisationResult.best_basic_params) {
+      return;
+    }
+    else {
+      const basic = optimisationResult.best_basic_params;
+      setBasicParams(prev => {
+        const updated = { ...prev };
+        for (const k in basic) {
+          updated[k] = { ...(prev[k] || {}), value: basic[k] };
+        }
+        return updated;
+      });
+    }
+
+    if (!optimisationResult.best_advanced_params) {
+      return;
+    }
+    else {
+      const advanced = optimisationResult.best_advanced_params;
+      setAdvancedParams(prev => {
+        const updated = { ...prev };
+        for (const k in advanced) {
+          updated[k] = { ...(prev[k] || {}), value: advanced[k] };
+        }
+        return updated;
+      });
+    }
+
   };
 
   const handleSelectPairs = async () => {
@@ -122,13 +159,13 @@ export default function Backtesting() {
           </div>
 
           {activeTab === "Overview" && (
-            <OverviewTab backtestResult={backtestResult} benchmarkData={benchmarkData} />
+            <OverviewTab results={backtestResult} benchmark={benchmarkData} />
           )}
           {activeTab === "Trade Analytics" && (
-            <TradeAnalyticsTab backtestResult={backtestResult} />
+            <TradeAnalyticsTab results={backtestResult} />
           )}
           {activeTab === "Risk & Exposure" && (
-            <RiskExposureTab backtestResult={backtestResult} />
+            <RiskExposureTab results={backtestResult} />
           )}
         </div>
       )}
@@ -144,6 +181,8 @@ export default function Backtesting() {
       <OptimiserPanel
         isOpen={isOptimiseOpen}
         onClose={() => setIsOptimiseOpen(false)}
+        optimisationParams={optimParams}
+        setOptimisationParams={setOptimParams}
         onRunOptimisation={handleOptimise}
       />
     </div>

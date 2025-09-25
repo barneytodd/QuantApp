@@ -5,7 +5,7 @@ import MetricCard from "../../../components/ui/MetricCard";
 
 export function OverviewTab({ results, benchmark }) {
   const [selectedTicker, setSelectedTicker] = useState("overall");
-  
+  console.log(benchmark)
   // List of tickers excluding "overall"
   const tickers = results
     .filter(r => r.symbol && r.symbol !== "overall")
