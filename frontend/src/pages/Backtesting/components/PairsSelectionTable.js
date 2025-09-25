@@ -24,15 +24,17 @@ export default function PairsSelectionTable({
               <th className="border px-2 py-1">Select</th>
               <th className="border px-2 py-1">Stock 1</th>
               <th className="border px-2 py-1">Stock 2</th>
-              <th className="border px-2 py-1">Score</th>
               <th className="border px-2 py-1">Correlation</th>
               <th className="border px-2 py-1">Cointegration p-value</th>
+              <th className="border px-2 py-1">Score</th>
             </tr>
           </thead>
           <tbody>
-            {pairCandidates.map((pair) => {
-              const isSelected = selectedPairs.some(
-                (p) => p.stock1 === pair.stock1 && p.stock2 === pair.stock2
+            {[...pairCandidates]
+              .sort((a, b) => b.score - a.score)
+              .map((pair) => {
+                const isSelected = selectedPairs.some(
+                  (p) => p.stock1 === pair.stock1 && p.stock2 === pair.stock2
               );
               return (
                 <tr key={`${pair.stock1}-${pair.stock2}`}>
@@ -59,9 +61,9 @@ export default function PairsSelectionTable({
                   </td>
                   <td className="border px-2 py-1">{pair.stock1}</td>
                   <td className="border px-2 py-1">{pair.stock2}</td>
-                  <td className="border px-2 py-1">{pair.score.toFixed(3)}</td>
                   <td className="border px-2 py-1">{pair.corr.toFixed(3)}</td>
                   <td className="border px-2 py-1">{pair.p_value.toFixed(4)}</td>
+                  <td className="border px-2 py-1">{pair.score.toFixed(3)}</td>
                 </tr>
               );
             })}
