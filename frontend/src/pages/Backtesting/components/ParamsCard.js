@@ -9,6 +9,10 @@ export default function ParamsCard({
   onOpenOptimiser,
   onRunBacktest,
   backtestLoading,
+  selectedSymbols,
+  selectedPairs,
+  optimError,
+  optimLoading
 }) {
   return (
     <div className="bg-white shadow rounded-xl p-4 col-span-1 md:col-span-2">
@@ -64,15 +68,24 @@ export default function ParamsCard({
 
           <button
             onClick={onOpenOptimiser}
-            className="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium"
+            disabled={
+              optimLoading || 
+              selectedSymbols.length === 0 || 
+              (strategyType?.value === "pairs_trading" && selectedPairs.length === 0)
+            }
+            className="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Optimise Parameters
           </button>
 
           <button
             onClick={onRunBacktest}
-            disabled={backtestLoading}
-            className={`px-4 py-2 rounded-lg text-white ${backtestLoading ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"}`}
+            disabled={
+              backtestLoading || 
+              selectedSymbols.length === 0 || 
+              (strategyType?.value === "pairs_trading" && selectedPairs.length === 0)
+            }
+            className={"px-4 py-2 rounded-lg text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"}
           >
             {backtestLoading ? "Running..." : "Run Backtest"}
           </button>

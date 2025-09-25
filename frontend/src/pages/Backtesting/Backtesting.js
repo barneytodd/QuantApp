@@ -29,7 +29,7 @@ export default function Backtesting() {
   const { symbols, benchmarkData } = useSymbols();
   const { backtestResult, runBacktest, isLoading: backtestLoading } = useBacktest();
   const { optimParams, setOptimParams } = useOptimisationParams()
-  const { optimisationResult, optimiseParameters } = useOptimisation();
+  const { optimisationResult, optimiseParameters, isLoading: optimLoading, error: optimError } = useOptimisation();
   
   const { 
     pairCandidates, 
@@ -119,12 +119,21 @@ export default function Backtesting() {
         <ParamsCard
           basicParams={basicParams}
           setBasicParams={setBasicParams}
+
+          selectedSymbols={selectedSymbols}
           strategyType={strategyType}
+
           onSelectPairs={handleSelectPairs}
           pairsLoading={pairsLoading}
           pairsError={pairsError}
+          selectedPairs={selectedPairs}
+
           onOpenAdvanced={() => setIsAdvancedOpen(true)}
+          
           onOpenOptimiser={() => setIsOptimiseOpen(true)}
+          optimLoading={optimLoading}
+          optimError={optimError}
+
           onRunBacktest={handleRunBacktest}
           backtestLoading={backtestLoading}
         />
