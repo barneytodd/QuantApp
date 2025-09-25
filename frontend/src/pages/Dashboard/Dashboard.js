@@ -15,7 +15,7 @@
 
     const [uploadSymbols, setUploadSymbols] = useState([]);
     const [selectedUploadSymbols, setSelectedUploadSymbols] = useState([]);
-    const [uploadYears, setUploadYears] = useState(null)
+    const [uploadYears, setUploadYears] = useState(null);
     
     const [ohlcv, setOhlcv] = useState([]);
     const [metrics, setMetrics] = useState({});
@@ -75,17 +75,31 @@
         const res = await fetch("http://localhost:8000/api/data/ohlcv/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ symbols: symbolValues, period: `${uploadYears}y` }),
+          body: JSON.stringify({ symbols: symbolValues, period: uploadYears.value }),
         });
         const result = await res.json();
-        console.log("Upload result:", result);
-        alert(`Data uploaded for ${symbolValues.length} symbols`);
+        console.log(result)
+        alert(`Data from last ${uploadYears.label} uploaded for ${symbolValues.length} symbols`);
       } catch (err) {
         console.error(err);
         alert("Error uploading data");
       }
     };
     
+    const periodOptions = [
+      {"value": "1d", "label": "1 day"},
+      {"value": "5d", "label": "5 days"},
+      {"value": "1mo", "label": "1 month"},
+      {"value": "3mo", "label": "3 months"},
+      {"value": "6mo", "label": "6 months"},
+      {"value": "1y", "label": "1 year"},
+      {"value": "2y", "label": "2 years"},
+      {"value": "5y", "label": "5 years"},
+      {"value": "10y", "label": "10 years"},
+      {"value": "ytd", "label": "Year to date"},
+      {"value": "max", "label": "Maximum available history"},
+    ]
+
     // build dashboard
     return (
       <div className="p-4 space-y-4">
@@ -127,20 +141,24 @@
               styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
             />
 
-            <input 
-              class="border p-2 rounded w-48" 
-              type="number" 
-              id="numYears" 
-              value={uploadYears} 
-              onChange={(e) => setUploadYears(Number(e.target.value))}
+            <Select
+              options={periodOptions}
+              value={uploadYears}
+              onChange={setUploadYears}
+              closeMenuOnSelect={true}
+              menuShouldScrollIntoView={false}
               placeholder="Number of years"
+              menuPortalTarget={document.body}
+              menuPosition="fixed"
+              styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
             />
+
   
 
             <button
               className="mt-2 w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleUploadData}
-              disabled={selectedUploadSymbols.length === 0}
+              disabled={selectedUploadSymbols.length === 0 || !uploadYears}
             >
               Upload / Insert
             </button>
