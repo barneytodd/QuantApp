@@ -27,7 +27,7 @@ export default function Backtesting() {
   const [isOptimiseOpen, setIsOptimiseOpen] = useState(false);
 
   const { symbols, benchmarkData } = useSymbols();
-  const { backtestResult, runBacktest, isLoading: backtestLoading } = useBacktest();
+  const { backtestResult, runBacktest, isLoading: backtestLoading, error: backtestError } = useBacktest();
   const { optimParams, setOptimParams } = useOptimisationParams()
   const { optimisationResult, optimiseParameters, isLoading: optimLoading, error: optimError } = useOptimisation();
   
@@ -55,13 +55,14 @@ export default function Backtesting() {
   // --- handlers ---
   const handleRunBacktest = async () => {
     await runBacktest({ symbols: selectedSymbols, strategyType, basicParams, advancedParams, selectedPairs });
-    setActiveTab("Overview");
+    if (!backtestError && backtestResult) {
+      setActiveTab("Overview");
+    }
   };
 
   const handleOptimise = async () => {
     await optimiseParameters({ symbols: selectedSymbols, strategyType, basicParams, advancedParams, optimParams });
-    console.log(optimisationResult)
-    if (!optimisationResult) {
+    if (!optimisationResult || optimError !== null) {
       return;
     }
 

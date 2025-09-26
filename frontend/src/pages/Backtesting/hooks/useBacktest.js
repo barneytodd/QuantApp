@@ -26,14 +26,16 @@ export function useBacktest() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Backtest failed");
-
+      if (!res.ok) {
+        alert("Backtest failed");
+        return; 
+      }
       const data = await res.json();
       setBacktestResult(data);
       return data;
     } catch (err) {
       setError(err);
-      throw err;
+      alert("Backtest failed");
     } finally {
       setIsLoading(false);
     }
