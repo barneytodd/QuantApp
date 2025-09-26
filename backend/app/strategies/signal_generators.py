@@ -1,4 +1,4 @@
-from app.utils.indicators import compute_sma, compute_bollinger_bands, compute_rsi
+from app.utils.indicators import compute_sma, compute_bollinger_bands, compute_rsi, compute_ema
 
 # SMA Signal Generator
 def sma_signal_generator(data, i, params):
@@ -17,8 +17,8 @@ def sma_signal_generator(data, i, params):
 
 # Bollinger Bands Signal Generator
 def bollinger_signal_generator(data, i, params):
-    period, std_dev = params["period"], params["stdDev"]
-    bands = compute_bollinger_bands(data, period, std_dev)
+    period, std_dev, bollinger_multiplier = params["period"], params["stdDev"], params["bollingerMultiplier"]
+    bands = compute_bollinger_bands(data, period, std_dev*bollinger_multiplier)
     price = data[i]["close"]
     if not bands[i]["lower"] or not bands[i]["upper"]:
         return "hold"
@@ -30,9 +30,17 @@ def bollinger_signal_generator(data, i, params):
 
 # RSI Signal Generator
 def rsi_signal_generator(data, i, params):
-    period, oversold, overbought = params["period"], params["oversold"], params["overbought"]
+    period, oversold, overbought, smoothing = params["period"], params["oversold"], params["overbought"], params["signalSmoothing"]
     rsi_series = compute_rsi(data, period)
-    rsi = rsi_series[i]["value"]
+    rsi_values = [r["value"] for r in rsi_series]
+
+    
+    if smoothing > 1:
+        smoothed_rsi_series = compute_ema(rsi_values, smoothing)
+        rsi = smoothed_rsi_series[i]["value"]
+    else:
+        rsi = rsi_values[i]
+
     if rsi is None:
         return "hold"
     if rsi < oversold:
@@ -55,17 +63,17 @@ def momentum_signal_generator(data, i, params):
 
 # Breakout Signal Generator
 def breakout_signal_generator(data, i, params):
-    lookback = params["lookback"]
+    lookback, multiplier = params["lookback"], params["breakoutMultiplier"]
     if i < lookback:
         return "hold"
     window = data[i - lookback:i]
-    highs = [d["close"] for d in window]
-    lows = [d["close"] for d in window]
-    max_high, min_low = max(highs), min(lows)
+    values = [d["close"] for d in window]
+    max_high, min_low = max(values), min(values)
     price = data[i]["close"]
-    if price > max_high:
+    rnge = max_high - min_low
+    if price > max_high + multiplier * rnge:
         return "buy"
-    if price < min_low:
+    if price < min_low - multiplier * rnge:
         return "sell"
     return "hold"
 

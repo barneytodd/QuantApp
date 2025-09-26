@@ -31,6 +31,28 @@ def compute_bollinger_bands(data, period, std_dev):
             })
     return result
 
+# Exponential Moving Average
+def compute_ema(values, period):
+    result = []
+    k = 2 / (period + 1)  # smoothing factor
+    ema_prev = None
+    for i, v in enumerate(values):
+        if v is None:
+            result.append({"value": None})
+            continue
+        if ema_prev is None:
+            # Start EMA with SMA of first 'period' values
+            if i < period - 1:
+                result.append({"value": None})
+                continue
+            window = [x for x in values[i - period + 1:i + 1] if x is not None]
+            ema_prev = sum(window) / period
+        else:
+            ema_prev = v * k + ema_prev * (1 - k)
+        result.append({"value": ema_prev})
+    return result
+
+
 # Relative Strength Index
 def compute_rsi(data, period):
     closes = [d["close"] for d in data]

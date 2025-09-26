@@ -117,7 +117,7 @@ def optimise_parameters(strategy, symbols, param_space, optim_params, db, initia
                 sk_space.append(Integer(param["bounds"][0], param["bounds"][1], name=name))
             else:
                 sk_space.append(Real(param["bounds"][0], param["bounds"][1], name=name))
-        elif param["type"] == "string":
+        elif param["type"] == "categorical":
             sk_space.append(Categorical(param["options"], name=name))
 
     trials = []

@@ -90,4 +90,23 @@ export const globalParams = [
     optimise: false,
     integer: false
   },
+  { 
+    name: "positionSizing", 
+    label: "Position Sizing (%)", 
+    type: "number", 
+    default: 100, 
+    bounds: [1, 100], 
+    category: "advanced", 
+    optimise: true, 
+    integer: false 
+  },
+  { 
+    name: "maxConcurrentPositions", 
+    label: "Max Concurrent Positions", 
+    type: "categorical", 
+    default: "unlimited", 
+    options: [1, 2, 3, 5, 10, 20, "unlimited"], 
+    category: "advanced", 
+    optimise: true, 
+  },
 ];

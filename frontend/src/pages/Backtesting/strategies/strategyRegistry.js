@@ -7,8 +7,6 @@ export const strategies = {
       { name: "longPeriod", label: "Long SMA Period", type: "number", default: 50, bounds: [20, 200], category: "basic", optimise: true, integer: true },
 
       // --- Advanced ---
-      { name: "positionSizing", label: "Position Sizing (%)", type: "number", default: 100, bounds: [1, 100], category: "advanced", optimise: true, integer: false },
-      { name: "maxConcurrentPositions", label: "Max Concurrent Positions", type: "number", default: 5, bounds: [1, 20], category: "advanced", optimise: true, integer: true },
     ],
   },
 
@@ -17,11 +15,10 @@ export const strategies = {
     params: [
       // --- Basic ---
       { name: "period", label: "SMA Period", type: "number", default: 20, bounds: [5, 100], category: "basic", optimise: true, integer: true },
-      { name: "stdDev", label: "Standard Deviations", type: "number", default: 2, bounds: [0.5, 5], category: "basic", optimise: true, integer: false },
+      { name: "stdDev", label: "Standard Deviations", type: "number", default: 2, bounds: [0.5, 5], category: "basic", optimise: false, integer: false },
 
       // --- Advanced ---
-      { name: "bollingerMultiplier", label: "Band Multiplier", type: "number", default: 2, bounds: [0.5, 5], category: "advanced", optimise: true, integer: false },
-      { name: "positionSizing", label: "Position Sizing (%)", type: "number", default: 100, bounds: [1, 100], category: "advanced", optimise: true, integer: false },
+      { name: "bollingerMultiplier", label: "Band Multiplier", type: "number", default: 1, bounds: [0.5, 5], category: "advanced", optimise: true, integer: false },
     ],
   },
 
@@ -35,7 +32,6 @@ export const strategies = {
 
       // --- Advanced ---
       { name: "signalSmoothing", label: "Signal Smoothing (EMA)", type: "number", default: 3, bounds: [1, 10], category: "advanced", optimise: true, integer: true },
-      { name: "positionSizing", label: "Position Sizing (%)", type: "number", default: 100, bounds: [1, 100], category: "advanced", optimise: true, integer: false },
     ],
   },
 
@@ -48,7 +44,6 @@ export const strategies = {
       // --- Advanced ---
       { name: "holdingPeriod", label: "Holding Period", type: "number", default: 21, bounds: [1, 60], category: "advanced", optimise: true, integer: true },
       { name: "volatilityTarget", label: "Volatility Target (%)", type: "number", default: 15, bounds: [1, 50], category: "advanced", optimise: true, integer: false },
-      { name: "positionSizing", label: "Position Sizing (%)", type: "number", default: 100, bounds: [1, 100], category: "advanced", optimise: true, integer: false },
     ],
   },
 
@@ -59,8 +54,7 @@ export const strategies = {
       { name: "lookback", label: "Lookback Period", type: "number", default: 20, bounds: [5, 100], category: "basic", optimise: true, integer: true },
 
       // --- Advanced ---
-      { name: "breakoutMultiplier", label: "Breakout Threshold Multiplier", type: "number", default: 1.0, bounds: [0.5, 5.0], category: "advanced", optimise: true, integer: false },
-      { name: "positionSizing", label: "Position Sizing (%)", type: "number", default: 100, bounds: [1, 100], category: "advanced", optimise: true, integer: false },
+      { name: "breakoutMultiplier", label: "Breakout Threshold Multiplier", type: "number", default: 0.0, bounds: [0.0, 0.5], category: "advanced", optimise: true, integer: false },
     ],
   },
 
@@ -75,7 +69,6 @@ export const strategies = {
       // --- Advanced ---
       { name: "maxHolding", label: "Max Holding Days", type: "number", default: 20, bounds: [1, 60], category: "advanced", optimise: true, integer: true },
       { name: "hedgeRatio", label: "Hedge Ratio (β)", type: "number", default: 1.0, bounds: [0.1, 2.0], category: "advanced", optimise: true, integer: false },
-      { name: "positionSizing", label: "Position Sizing (%)", type: "number", default: 100, bounds: [1, 100], category: "advanced", optimise: true, integer: false },
     ],
   },
 };
