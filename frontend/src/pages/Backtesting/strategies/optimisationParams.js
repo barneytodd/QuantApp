@@ -12,16 +12,10 @@ export const optimisationParams = [
         default: 10,
     }, 
     {
-        name: "trainYears",
-        label: "Number of years of training data for each fold",
+        name: "foldLength",
+        label: "Years of data in each fold",
         type: "number",
         default: 2
-    },
-    {
-        name: "testYears",
-        label: "Number of years of test data for each fold",
-        type: "number",
-        default: 1
     },
     { 
         name: "iterations",

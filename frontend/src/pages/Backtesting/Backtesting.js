@@ -61,7 +61,7 @@ export default function Backtesting() {
   };
 
   const handleOptimise = async () => {
-    await optimiseParameters({ symbols: selectedSymbols, strategyType, basicParams, advancedParams, optimParams });
+    await optimiseParameters({ symbols: selectedSymbols, strategyType, basicParams, advancedParams, optimParams, selectedPairs });
     if (!optimisationResult || optimError !== null) {
       return;
     }
@@ -194,6 +194,7 @@ export default function Backtesting() {
         optimisationParams={optimParams}
         setOptimisationParams={setOptimParams}
         onRunOptimisation={handleOptimise}
+        optimLoading={optimLoading}
       />
     </div>
   );

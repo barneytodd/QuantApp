@@ -8,11 +8,10 @@ export function useBacktest() {
   const runBacktest = async ({ symbols, strategyType, basicParams, advancedParams, selectedPairs }) => {
     setIsLoading(true);
     setError(null);
-
     try {
       const payload = {
         strategy: strategyType.value,
-        symbols: symbols.map((s) => s.value),
+        symbols: strategyType.value === "pairs_trading" ? selectedPairs.map((s) => [s.stock1, s.stock2]) : symbols.map((s) => [s.value]),
         params: {
           ...Object.fromEntries(Object.entries(basicParams).map(([k, v]) => [k, v.value])),
           ...Object.fromEntries(Object.entries(advancedParams).map(([k, v]) => [k, v.value])),

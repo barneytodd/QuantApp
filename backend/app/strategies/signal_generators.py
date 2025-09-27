@@ -79,16 +79,16 @@ def breakout_signal_generator(data, i, params):
 
 # Pairs Trading Signal Generator
 def pairs_signal_generator(data, i, params):
- 
-    lookback, entryZ, exitZ, stock1, stock2 = params["lookback"], params["entryZ"], params["exitZ"], params["stock1"], params["stock2"]
+    lookback, entryZ, exitZ = params["lookback"], params["entryZ"], params["exitZ"]
+    stock1, stock2 = data.columns.tolist()[1:]
 
     if i < lookback:
         return "hold"
 
-    price1, price2 = data[i][stock1], data[i][stock2]
+    price1, price2 = data[stock1].iloc[i], data[stock2].iloc[i]
 
     # compute spread series for rolling window
-    spread_series = [data[j][stock1] - data[j][stock2] for j in range(i - lookback, i)]
+    spread_series = [data[stock1].iloc[j] - data[stock2].iloc[j] for j in range(i - lookback, i)]
     mean = sum(spread_series) / lookback
     std = (sum((x - mean) ** 2 for x in spread_series) / lookback) ** 0.5
 

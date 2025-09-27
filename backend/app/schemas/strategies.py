@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional
 # Request model for running a strategy backtest
 class StrategyRequest(BaseModel):
     strategy: str
-    symbols: List[str]
+    symbols: List[List[str]]
     params: Dict[str, Any]
     pairs: Optional[List[Dict[str, Any]]] = [] 
 

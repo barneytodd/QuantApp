@@ -1,117 +1,149 @@
-from math import sqrt
-from collections import defaultdict
-from app.utils.backtest_helpers import compute_metrics, compute_trade_stats, commission, calc_effective_price
+from ..helpers.backtest.positions import check_signal, open_position, close_position
+from ..helpers.backtest.metrics import compute_metrics, compute_trade_stats
+from ..helpers.pairs.align_series import align_series
 
-# Run backtest on historical data with given parameters and signal generator
-def run_backtest(data, params, signal_generator, initial_capital):
+def run_backtest(data, symbols, params):
+    """
+    data: dict {symbol: [{"date":..., "close":...}, ...]} - stores data separately for each symbol
+    symbols: dict { symbol: strategy } - stores pairs as single symbols
+    params: dict of strategy parameters
+    """
     slippage_pct = params["slippage"] / 100
     transaction_pct = params["transactionCostPct"] / 100
     transaction_fixed = params["fixedTransactionCost"] 
-    
-    symbol = data[0]["symbol"]
-    capital = initial_capital
-    position = 0
-    equity_curve = []
-    trades = []
-    entry_price = None
-    entry_date = None
-    for i, row in enumerate(data):
-        price = row["close"]
-        signal = signal_generator(data, i, params)
+    initial_capital = params["initialCapital"]
 
-        if signal == "buy" and position == 0:
-            effective_price = calc_effective_price(price, slippage_pct, "buy")
-            position = (capital - commission(signal, capital, effective_price, 0, transaction_pct,transaction_fixed)) / effective_price
-            capital = 0
-            entry_price = price
-            entry_date = row["date"]
+    capital = {symbol:initial_capital/len(symbols) for symbol in symbols.keys()}
+    positions = {symbol:0 for symbol in data.keys()}
+    equity_curves = {**{symbol: [] for symbol in symbols.keys()}, "overall": []}
+    trades = {symbol:[] for symbol in symbols.keys()}
+    entry_prices = {symbol:None for symbol in data.keys()}
+    entry_dates = {symbol:None for symbol in symbols.keys()}
+    last_date = {symbol:None for symbol in data.keys()}
 
-        if signal == "sell" and position > 0:
-            effective_exit = calc_effective_price(price, slippage_pct, "sell")
-            effective_entry = calc_effective_price(entry_price, slippage_pct, "buy")
-            pnl = position * (effective_exit - effective_entry)
-            return_pct = (effective_exit - effective_entry) / effective_entry * 100
-            trades.append({
-                "symbol": symbol,
-                "direction": "Long",
-                "entryDate": entry_date,
-                "exitDate": row["date"],
-                "entryPrice": entry_price,
-                "exitPrice": price,
-                "pnl": pnl,
-                "returnPct": return_pct
-            })
-            capital = position * effective_exit - commission("sell", 0, effective_exit, position, transaction_pct,transaction_fixed)
-            position = 0
-            entry_price = None
-            entry_date = None
+    all_dates = sorted({row["date"] for d in data.values() for row in d})
 
-        equity_curve.append({"date": row["date"], "value": capital + position * price})
+    for date in all_dates:
+        
+        # --- 1. Generate signals ---
+        signals = {}
+        for symbol, strategy in symbols.items():
+            if strategy == "pairs_trading":
+                stock1, stock2 = symbol.split("-")
+                prices_dict = {stock: data[stock] for stock in [stock1, stock2]}
+                symbol_data = align_series(prices_dict, stock1, stock2)
+            else:
+                stock1 = stock2 = symbol
+                symbol_data = data[symbol]
+            signal = check_signal(positions[stock1], date, symbol_data, params, strategy)
 
-    # Final liquidation
-    if position > 0:
-        last_price = data[-1]["close"]
-        effective_last = calc_effective_price(last_price, slippage_pct, "sell")
-        effective_entry = calc_effective_price(entry_price, slippage_pct, "buy")
-        pnl = position * (effective_last - effective_entry)
-        return_pct = (effective_last - effective_entry) / effective_entry * 100
-        trades.append({
+            if signal is not None:
+                last_date[stock1] = date
+                last_date[stock2] = date
+                signals[symbol] = signal
+            else:
+                signals[symbol] = "hold"
+
+
+        # --- 2. Apply exits ---
+        for symbol, signal in signals.items():
+            if signal in ["sell", "exit"]:
+                if symbols[symbol] == "pairs_trading":
+                    stocks = symbol.split("-")
+                else:
+                    stocks = [symbol]
+                prices = [next((d["close"] for d in data[s] if d["date"] == date), None) for s in stocks]
+                entry_ps = [entry_prices[s] for s in stocks]
+                pos = [positions[s] for s in stocks]
+                
+                capital[symbol], new_trades = close_position(
+                    stocks,
+                    prices,
+                    capital[symbol],
+                    entry_ps,
+                    pos, 
+                    date, 
+                    entry_dates[symbol],
+                    slippage_pct,
+                    transaction_pct,
+                    transaction_fixed
+                )
+                trades[symbol].extend(new_trades)
+                for s in stocks:
+                    positions[s] = 0
+                    entry_prices[s] = None
+                entry_dates[symbol] = None
+
+
+        # --- 3. Apply entries ---
+        for symbol in signals.keys():
+            if signals[symbol] in ["buy", "short", "long"]:
+                
+                if symbols[symbol] == "pairs_trading":
+                    stocks = symbol.split("-")
+                else:
+                    stocks = [symbol]
+
+                prices = [next((d["close"] for d in data[s] if d["date"] == date), None) for s in stocks]
+                cap = capital[symbol]
+
+                new_positions, capital[symbol], new_entry_prices = open_position(
+                            signal, prices, cap, slippage_pct, transaction_pct, transaction_fixed
+                )
+
+                for i, stock in enumerate(stocks):
+                    positions[stock] = new_positions[i]
+                    entry_prices[stock] = new_entry_prices[i]
+                
+                entry_dates[symbol] = date
+
+
+        # --- 4. Mark portfolio value 
+        for symbol in symbols.keys():
+            if strategy == "pairs_trading":
+                stocks = symbol.split("-")
+            else:
+                stocks = [symbol]
+            value = capital[symbol]
+            for stock in stocks:
+                price = next((d["close"] for d in data[stock] if d["date"] == date), None)
+                if price is not None:
+                    value += positions[stock] * price
+                else:
+                    value = None
+                    break
+            if value is not None:
+                equity_curves[symbol].append({"date": date, "value": value})
+                    
+
+
+        portfolio_value = close_position(
+            [stock for stock in data.keys()],
+            [next((d["close"] for d in data[s] if d["date"] == last_date[s]), None) for s in data.keys()],
+            sum(capital.values()),
+            [p for p in entry_prices.values()],
+            [pos for pos in positions.values()], 
+            date, 
+            None,
+            0,
+            0,
+            0
+        )[0]
+        equity_curves["overall"].append({"date": date, "value": portfolio_value})
+
+    results = []
+    for symbol, equity_curve in equity_curves.items():
+        initialCapital = initial_capital / len(symbols) if symbol != "overall" else initial_capital
+        symbol_trades = trades[symbol] if symbol != "overall" else [trade for trade_list in trades.values() for trade in trade_list]
+        results.append({
             "symbol": symbol,
-            "direction": "Long",
-            "entryDate": entry_date,
-            "exitDate": data[-1]["date"],
-            "entryPrice": entry_price,
-            "exitPrice": last_price,
-            "pnl": pnl,
-            "returnPct": return_pct
+            "initialCapital": initialCapital,
+            "finalCapital": equity_curve[-1]["value"],
+            "returnPct": (equity_curve[-1]["value"] / initialCapital - 1) * 100,
+            "metrics": compute_metrics(equity_curve),
+            "equityCurve": equity_curve,
+            "trades": symbol_trades,
+            "tradeStats": compute_trade_stats(symbol_trades)
         })
-        capital = position * last_price - commission("sell", 0, effective_last, position, transaction_pct,transaction_fixed)
-        position = 0
-    return {
-        "symbol": symbol,
-        "initialCapital": initial_capital,
-        "finalCapital": capital,
-        "returnPct": (capital / initial_capital - 1) * 100,
-        "equityCurve": equity_curve,
-        "trades": trades,
-        "metrics": compute_metrics(equity_curve),
-        "tradeStats": compute_trade_stats(trades)
-    }
 
-# Combine results from multiple backtests into one overall result
-def combine_results(results):
-
-    date_map = defaultdict(float)
-    combined_trades = []
-
-    all_dates = sorted({p["date"] for r in results for p in r["equityCurve"]})
-
-    for r in results:
-
-        curve = r["equityCurve"]
-        idx = 0
-        n = len(curve)
-        last_value = r["initialCapital"]
-
-        for date in all_dates:
-            while idx < n and curve[idx]["date"] <= date:
-                last_value = curve[idx]["value"]
-                idx += 1
-            value = last_value
-            date_map[date] += value
-
-        combined_trades.extend(r["trades"])
-
-    combined_curve = [{"date": date, "value": value} for date, value in sorted(date_map.items())]
-    initial_capital = sum(r["initialCapital"] for r in results)
-    final_capital = combined_curve[-1]["value"] if combined_curve else initial_capital
-    return {
-        "symbol": "overall",
-        "initialCapital": initial_capital,
-        "finalCapital": final_capital,
-        "returnPct": (final_capital / initial_capital - 1) * 100,
-        "equityCurve": combined_curve,
-        "trades": combined_trades,
-        "metrics": compute_metrics(combined_curve),
-        "tradeStats": compute_trade_stats(combined_trades)
-    }
+    return results

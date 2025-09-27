@@ -4,6 +4,7 @@ export default function OptimiserPanel({
   optimisationParams,
   setOptimisationParams,
   onRunOptimisation,
+  optimLoading
 }) {
   if (!isOpen) return null; // don't render at all when closed
 
@@ -67,9 +68,13 @@ export default function OptimiserPanel({
         <div>
           <button
             onClick={onRunOptimisation}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium w-full"
+            disabled={
+              optimLoading || 
+              optimisationParams.length === 0
+            }
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Run Optimisation
+            {optimLoading ? "Running..." : "Optimise"}
           </button>
         </div>
       </div>

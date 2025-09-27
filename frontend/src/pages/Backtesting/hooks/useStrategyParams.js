@@ -37,13 +37,13 @@ export function useStrategyParams() {
       const basicDefaults = Object.fromEntries(
         basic.map((p) => [
           p.name,
-          { value: p.default, label: p.label, type: p.type, bounds: p.bounds, optimise: p.optimise, integer: p.integer, category: p.category },
+          { value: p.default, label: p.label, type: p.type, bounds: p.bounds, optimise: p.optimise, integer: p.integer, category: p.category, options: p.options },
         ])
       );
       const advancedDefaults = Object.fromEntries(
         advanced.map((p) => [
           p.name,
-          { value: p.default, label: p.label, type: p.type, bounds: p.bounds, optimise: p.optimise, integer: p.integer, category: p.category },
+          { value: p.default, label: p.label, type: p.type, bounds: p.bounds, optimise: p.optimise, integer: p.integer, category: p.category, options: p.options },
         ])
       );
 

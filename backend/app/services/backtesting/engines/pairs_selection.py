@@ -4,7 +4,7 @@ from itertools import combinations
 from app.utils.scoring import compute_pair_score
 import numpy as np
 import pandas as pd
-from app.utils.pairs_helpers import align_series
+from ..helpers.pairs.align_series import align_series
 
 def engle_granger_test(y, x):
     """Run Engle-Granger cointegration test."""
