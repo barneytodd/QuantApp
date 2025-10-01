@@ -17,8 +17,8 @@ def sma_signal_generator(data, i, params):
 
 # Bollinger Bands Signal Generator
 def bollinger_signal_generator(data, i, params):
-    period, std_dev, bollinger_multiplier = params["period"], params["stdDev"], params["bollingerMultiplier"]
-    bands = compute_bollinger_bands(data, period, std_dev*bollinger_multiplier)
+    period, std_dev = params["period"], params["bandMultiplier"]
+    bands = compute_bollinger_bands(data, period, std_dev)
     price = data[i]["close"]
     if not bands[i]["lower"] or not bands[i]["upper"]:
         return "hold"

@@ -1,21 +1,33 @@
 from app.strategies.signal_registry import generators
 from .pricing import calc_effective_price, commission
+from .advanced_params import check_holding_period
 
-def check_signal(position, date, data, params, strategy):
+def check_signal(position, date, entry_date, data, params, strategy):
 	"""
 	Check the signal for a given position on a specific date.
+
+	---params---
 	position: int 0=no position, >0=long,<0=short
 	data: list [{"date":..., "close":...}, ...]
 	params: strategy parameters
 	strategy: str
+
+	---return---
+	signal: str indicating trading signal
+	index: int 
 	"""
+	chp = check_holding_period(params["minHoldingPeriod"], position, entry_date, date)
+	if not chp:
+		return "hold"
+
+
 
 	dates = data["date"].tolist() if strategy == "pairs_trading" else [row["date"] for row in data]
 	
 	try:
 		i = dates.index(date)
 	except ValueError:
-		return None
+		return "hold"
 
 	signal = generators[strategy](data, i, params)
 

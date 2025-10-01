@@ -46,7 +46,7 @@ def optimise_parameters(data, symbols, param_space, optim_params, initial_capita
 
     best_basic_params = {k:v for k,v in best_params.items() if param_space[k]["category"] == "basic"}
     best_advanced_params = {k:v for k,v in best_params.items() if param_space[k]["category"] == "advanced"}
-    print(best_basic_params)
+
     return convert_numpy({
         "best_basic_params": best_basic_params,
         "best_advanced_params": best_advanced_params,

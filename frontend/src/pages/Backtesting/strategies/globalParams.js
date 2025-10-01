@@ -64,15 +64,6 @@ export const globalParams = [
     integer: true
   },
   {
-    name: "rebalanceFrequency",
-    label: "Rebalance Frequency (days)",
-    type: "number",
-    default: null, 
-    category: "advanced",
-    optimise: false,
-    integer: true
-  },
-  {
     name: "stopLoss",
     label: "Stop Loss (%)",
     type: "number",
@@ -109,4 +100,13 @@ export const globalParams = [
     category: "advanced", 
     optimise: true, 
   },
+  { 
+    name: "minHoldingPeriod", 
+    label: "Minimum Holding Period", 
+    type: "categorical", 
+    default: 0, 
+    options: [0, 1, 5, 10, 20, 60], 
+    category: "advanced", 
+    optimise: true, 
+  }
 ];

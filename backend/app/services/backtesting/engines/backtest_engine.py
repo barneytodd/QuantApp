@@ -1,6 +1,7 @@
 from ..helpers.backtest.positions import check_signal, open_position, close_position
 from ..helpers.backtest.metrics import compute_metrics, compute_trade_stats
 from ..helpers.pairs.align_series import align_series
+from ..helpers.backtest.advanced_params import rebalance
 
 def run_backtest(data, symbols, params):
     """
@@ -19,27 +20,35 @@ def run_backtest(data, symbols, params):
     trades = {symbol:[] for symbol in symbols.keys()}
     entry_prices = {symbol:None for symbol in data.keys()}
     entry_dates = {symbol:None for symbol in symbols.keys()}
-    last_date = {symbol:None for symbol in data.keys()}
+    last_prices = {symbol:None for symbol in data.keys()}
+    current_prices = {symbol:None for symbol in data.keys()}
 
     all_dates = sorted({row["date"] for d in data.values() for row in d})
 
-    for date in all_dates:
+    for idx, date in enumerate(all_dates):
         
         # --- 1. Generate signals ---
         signals = {}
         for symbol, strategy in symbols.items():
             if strategy == "pairs_trading":
-                stock1, stock2 = symbol.split("-")
-                prices_dict = {stock: data[stock] for stock in [stock1, stock2]}
-                symbol_data = align_series(prices_dict, stock1, stock2)
+                stocks = symbol.split("-")
+                prices_dict = {stock: data[stock] for stock in stocks}
+                symbol_data = align_series(prices_dict, stocks[0], stocks[1])
             else:
-                stock1 = stock2 = symbol
+                stocks = [symbol]
                 symbol_data = data[symbol]
-            signal = check_signal(positions[stock1], date, symbol_data, params, strategy)
 
-            if signal is not None:
-                last_date[stock1] = date
-                last_date[stock2] = date
+            data_check = True
+            for stock in stocks:
+                price = next((d["close"] for d in data[stock] if d["date"] == date), None)
+                current_prices[stock] = price
+                if price is None:
+                    data_check = False
+                else:
+                    last_prices[stock] = price
+
+            if data_check:
+                signal = check_signal(positions[stocks[0]], date, entry_dates[symbol], symbol_data, params, strategy)
                 signals[symbol] = signal
             else:
                 signals[symbol] = "hold"
@@ -52,7 +61,7 @@ def run_backtest(data, symbols, params):
                     stocks = symbol.split("-")
                 else:
                     stocks = [symbol]
-                prices = [next((d["close"] for d in data[s] if d["date"] == date), None) for s in stocks]
+                prices = [current_prices[s] for s in stocks]
                 entry_ps = [entry_prices[s] for s in stocks]
                 pos = [positions[s] for s in stocks]
                 
@@ -84,7 +93,7 @@ def run_backtest(data, symbols, params):
                 else:
                     stocks = [symbol]
 
-                prices = [next((d["close"] for d in data[s] if d["date"] == date), None) for s in stocks]
+                prices = [current_prices[s] for s in stocks]
                 cap = capital[symbol]
 
                 new_positions, capital[symbol], new_entry_prices = open_position(
@@ -97,8 +106,15 @@ def run_backtest(data, symbols, params):
                 
                 entry_dates[symbol] = date
 
+        
+        # --- 4. Apply rebalancing ---
+        #freq = params["rebalanceFrequency"]
+        #lookback = params["volLookback"]
+        #if freq not in [0, "onSignal"] and idx%int(freq) == 0 and lookback <= idx:
+        #    pass
+            #positions = rebalance(equity_curves, positions, current_prices, float(params["volTarget"])/100, lookback)
 
-        # --- 4. Mark portfolio value 
+        # --- 5. Mark portfolio value ---
         for symbol in symbols.keys():
             if strategy == "pairs_trading":
                 stocks = symbol.split("-")
@@ -106,7 +122,7 @@ def run_backtest(data, symbols, params):
                 stocks = [symbol]
             value = capital[symbol]
             for stock in stocks:
-                price = next((d["close"] for d in data[stock] if d["date"] == date), None)
+                price = current_prices[stock]
                 if price is not None:
                     value += positions[stock] * price
                 else:
@@ -116,10 +132,10 @@ def run_backtest(data, symbols, params):
                 equity_curves[symbol].append({"date": date, "value": value})
                     
 
-
+        print([last_prices[s] for s in data.keys()])
         portfolio_value = close_position(
             [stock for stock in data.keys()],
-            [next((d["close"] for d in data[s] if d["date"] == last_date[s]), None) for s in data.keys()],
+            [last_prices[s] for s in data.keys()],
             sum(capital.values()),
             [p for p in entry_prices.values()],
             [pos for pos in positions.values()], 
