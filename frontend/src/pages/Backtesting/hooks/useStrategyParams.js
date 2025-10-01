@@ -28,7 +28,12 @@ export function useStrategyParams() {
     if (strategyType) {
       const allParams = [
         ...globalParams,
-        ...strategies[strategyType.value].params,
+        ...(strategyType.value === "custom"
+          ? Object.values(strategies)
+              .filter(s => s.value !== "custom") 
+              .flatMap(s => s.params)           
+          : strategies[strategyType.value].params
+        ),
       ];
 
       const basic = allParams.filter((p) => p.category === "basic");

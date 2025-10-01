@@ -11,14 +11,14 @@ router = APIRouter()
 # enpoint to run backtest
 @router.post("/backtest")
 def run_strategy_backtest(payload: StrategyRequest, db: Session = Depends(get_db)):
-    if not payload.symbols:
+    if not payload.symbolItems:
         raise HTTPException(status_code=400, detail="No symbols provided")
 
     if not payload.params:
         raise HTTPException(status_code=400, detail="No parameters provided")
 
-    individual_symbols = [s[i] for s in payload.symbols for i in range(len(s))] 
-    strategy_symbols = {"-".join(s):payload.strategy for s in payload.symbols}
+    individual_symbols = [s["symbols"][i] for s in payload.symbolItems for i in range(len(s["symbols"]))] 
+    strategy_symbols = {"-".join(s["symbols"]):s["strategy"] for s in payload.symbolItems}
     data = fetch_price_data(db, individual_symbols, payload.params["startDate"], payload.params["endDate"])
     results = run_backtest(data, strategy_symbols, payload.params)
 

@@ -3,10 +3,8 @@ from typing import List, Dict, Any, Optional
 
 # Request model for running a strategy backtest
 class StrategyRequest(BaseModel):
-    strategy: str
-    symbols: List[List[str]]
+    symbolItems: List[Dict[str, Any]]
     params: Dict[str, Any]
-    pairs: Optional[List[Dict[str, Any]]] = [] 
 
 # Response model for backtest results
 class StrategyResponse(BaseModel):

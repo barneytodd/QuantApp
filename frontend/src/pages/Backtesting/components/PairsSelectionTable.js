@@ -1,11 +1,12 @@
 export default function PairsSelectionTable({
+  strategyType,
   pairCandidates,
   selectedPairs,
   setSelectedPairs,
   visible,
   setVisible,
 }) {
-  if (!pairCandidates.length) return null;
+  if (!pairCandidates.length || strategyType?.value !== "pairs_trading") return null;
 
   return (
     <div className="bg-white shadow rounded-xl p-4 mt-6">

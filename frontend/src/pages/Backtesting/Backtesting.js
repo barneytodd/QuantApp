@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSymbols } from "./hooks/useSymbols";
 import { useStrategyParams } from "./hooks/useStrategyParams";
 import { useBacktest } from "./hooks/useBacktest";
@@ -12,6 +12,7 @@ import ParamsCard from "./components/ParamsCard";
 import PairsSelectionTable from "./components/PairsSelectionTable";
 import AdvancedOptionsPanel from "./components/AdvancedOptionsPanel";
 import OptimiserPanel from "./components/OptimiserPanel";
+import CustomTextBox from "./components/CustomTextBox";
 
 import OverviewTab from "./tabs/OverviewTab";
 import TradeAnalyticsTab from "./tabs/TradeAnalyticsTab";
@@ -20,11 +21,13 @@ import RiskExposureTab from "./tabs/RiskExposureTab";
 export default function Backtesting() {
   const [selectedSymbols, setSelectedSymbols] = useState([]);
   const [showPairs, setShowPairs] = useState(false);
+  const [showCustom, setShowCustom] = useState(false);
 
   const [activeTab, setActiveTab] = useState(null);
 
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [isOptimiseOpen, setIsOptimiseOpen] = useState(false);
+  const [customStrategy, setCustomStrategy] = useState(null);
 
   const { symbols, benchmarkData } = useSymbols();
   const { backtestResult, runBacktest, isLoading: backtestLoading, error: backtestError } = useBacktest();
@@ -54,11 +57,33 @@ export default function Backtesting() {
 
   // --- handlers ---
   const handleRunBacktest = async () => {
-    await runBacktest({ symbols: selectedSymbols, strategyType, basicParams, advancedParams, selectedPairs });
+    const syms = strategyType?.value === "custom" 
+      ? customStrategy.flatMap((s) =>
+        s.symbols.map((symbol, idx) => ({
+          symbols: [symbol],
+          strategy: s.name,
+          weight: s.weights[idx] ?? null, // use null if weight is missing
+        })))
+      : strategyType?.value === "pairs_trading" 
+        ? selectedPairs.map(p => ({
+            symbols: [p.stock1, p.stock2],
+            strategy: strategyType?.value,
+            weight: null
+          }))
+        : selectedSymbols.map(s => ({
+            symbols: [s.value],
+            strategy: strategyType?.value,
+            weight: null
+          }))
+    await runBacktest({ symbolItems: syms, strategyType, basicParams, advancedParams, selectedPairs });
+  };
+
+  useEffect(() => {
     if (!backtestError && backtestResult) {
       setActiveTab("Overview");
     }
-  };
+  }, [backtestError, backtestResult]);
+
 
   const handleOptimise = async () => {
     await optimiseParameters({ symbols: selectedSymbols, strategyType, basicParams, advancedParams, optimParams, selectedPairs });
@@ -96,10 +121,22 @@ export default function Backtesting() {
 
   };
 
+
   const handleSelectPairs = async () => {
     await selectPairs(selectedSymbols.map((s) => s.value));
     setShowPairs(true);
   };
+
+
+  useEffect(() => {
+    if (strategyType !== "custom") {
+      setShowCustom(false);
+    }
+    if (strategyType !== "pairs_trading") {
+      setShowPairs(false)
+    }
+  }, [strategyType]);
+
 
   return (
     <div className="space-y-6">
@@ -115,6 +152,15 @@ export default function Backtesting() {
           symbols={symbols}
           selectedSymbols={selectedSymbols}
           setSelectedSymbols={setSelectedSymbols}
+        />
+
+        <CustomTextBox
+          strategyType={strategyType}
+          customStrategy={customStrategy}
+          setCustomStrategy={setCustomStrategy}
+          strategyOptions={strategyTypeOptions}
+          visible={showCustom}
+          setVisible={setShowCustom}
         />
 
         <ParamsCard
@@ -142,6 +188,7 @@ export default function Backtesting() {
 
       {/* Pairs table */}
       <PairsSelectionTable
+        strategyType={strategyType}
         pairCandidates={pairCandidates}
         selectedPairs={selectedPairs}
         setSelectedPairs={setSelectedPairs}
