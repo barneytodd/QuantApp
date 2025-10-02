@@ -7,10 +7,10 @@ export default function AdvancedOptionsPanel({
   setAdvancedParams,
 }) {
   // Group parameters by `param.group`
-  const groupedParams = Object.values(advancedParams).reduce((acc, param) => {
+  const groupedParams = Object.entries(advancedParams).reduce((acc, [paramName, param]) => {
     const group = param.group || "Other"; // fallback group
-    if (!acc[group]) acc[group] = [];
-    acc[group].push(param);
+    if (!acc[group]) acc[group] = {};
+    if (!acc[group][paramName]) acc[group][paramName] = param;
     return acc;
   }, {});
 
@@ -71,8 +71,8 @@ export default function AdvancedOptionsPanel({
               {/* Parameters in this group */}
               {expandedGroups[groupName] && (
                 <div className="space-y-4">
-                  {params.map((param) => (
-                    <div key={param.name}>
+                  {Object.entries(params).map(([paramName, param]) => (
+                    <div key={paramName}>
 
                       {/* Tooltip container */}
                       <div className="relative group">
@@ -86,18 +86,18 @@ export default function AdvancedOptionsPanel({
 
                       <input
                         type={param.type}
-                        value={param.value ?? ""}
+                        value={advancedParams[paramName].value ?? ""}
                         onChange={(e) =>
                           setAdvancedParams((prev) => ({
                             ...prev,
-                            [param.name]: { ...prev[param.name], value: e.target.value },
+                            [paramName]: { ...prev[paramName], value: e.target.value },
                           }))
                         }
                         onBlur={(e) =>
                           setAdvancedParams((prev) => ({
                             ...prev,
-                            [param.name]: {
-                              ...prev[param.name],
+                            [paramName]: {
+                              ...prev[paramName],
                               value:
                                 param.type === "number"
                                   ? Number(e.target.value) || 0

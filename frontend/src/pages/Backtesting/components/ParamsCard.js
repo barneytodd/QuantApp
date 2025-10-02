@@ -35,7 +35,6 @@ export default function ParamsCard({
               </div>
 
               <input
-                key={param.value}
                 type={param.type}
                 value={param.value ?? ""}
                 onChange={(e) =>
