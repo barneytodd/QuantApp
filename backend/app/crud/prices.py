@@ -5,8 +5,22 @@ from app.schemas.prices import PriceIn
 from datetime import date
 
 # Get historical OHLCV data for a symbol, optionally filtered by date range
-def get_prices(db: Session, symbol: str, start: Optional[date] = None, end: Optional[date] = None) -> List[Price]:
+def get_prices(db: Session, symbol: str, start: Optional[date] = None, end: Optional[date] = None, lookback: Optional[int] = 0) -> List[Price]:
     query = db.query(Price).filter(Price.symbol == symbol)
+
+    if start and lookback and lookback > 0:
+        # Find the cutoff date by looking back N trading days
+        subquery = (
+            db.query(Price.date)
+            .filter(Price.symbol == symbol, Price.date <= start)
+            .order_by(Price.date.desc())
+            .limit(lookback)
+            .subquery()
+        )
+        cutoff_date = db.query(subquery.c.date).order_by(subquery.c.date.asc()).first()
+        if cutoff_date:
+            start = cutoff_date[0]
+
     if start:
         query = query.filter(Price.date >= start)
     if end:

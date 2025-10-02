@@ -52,7 +52,8 @@ export function useStrategyParams() {
             category: p.category, 
             options: p.options, 
             info: p.info,
-            group: p.group
+            group: p.group,
+            lookback: p.lookback
           },
         ])
       );
@@ -69,7 +70,8 @@ export function useStrategyParams() {
             category: p.category, 
             options: p.options,
             info: p.info,
-            group: p.group
+            group: p.group,
+            lookback: p.lookback
           },
         ])
       );

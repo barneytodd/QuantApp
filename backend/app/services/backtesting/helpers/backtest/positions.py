@@ -1,14 +1,16 @@
 from app.strategies.signal_registry import generators
 from .pricing import calc_effective_price, commission
 from .advanced_params import check_holding_period
+from datetime import datetime
 
-def check_signal(position, date, entry_date, data, params, strategy):
+def check_signal(position, date_idx, date, entry_date, data, params, strategy, lookback):
 	"""
 	Check the signal for a given position on a specific date.
 
 	---params---
 	position: int 0=no position, >0=long,<0=short
 	data: list [{"date":..., "close":...}, ...]
+	entry_date: dict {"idx": idx, "date": date} where idx is the date's index in the overall list of dates
 	params: strategy parameters
 	strategy: str
 
@@ -16,11 +18,12 @@ def check_signal(position, date, entry_date, data, params, strategy):
 	signal: str indicating trading signal
 	index: int 
 	"""
-	chp = check_holding_period(params["minHoldingPeriod"], position, entry_date, date)
-	if not chp:
+	if date_idx < lookback:
 		return "hold"
 
-
+	chp = check_holding_period(params["minHoldingPeriod"], position, entry_date, date_idx, date)
+	if not chp:
+		return "hold"
 
 	dates = data["date"].tolist() if strategy == "pairs_trading" else [row["date"] for row in data]
 	

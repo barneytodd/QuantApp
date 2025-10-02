@@ -3,11 +3,11 @@ from app.crud import get_prices as crud_get_prices
 from typing import Optional, List
 import numpy as np
 
-def fetch_price_data(db: Session, symbols: list[str], start: Optional[str] = None, end: Optional[str] = None):
+def fetch_price_data(db: Session, symbols: list[str], start: Optional[str] = None, end: Optional[str] = None, lookback: Optional[int] = 0):
     """Fetch OHLCV data from DB and convert to dict."""
     data_dict = {}
     for symbol in symbols:
-        data_rows = crud_get_prices(db, symbol, start, end)
+        data_rows = crud_get_prices(db, symbol, start, end, lookback)
         if not data_rows:
             continue
         data_dict[symbol] = [

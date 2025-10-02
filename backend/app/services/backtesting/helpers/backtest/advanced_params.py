@@ -1,21 +1,17 @@
-from datetime import datetime
 import numpy as np
 
-def check_holding_period(min_holding_period, position, entry_date, date):
+def check_holding_period(min_holding_period, position, entry_date, date_idx, date):
 	"""
 	checks if position has been open longer than the min holding period
 	min_holding_period: int
 	position: int = 0 => no open position
-	entry_date: date position was opened
+	entry_date: dict {"idx": idx, "date": date} for date position was opened
 	date: current date for which a signal is being generated	
 	"""
 	if min_holding_period == 0 or position == 0:
 		return True
 	else:
-		fmt = "%Y-%m-%d"
-		d1 = datetime.strptime(entry_date, fmt)
-		d2 = datetime.strptime(date, fmt)
-		diff = (d2-d1).days
+		diff = date_idx - entry_date["idx"]
 		if diff >= min_holding_period:
 			return True
 		else:

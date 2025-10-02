@@ -11,6 +11,7 @@ export const strategies = {
         category: "basic", 
         optimise: true, 
         integer: true, 
+        lookback: true,
         info: "Lookback period for short SMA \nRequired: int < Long SMA Period \nSuggested bounds [5,30]"
       },
       { 
@@ -23,6 +24,7 @@ export const strategies = {
         category: "basic", 
         optimise: true, 
         integer: true,
+        lookback: true,
         info: "Lookback period for long SMA \nRequired: int > Short SMA Period \nSuggested bounds [20,200]"
       },
 
@@ -43,6 +45,7 @@ export const strategies = {
         category: "basic", 
         optimise: true, 
         integer: true, 
+        lookback: true,
         info: "Lookback period for calculating SMA and std \nRequired: int \nSuggested bounds [5,100]"
       },
       { name: "bandMultiplier", 
@@ -53,6 +56,7 @@ export const strategies = {
         category: "basic", 
         optimise: true, 
         integer: false, 
+        lookback: false,
         info: "Std multiplier to control band width \nSuggested bounds [1,3]"
       },
       
@@ -73,6 +77,7 @@ export const strategies = {
         category: "basic", 
         optimise: true, 
         integer: true,
+        lookback: true,
         info: "Lookback period to calculate SMA \nRequired: int \nSuggested bounds [5,50]" 
       },
       { name: "oversold", 
@@ -83,6 +88,7 @@ export const strategies = {
         category: "basic", 
         optimise: true, 
         integer: true, 
+        lookback: false,
         info: "RSI value below which asset is oversold \nRequired: int < Overbought Threshold \nSuggested bounds [0,50]"
       },
       { 
@@ -94,6 +100,7 @@ export const strategies = {
         category: "basic", 
         optimise: true, 
         integer: true, 
+        lookback: false,
         info: "RSI value above which asset is oversold \nRequired: int > Oversold Threshold \nSuggested bounds [50,100]"
       },
 
@@ -107,6 +114,7 @@ export const strategies = {
         category: "advanced", 
         optimise: true,
         integer: true,
+        lookback: true,
         group: "Signal Smoothing",
         info: "Lookback period for EMA applied to RSI values \nRequired: int > 0 \nSet to 1 to remove smoothing \nSuggested bounds [1,8]"
       },
@@ -126,6 +134,7 @@ export const strategies = {
         category: "basic", 
         optimise: true, 
         integer: true,
+        lookback: true,
         info: "Lookback period for momentum calculation \nRequired: int \nSuggested values [63,126,252]"
       },
 
@@ -139,6 +148,7 @@ export const strategies = {
         category: "advanced", 
         optimise: true,
         integer: false,
+        lookback: false,
         group: "Volatility Rebalancing",
         info: "Volatility target for rebalancing portfolio \nSet Rebalance Frequency to 0 to remove rebalancing \nSuggested bounds [5,20]" 
       },
@@ -151,6 +161,7 @@ export const strategies = {
         category: "advanced", 
         optimise: true,
         integer: true,
+        lookback: true,
         group: "Volatility Rebalancing",
         info: "Lookback period for volatility calculation during rebalancing \nRequired: int \nSet Rebalance Frequency to 0 to remove rebalancing \nSuggested values [21,63,126,252]" 
       },
@@ -163,6 +174,7 @@ export const strategies = {
         category: "advanced", 
         optimise: true, 
         integer: true,
+        lookback: false,
         group: "Volatility Rebalancing",
         info: "Frequency with which to rebalance portfolio \nRequired: int or onSignal to rebalance after every trade \nSet to 0 to remove rebalancing \nSuggested values [0, 1, 5, 10, 21, 63, onSignal]" 
       }
@@ -182,6 +194,7 @@ export const strategies = {
         category: "basic", 
         optimise: true, 
         integer: true,
+        lookback: true,
         info: "Lookback period for breakout boundaries \nRequired: int \nSuggested bounds [5,100]" 
       },
 
@@ -195,6 +208,7 @@ export const strategies = {
         category: "advanced", 
         optimise: true, 
         integer: false,
+        lookback: false,
         group: "Breakout Threshold Adjustment",
         info: "Multiplier m to add m * range(lookback prices) to breakout threshold \nSuggested bounds [0.0,0.2]" 
       },
@@ -214,6 +228,7 @@ export const strategies = {
         category: "basic", 
         optimise: true, 
         integer: true,
+        lookback: true,
         info: "Lookback period to calculate mean and std of spread between asset prices \nRequired: int \nSuggested bounds [20,200]" 
       },
       { 
@@ -225,6 +240,7 @@ export const strategies = {
         category: "basic", 
         optimise: true, 
         integer: false,
+        lookback: false,
         info: "z boundary to open position, where z = |(spread - mean_spread) / std_spread| \nRequired: > Exit Z-Score \nSuggested bounds [1.5,2.5]" 
       },
       { 
@@ -236,6 +252,7 @@ export const strategies = {
         category: "basic", 
         optimise: true, 
         integer: false,
+        lookback: false,
         info: "z boundary to close position, where z = |(spread - mean_spread) / std_spread| \nRequired: < Entry Z-Score \nSuggested bounds [0,0.5]" 
       },
 
@@ -249,6 +266,7 @@ export const strategies = {
         category: "advanced", 
         optimise: true, 
         integer: false,
+        lookback: false,
         group: "Pairs Trading Adjustments",
         info: "Factor for computing spread where spread = P_A - β * P_B \nSuggested bounds [0.5,2.0]" 
       },

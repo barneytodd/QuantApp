@@ -75,7 +75,7 @@ export default function Backtesting() {
             strategy: strategyType?.value,
             weight: null
           }))
-    await runBacktest({ symbolItems: syms, strategyType, basicParams, advancedParams, selectedPairs });
+    await runBacktest({ symbolItems: syms, basicParams, advancedParams });
   };
 
   useEffect(() => {

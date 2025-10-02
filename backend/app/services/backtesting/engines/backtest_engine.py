@@ -3,11 +3,12 @@ from ..helpers.backtest.metrics import compute_metrics, compute_trade_stats
 from ..helpers.pairs.align_series import align_series
 from ..helpers.backtest.advanced_params import rebalance
 
-def run_backtest(data, symbols, params):
+def run_backtest(data, symbols, params, lookback=0):
     """
     data: dict {symbol: [{"date":..., "close":...}, ...]} - stores data separately for each symbol
     symbols: dict { symbol: strategy } - stores pairs as single symbols
     params: dict of strategy parameters
+    lookback: int - lookback period to initiate indicators before first trading day
     """
     slippage_pct = params["slippage"] / 100
     transaction_pct = params["transactionCostPct"] / 100
@@ -19,7 +20,7 @@ def run_backtest(data, symbols, params):
     equity_curves = {**{symbol: [] for symbol in symbols.keys()}, "overall": []}
     trades = {symbol:[] for symbol in symbols.keys()}
     entry_prices = {symbol:None for symbol in data.keys()}
-    entry_dates = {symbol:None for symbol in symbols.keys()}
+    entry_dates = {symbol:{"idx":None, "date":None} for symbol in symbols.keys()}
     last_prices = {symbol:None for symbol in data.keys()}
     current_prices = {symbol:None for symbol in data.keys()}
 
@@ -48,7 +49,7 @@ def run_backtest(data, symbols, params):
                     last_prices[stock] = price
 
             if data_check:
-                signal = check_signal(positions[stocks[0]], date, entry_dates[symbol], symbol_data, params, strategy)
+                signal = check_signal(positions[stocks[0]], idx, date, entry_dates[symbol], symbol_data, params, strategy, lookback)
                 signals[symbol] = signal
             else:
                 signals[symbol] = "hold"
@@ -72,7 +73,7 @@ def run_backtest(data, symbols, params):
                     entry_ps,
                     pos, 
                     date, 
-                    entry_dates[symbol],
+                    entry_dates[symbol]["date"],
                     slippage_pct,
                     transaction_pct,
                     transaction_fixed
@@ -81,7 +82,7 @@ def run_backtest(data, symbols, params):
                 for s in stocks:
                     positions[s] = 0
                     entry_prices[s] = None
-                entry_dates[symbol] = None
+                entry_dates[symbol]["idx"] = entry_dates[symbol]["date"] = None
 
 
         # --- 3. Apply entries ---
@@ -104,7 +105,7 @@ def run_backtest(data, symbols, params):
                     positions[stock] = new_positions[i]
                     entry_prices[stock] = new_entry_prices[i]
                 
-                entry_dates[symbol] = date
+                entry_dates[symbol]["idx"], entry_dates[symbol]["date"] = idx, date
 
         
         # --- 4. Apply rebalancing ---
@@ -115,37 +116,37 @@ def run_backtest(data, symbols, params):
             #positions = rebalance(equity_curves, positions, current_prices, float(params["volTarget"])/100, lookback)
 
         # --- 5. Mark portfolio value ---
-        for symbol in symbols.keys():
-            if strategy == "pairs_trading":
-                stocks = symbol.split("-")
-            else:
-                stocks = [symbol]
-            value = capital[symbol]
-            for stock in stocks:
-                price = current_prices[stock]
-                if price is not None:
-                    value += positions[stock] * price
+        if idx >= lookback:
+            for symbol in symbols.keys():
+                if strategy == "pairs_trading":
+                    stocks = symbol.split("-")
                 else:
-                    value = None
-                    break
-            if value is not None:
-                equity_curves[symbol].append({"date": date, "value": value})
+                    stocks = [symbol]
+                value = capital[symbol]
+                for stock in stocks:
+                    price = current_prices[stock]
+                    if price is not None:
+                        value += positions[stock] * price
+                    else:
+                        value = None
+                        break
+                if value is not None:
+                    equity_curves[symbol].append({"date": date, "value": value})
                     
 
-        print([last_prices[s] for s in data.keys()])
-        portfolio_value = close_position(
-            [stock for stock in data.keys()],
-            [last_prices[s] for s in data.keys()],
-            sum(capital.values()),
-            [p for p in entry_prices.values()],
-            [pos for pos in positions.values()], 
-            date, 
-            None,
-            0,
-            0,
-            0
-        )[0]
-        equity_curves["overall"].append({"date": date, "value": portfolio_value})
+            portfolio_value = close_position(
+                [stock for stock in data.keys()],
+                [last_prices[s] for s in data.keys()],
+                sum(capital.values()),
+                [p for p in entry_prices.values()],
+                [pos for pos in positions.values()], 
+                date, 
+                None,
+                0,
+                0,
+                0
+            )[0]
+            equity_curves["overall"].append({"date": date, "value": portfolio_value})
 
     results = []
     for symbol, equity_curve in equity_curves.items():
