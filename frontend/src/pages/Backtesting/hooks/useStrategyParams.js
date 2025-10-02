@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { strategies } from "../strategies/strategyRegistry";
-import { globalParams } from "../strategies/globalParams";
+import { strategies } from "../parameters/strategyRegistry";
+import { globalParams } from "../parameters/globalParams";
 
 export function useStrategyParams(selectedSymbols, selectedPairs) {
   const [strategyType, setStrategyType] = useState(null);
@@ -40,40 +40,17 @@ export function useStrategyParams(selectedSymbols, selectedPairs) {
       const advanced = allParams.filter((p) => p.category === "advanced");
 
       const basicDefaults = Object.fromEntries(
-        basic.map((p) => [
-          p.name,
-          { 
-            value: p.default, 
-            label: p.label, 
-            type: p.type, 
-            bounds: p.bounds, 
-            optimise: p.optimise, 
-            integer: p.integer, 
-            category: p.category, 
-            options: p.options, 
-            info: p.info,
-            group: p.group,
-            lookback: p.lookback
-          },
-        ])
+        basic.map(p => {
+          const { default: value, name, ...rest } = p;
+          return [name, { value, ...rest }];
+        })
       );
+
       const advancedDefaults = Object.fromEntries(
-        advanced.map((p) => [
-          p.name,
-          { 
-            value: p.default, 
-            label: p.label, 
-            type: p.type, 
-            bounds: p.bounds, 
-            optimise: p.optimise, 
-            integer: p.integer, 
-            category: p.category, 
-            options: p.options,
-            info: p.info,
-            group: p.group,
-            lookback: p.lookback
-          },
-        ])
+        advanced.map(p => {
+          const { default: value, name, ...rest } = p;
+          return [name, { value, ...rest }];
+        })
       );
 
       setBasicParams(basicDefaults);
