@@ -87,39 +87,33 @@ export default function Backtesting() {
 
   const handleOptimise = async () => {
     await optimiseParameters({ symbols: selectedSymbols, strategyType, basicParams, advancedParams, optimParams, selectedPairs });
-    if (!optimisationResult || optimError !== null) {
-      return;
+  }
+    
+  useEffect(() => {
+    console.log(optimisationResult, optimError)
+    if (optimisationResult && !optimError) {
+      if (optimisationResult.best_basic_params) {
+        const basic = optimisationResult.best_basic_params;
+        setBasicParams(prev => {
+          const updated = { ...prev };
+          for (const k in basic) {
+            updated[k] = { ...(prev[k] || {}), value: basic[k] };
+          }
+          return updated;
+        });
+      }
+      if (optimisationResult.best_advanced_params) {
+        const advanced = optimisationResult.best_advanced_params;
+        setAdvancedParams(prev => {
+          const updated = { ...prev };
+          for (const k in advanced) {
+            updated[k] = { ...(prev[k] || {}), value: advanced[k] };
+          }
+          return updated;
+        });
+      }
     }
-
-    if (!optimisationResult.best_basic_params) {
-      return;
-    }
-    else {
-      const basic = optimisationResult.best_basic_params;
-      setBasicParams(prev => {
-        const updated = { ...prev };
-        for (const k in basic) {
-          updated[k] = { ...(prev[k] || {}), value: basic[k] };
-        }
-        return updated;
-      });
-    }
-
-    if (!optimisationResult.best_advanced_params) {
-      return;
-    }
-    else {
-      const advanced = optimisationResult.best_advanced_params;
-      setAdvancedParams(prev => {
-        const updated = { ...prev };
-        for (const k in advanced) {
-          updated[k] = { ...(prev[k] || {}), value: advanced[k] };
-        }
-        return updated;
-      });
-    }
-
-  };
+  }, [optimisationResult, optimError, setBasicParams, setAdvancedParams])
 
 
   const handleSelectPairs = async () => {
