@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { strategies } from "../strategies/strategyRegistry";
 import { globalParams } from "../strategies/globalParams";
 
-export function useStrategyParams() {
+export function useStrategyParams(selectedSymbols, selectedPairs) {
   const [strategyType, setStrategyType] = useState(null);
   const [basicParams, setBasicParams] = useState({});
   const [advancedParams, setAdvancedParams] = useState({});
@@ -81,6 +81,40 @@ export function useStrategyParams() {
     }
 
   }, [strategyType]);
+
+  // add weight to advanced params for each selected stock
+  useEffect(() => {
+    setAdvancedParams((prev) => {
+      const newParams = { ...prev };
+
+      const symbols = strategyType?.value === "pairs_trading" 
+        ? selectedPairs?.flatMap(obj => `${obj.stock1}-${obj.stock2}`)
+        : selectedSymbols?.flatMap(obj => obj.label)
+      
+      symbols.forEach((symbol) => {
+        const key = `${symbol}_weight`;
+        newParams[key] = {
+          name: key,
+          label: `${symbol} Weight`,
+          value: 1/symbols.length,
+          type: "number",
+          optimise: false,
+          group: "Capital Allocation",
+          info: `Allocation of initial capital towards ${symbol} \nRequired: value, total weight ε [0,1]`,
+        };
+      });
+
+      // Remove weights for stocks that are no longer selected
+      Object.keys(newParams).forEach((key) => {
+        if (key.endsWith("_weight") && !symbols.includes(key.replace("_weight", ""))) {
+          delete newParams[key];
+        }
+      });
+
+      return newParams;
+    });
+  }, [selectedSymbols, selectedPairs, strategyType?.value]);
+
   return {
     strategyType,
     setStrategyType,

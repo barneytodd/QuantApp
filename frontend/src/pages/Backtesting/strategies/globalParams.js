@@ -41,7 +41,7 @@ export const globalParams = [
     category: "advanced",
     optimise: false,
     integer: true,
-    group: "Capital & Risk Management",
+    group: "Capital Allocation",
     info: "Total initial capital for the portfolio"
   },
   {
@@ -85,7 +85,7 @@ export const globalParams = [
     category: "advanced",
     optimise: false,
     integer: false,
-    group: "Capital & Risk Management",
+    group: "Risk Management",
     info: "Trade is closed if its percentage loss exceeds this bound"
   },
   {
@@ -96,7 +96,7 @@ export const globalParams = [
     category: "advanced",
     optimise: false,
     integer: false,
-    group: "Capital & Risk Management",
+    group: "Risk Management",
     info: "Trade is closed if its percentage profit exceeds this bound"
   },
   { 
@@ -108,7 +108,7 @@ export const globalParams = [
     category: "advanced", 
     optimise: true, 
     integer: false,
-    group: "Capital & Risk Management",
+    group: "Risk Management",
     info: "Percentage of available capital allocated to each trade" 
   },
   { 
@@ -120,7 +120,7 @@ export const globalParams = [
     category: "advanced", 
     optimise: true,
     integer: true, 
-    group: "Capital & Risk Management",
+    group: "Risk Management",
     info: "Maximum number of positions allowed to be open at any one time \nRequired: int \nSuggested values [1, 2, 3, 5, 10, 20, unlimited]"
   },
   { 
@@ -132,7 +132,7 @@ export const globalParams = [
     category: "advanced", 
     optimise: true,
     integer: true,
-    group: "Capital & Risk Management",
+    group: "Risk Management",
     info: "Minimum number of days to stay open before closing any given position \nRequired: int \nSuggested values [0, 1, 5, 10, 20, 60]" 
   }
 ];

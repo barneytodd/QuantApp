@@ -51,7 +51,7 @@ export default function Backtesting() {
     setBasicParams,
     advancedParams,
     setAdvancedParams
-  } = useStrategyParams();
+  } = useStrategyParams(selectedSymbols, selectedPairs);
 
   
 

@@ -27,13 +27,28 @@ export function useBacktest() {
   const runBacktest = async ({ symbolItems, basicParams, advancedParams }) => {
     setIsLoading(true);
     setError(null);
+
+    const symbolItemsWithWeights = symbolItems.map(item => {
+      const weightParam = item.strategy === "pairs_trading" 
+        ? advancedParams[`${item.symbols[0]}-${item.symbols[1]}_weight`] 
+        : advancedParams[`${item.symbols[0]}_weight`];
+      return {
+        ...item,
+        weight: weightParam?.value ?? 0
+      };
+    });
+
     try {
       const payload = {
-        symbolItems: symbolItems,
-        params: {
-          ...Object.fromEntries(Object.entries(basicParams).map(([k, v]) => [k, {"value": v.value, "lookback": v.lookback ?? false}])),
-          ...Object.fromEntries(Object.entries(advancedParams).map(([k, v]) => [k, {"value": v.value, "lookback": v.lookback ?? false}])),
-        },
+        symbolItems: symbolItemsWithWeights,
+        params: Object.fromEntries(
+          Object.entries(advancedParams)
+            .filter(([key, _]) => !key.endsWith("_weight"))
+            .map(([k, v]) => [k, { value: v.value, lookback: v.lookback ?? false }])
+            .concat(
+              Object.entries(basicParams).map(([k, v]) => [k, { value: v.value, lookback: v.lookback ?? false }])
+            )
+        ),
       };
       console.log(payload)
 

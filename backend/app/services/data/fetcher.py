@@ -45,17 +45,17 @@ def fetch_historical(symbols: List[str], period: str = "1y", interval: str = "1d
     return records
 
 # Fetch list of available symbols from Yahoo Finance based on criteria
-def fetch_symbols(page_size=250, pause=0.3):
+def fetch_symbols(page_size=250, pause=0.3, regions=['us'], exchanges=['NMS','NYQ'], min_market_cap=1_000_000_000, min_daily_vol=500_000, min_eps_growth=0, max_price_earnings_ratio=50):
     all_symbols = []
     offset = 0
 
     query = EquityQuery('and', [
-        EquityQuery('eq', ['region', 'us']),
-        EquityQuery('is-in', ['exchange', 'NMS', 'NYQ']),
-        EquityQuery('gt', ['lastclosemarketcap.lasttwelvemonths', 1_000_000_000]),
-        EquityQuery('gt', ['avgdailyvol3m', 500_000]),
-        EquityQuery('gt', ['epsgrowth.lasttwelvemonths', 0]),
-        EquityQuery('lt', ['lastclosepriceearnings.lasttwelvemonths', 50])
+        EquityQuery('is-in', ['region'] + regions),
+        EquityQuery('is-in', ['exchange'] + exchanges),
+        EquityQuery('gt', ['lastclosemarketcap.lasttwelvemonths', min_market_cap]),
+        EquityQuery('gt', ['avgdailyvol3m', min_daily_vol]),
+        EquityQuery('gt', ['epsgrowth.lasttwelvemonths', min_eps_growth]),
+        EquityQuery('lt', ['lastclosepriceearnings.lasttwelvemonths', max_price_earnings_ratio])
     ])
 
     while True:

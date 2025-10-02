@@ -6,7 +6,7 @@ from ..helpers.backtest.advanced_params import rebalance
 def run_backtest(data, symbols, params, lookback=0):
     """
     data: dict {symbol: [{"date":..., "close":...}, ...]} - stores data separately for each symbol
-    symbols: dict { symbol: strategy } - stores pairs as single symbols
+    symbols: dict { symbol: {"strategy": strat, "weight": wgt} } - stores pairs as single symbols
     params: dict of strategy parameters
     lookback: int - lookback period to initiate indicators before first trading day
     """
@@ -15,7 +15,7 @@ def run_backtest(data, symbols, params, lookback=0):
     transaction_fixed = params["fixedTransactionCost"] 
     initial_capital = params["initialCapital"]
 
-    capital = {symbol:initial_capital/len(symbols) for symbol in symbols.keys()}
+    capital = {symbol:initial_capital * strat_info["weight"] for symbol,strat_info in symbols.items()}
     positions = {symbol:0 for symbol in data.keys()}
     equity_curves = {**{symbol: [] for symbol in symbols.keys()}, "overall": []}
     trades = {symbol:[] for symbol in symbols.keys()}
@@ -30,7 +30,8 @@ def run_backtest(data, symbols, params, lookback=0):
         
         # --- 1. Generate signals ---
         signals = {}
-        for symbol, strategy in symbols.items():
+        for symbol, strat_info in symbols.items():
+            strategy = strat_info["strategy"]
             if strategy == "pairs_trading":
                 stocks = symbol.split("-")
                 prices_dict = {stock: data[stock] for stock in stocks}
@@ -58,7 +59,7 @@ def run_backtest(data, symbols, params, lookback=0):
         # --- 2. Apply exits ---
         for symbol, signal in signals.items():
             if signal in ["sell", "exit"]:
-                if symbols[symbol] == "pairs_trading":
+                if symbols[symbol]["strategy"] == "pairs_trading":
                     stocks = symbol.split("-")
                 else:
                     stocks = [symbol]
@@ -86,10 +87,10 @@ def run_backtest(data, symbols, params, lookback=0):
 
 
         # --- 3. Apply entries ---
-        for symbol in signals.keys():
-            if signals[symbol] in ["buy", "short", "long"]:
+        for symbol, signal in signals.items():
+            if signal in ["buy", "short", "long"]:
                 
-                if symbols[symbol] == "pairs_trading":
+                if symbols[symbol]["strategy"] == "pairs_trading":
                     stocks = symbol.split("-")
                 else:
                     stocks = [symbol]
@@ -117,8 +118,8 @@ def run_backtest(data, symbols, params, lookback=0):
 
         # --- 5. Mark portfolio value ---
         if idx >= lookback:
-            for symbol in symbols.keys():
-                if strategy == "pairs_trading":
+            for symbol, strat_info in symbols.items():
+                if strat_info["strategy"] == "pairs_trading":
                     stocks = symbol.split("-")
                 else:
                     stocks = [symbol]

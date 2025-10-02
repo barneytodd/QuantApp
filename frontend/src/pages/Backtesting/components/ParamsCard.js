@@ -14,7 +14,6 @@ export default function ParamsCard({
   optimError,
   optimLoading
 }) {
-  console.log(basicParams)
   return (
     <div className="bg-white shadow rounded-xl p-4 col-span-1 md:col-span-2">
       <h3 className="text-lg font-semibold mb-3">Parameters</h3>

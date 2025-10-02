@@ -19,7 +19,7 @@ def run_strategy_backtest(payload: StrategyRequest, db: Session = Depends(get_db
         raise HTTPException(status_code=400, detail="No parameters provided")
 
     individual_symbols = [s["symbols"][i] for s in payload.symbolItems for i in range(len(s["symbols"]))] 
-    strategy_symbols = {"-".join(s["symbols"]):s["strategy"] for s in payload.symbolItems}
+    strategy_symbols = {"-".join(s["symbols"]):{"strategy":s["strategy"], "weight":s["weight"]} for s in payload.symbolItems}
     max_lookback = max([p["value"] for p in payload.params.values() if p["lookback"]])
 
     data = fetch_price_data(db, individual_symbols, payload.params["startDate"]["value"], payload.params["endDate"]["value"], max_lookback)
