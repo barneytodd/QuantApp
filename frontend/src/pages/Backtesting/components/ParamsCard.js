@@ -14,6 +14,7 @@ export default function ParamsCard({
   optimError,
   optimLoading
 }) {
+  console.log(basicParams)
   return (
     <div className="bg-white shadow rounded-xl p-4 col-span-1 md:col-span-2">
       <h3 className="text-lg font-semibold mb-3">Parameters</h3>
@@ -21,10 +22,22 @@ export default function ParamsCard({
         {strategyType &&
           Object.entries(basicParams).map(([key, param]) => (
             <div key={key} className="flex items-center gap-2">
-              <span>{param.label}:</span>
+              
+
+              {/* Tooltip container */}
+              <div className="relative group">
+                <span className="text-black-500 cursor-pointer">{param.label}:</span>
+                
+                {/* Tooltip text */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-40 bg-gray-800 text-white text-sm p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 whitespace-pre-line">
+                  {param.info}
+                </div>
+              </div>
+
               <input
+                key={param.value}
                 type={param.type}
-                value={param.value}
+                value={param.value ?? ""}
                 onChange={(e) =>
                   setBasicParams((prev) => ({
                     ...prev,

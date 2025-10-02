@@ -1,9 +1,34 @@
+import { useState } from "react";
+
 export default function AdvancedOptionsPanel({
   isOpen,
   onClose,
   advancedParams,
   setAdvancedParams,
 }) {
+  // Group parameters by `param.group`
+  const groupedParams = Object.values(advancedParams).reduce((acc, param) => {
+    const group = param.group || "Other"; // fallback group
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(param);
+    return acc;
+  }, {});
+
+  // State to track which groups are expanded
+  const [expandedGroups, setExpandedGroups] = useState(
+    Object.keys(groupedParams).reduce((acc, group) => {
+      acc[group] = false; // default all expanded
+      return acc;
+    }, {})
+  );
+
+  const toggleGroup = (groupName) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupName]: !prev[groupName],
+    }));
+  };
+
   if (!isOpen) return null; // don't render when closed
 
   return (
@@ -32,32 +57,60 @@ export default function AdvancedOptionsPanel({
         </div>
 
         <div className="space-y-4">
-          {Object.entries(advancedParams).map(([key, param]) => (
-            <div key={key}>
-              <label className="block text-sm font-medium">{param.label}</label>
-              <input
-                type={param.type}
-                value={param.value ?? ""}
-                onChange={(e) =>
-                  setAdvancedParams((prev) => ({
-                    ...prev,
-                    [key]: { ...prev[key], value: e.target.value },
-                  }))
-                }
-                onBlur={(e) =>
-                  setAdvancedParams((prev) => ({
-                    ...prev,
-                    [key]: {
-                      ...prev[key],
-                      value:
-                        param.type === "number"
-                          ? Number(e.target.value) || 0
-                          : e.target.value,
-                    },
-                  }))
-                }
-                className="border p-2 rounded w-full"
-              />
+          {Object.entries(groupedParams).map(([groupName, params]) => (
+            <div key={groupName}>
+              {/* Group header with toggle */}
+              <div
+                className="flex justify-between items-center cursor-pointer bg-gray-100 p-2 rounded"
+                onClick={() => toggleGroup(groupName)}
+              >
+                <h4 className="font-semibold">{groupName}</h4>
+                <span>{expandedGroups[groupName] ? "▼" : "►"}</span>
+              </div>
+
+              {/* Parameters in this group */}
+              {expandedGroups[groupName] && (
+                <div className="space-y-4">
+                  {params.map((param) => (
+                    <div key={param.name}>
+
+                      {/* Tooltip container */}
+                      <div className="relative group">
+                        <span className="block text-sm font-medium cursor-pointer">{param.label}</span>
+                        
+                        {/* Tooltip text */}
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-40 bg-gray-800 text-white text-sm p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 whitespace-pre-line">
+                          {param.info}
+                        </div>
+                      </div>
+
+                      <input
+                        type={param.type}
+                        value={param.value ?? ""}
+                        onChange={(e) =>
+                          setAdvancedParams((prev) => ({
+                            ...prev,
+                            [param.name]: { ...prev[param.name], value: e.target.value },
+                          }))
+                        }
+                        onBlur={(e) =>
+                          setAdvancedParams((prev) => ({
+                            ...prev,
+                            [param.name]: {
+                              ...prev[param.name],
+                              value:
+                                param.type === "number"
+                                  ? Number(e.target.value) || 0
+                                  : e.target.value,
+                            },
+                          }))
+                        }
+                        className="border p-2 rounded w-full"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
