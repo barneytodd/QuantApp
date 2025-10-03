@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.crud import get_all_symbols
 from app.database import get_db
 from app.services.data import fetcher
+from app.schemas import SymbolsRequest
 
 router = APIRouter()
 
@@ -12,9 +13,12 @@ def get_symbols(db: Session = Depends(get_db)):
     return get_all_symbols(db)
 
 # Fetch available symbols from external data source
-@router.get("/fetch_symbols")
-def get_available_symbols():
-    symbols = fetcher.fetch_symbols()
+@router.post("/fetch_symbols")
+def get_available_symbols(payload: SymbolsRequest):
+    
+    filters = payload.filters if payload.filters else {}
+
+    symbols = fetcher.fetch_symbols(**filters)
     if not symbols:
         raise HTTPException(status_code=404, detail="No symbols found")
     return symbols

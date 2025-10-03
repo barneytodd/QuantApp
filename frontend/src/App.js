@@ -5,7 +5,7 @@ import Sidebar from "./components/layout/Sidebar";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import Backtesting from "./pages/Backtesting/Backtesting";
 import TradingSimulatorPage from "./pages/TradingSimulator/TradingSimulator";
-import PortfolioAnalysisPage from "./pages/PortfolioAnalysis/PortfolioAnalysis";
+import PortfolioBuilder from "./pages/PortfolioAnalysis/PortfolioAnalysis";
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -39,7 +39,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/backtesting" element={<Backtesting />} />
           <Route path="/simulator" element={<TradingSimulatorPage />} />
-          <Route path="/portfolio" element={<PortfolioAnalysisPage />} />
+          <Route path="/portfolio" element={<PortfolioBuilder />} />
         </Routes>
       </div>
     </Router>

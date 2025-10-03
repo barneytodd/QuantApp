@@ -15,8 +15,7 @@ export const strategies = {
         info: "Lookback period for short SMA \nRequired: int < Long SMA Period \nSuggested bounds [5,30]"
       },
       { 
-        name: 
-        "longPeriod", 
+        name: "longPeriod", 
         label: "Long SMA Period", 
         type: "number", 
         default: 50, 

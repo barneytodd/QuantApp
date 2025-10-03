@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { optimisationParams } from "../strategies/optimisationParams";
+import { optimisationParams } from "../parameters/optimisationParams";
 
 export function useOptimisationParams() {
   const [optimParams, setOptimParams] = useState({});

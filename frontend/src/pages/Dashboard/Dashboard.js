@@ -59,10 +59,23 @@
 
     // get available ticker symbols to upload data
     useEffect(() => {
-      fetch("http://localhost:8000/api/symbols/fetch_symbols")
-        .then(res => res.json())
+      fetch("http://localhost:8000/api/symbols/fetch_symbols", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({filters:{}}), // empty payload
+      })
+        .then(res => {
+          if (!res.ok) throw new Error("Failed to fetch symbols");
+          return res.json();
+        })
         .then(data => {
           setUploadSymbols(data.map(s => ({ value: s, label: s })));
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Error fetching symbols");
         });
     }, []);
 
