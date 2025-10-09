@@ -10,7 +10,7 @@ router = APIRouter()
 # Calculate and return financial metrics for a given symbol and date range
 @router.get("/{symbol}", response_model=StatsOut)
 def get_metrics(symbol: str, start: str = None, end: str = None, db: Session = Depends(get_db)):
-    rows = get_prices(db, symbol, start, end)
+    rows = get_prices(db, [symbol], start, end)
     if not rows:
         raise HTTPException(status_code=404, detail="No price data")
     

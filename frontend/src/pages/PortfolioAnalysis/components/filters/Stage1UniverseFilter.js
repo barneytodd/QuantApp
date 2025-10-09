@@ -14,7 +14,10 @@ export default function UniverseFilter({
   return (
     <div
       className={`${
-        filterResults ? "bg-green-500 text-white" : uniError ? "bg-red-500 text-black" : "bg-white text-black"
+        filterResults ? 
+            "bg-green-500 text-white" : uniLoading ? 
+                "bg-yellow-500 text-black" : uniError ? 
+                    "bg-red-500 text-black" : "bg-white text-black"
       } shadow rounded-xl p-4 mt-6 transition-colors duration-300`}
     >
       {/* Header */}

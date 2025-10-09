@@ -1,5 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
+import logging
+
+logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
 
 # Connection string for MS SQL Server
 SQLALCHEMY_DATABASE_URL = (
@@ -7,7 +10,7 @@ SQLALCHEMY_DATABASE_URL = (
 )
 
 # Create engine
-engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=False)
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

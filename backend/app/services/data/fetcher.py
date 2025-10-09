@@ -1,48 +1,96 @@
-# Fetch data
-
 import yfinance as yf
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from yahooquery import Screener
 from yfinance import EquityQuery, screen
 import time
 from typing import List
+from app.utils.data_helpers import get_symbol_date_ranges, get_missing_periods, chunk_symbols
+from concurrent.futures import ThreadPoolExecutor
+from app.schemas import PriceIn
+from app.crud import upsert_prices
+from sqlalchemy.orm import Session
+from app.database import get_db, SessionLocal
+
 
 # Fetch historical price data from Yahoo Finance
-def fetch_historical(symbols: List[str], period: str = "1y", interval: str = "1d"):
-    df = yf.download(symbols, period=period, interval=interval, progress=False, threads=False, group_by='ticker')
-    print(df.head(), df.tail())
-    if df.empty:
-        return []
-    records = []
+def fetch_historical(symbols, period="1y", start=None, end=None, interval="1d"):
+    all_records = []
+    if start and end:
+        try:
+            df = yf.download(symbols, start=start, end=end, interval=interval, progress=False, threads=True, group_by='ticker')
+            if df.empty:
+                return None
+        except Exception as e:
+            return None
+    else:
+        df = yf.download(symbols, period=period, interval=interval, progress=False, threads=True, group_by='ticker')
+
     if isinstance(df.columns, pd.MultiIndex):
         for symbol in df.columns.levels[0]:
             sub_df = df[symbol].copy().reset_index()
-            for _, row in sub_df.iterrows():
-                records.append({
-                    "symbol": symbol,
-                    "date": row["Date"].date() if isinstance(row["Date"], pd.Timestamp) else row["Date"],
-                    "open": float(row["Open"]),
-                    "high": float(row["High"]),
-                    "low": float(row["Low"]),
-                    "close": float(row["Close"]),
-                    "volume": int(row["Volume"]) if not pd.isna(row["Volume"]) else 0,
-                })
-    else:  # single symbol
+            sub_df['symbol'] = symbol
+            sub_df['date'] = sub_df['Date'].dt.date
+            sub_df['volume'] = sub_df['Volume'].fillna(0).astype(int)
+            sub_df['open'] = sub_df['Open'].astype(float)
+            sub_df['high'] = sub_df['High'].astype(float)
+            sub_df['low'] = sub_df['Low'].astype(float)
+            sub_df['close'] = sub_df['Close'].astype(float)
+            all_records.extend(sub_df[['symbol','date','open','high','low','close','volume']].to_dict('records'))
+    else:
+        # single symbol
         df = df.reset_index()
-        symbol = symbols if isinstance(symbols, str) else symbols[0]
-        for _, row in df.iterrows():
-            records.append({
-                "symbol": symbol,
-                "date": row["Date"].date() if isinstance(row["Date"], pd.Timestamp) else row["Date"],
-                "open": float(row["Open"]),
-                "high": float(row["High"]),
-                "low": float(row["Low"]),
-                "close": float(row["Close"]),
-                "volume": int(row["Volume"]) if not pd.isna(row["Volume"]) else 0,
-            })
+        symbol = symbols[0] if isinstance(symbols, list) else symbols
+        df['symbol'] = symbol
+        df['date'] = df['Date'].dt.date
+        df['volume'] = df['Volume'].fillna(0).astype(int)
+        df['open'] = df['Open'].astype(float)
+        df['high'] = df['High'].astype(float)
+        df['low'] = df['Low'].astype(float)
+        df['close'] = df['Close'].astype(float)
+        all_records.extend(df[['symbol','date','open','high','low','close','volume']].to_dict('records'))
 
-    return records
+    return all_records
+
+
+def ingest_missing_data_parallel(db, symbols, start, end, chunk_size=50, max_workers=5):
+    """
+    Fetch missing OHLCV data for a list of symbols and insert into the DB in parallel.
+    
+    Args:
+        db: SQLAlchemy Session
+        symbols: list of symbols
+        start, end: datetime.date objects for the full range to ingest
+        chunk_size: number of symbols per thread batch
+        max_workers: number of parallel threads
+    """
+    # Get existing date ranges for symbols
+    ranges = get_symbol_date_ranges(db, symbols)
+    
+    # Compute missing periods per symbol
+    missing_periods = get_missing_periods(symbols, ranges, start, end)
+
+    def fetch_and_insert(symbol):
+        """Fetch missing periods for a symbol and insert into DB."""
+        all_records = []
+        with SessionLocal() as db_thread:
+            for period_start, period_end in missing_periods.get(symbol, []):
+                print(symbol, period_start, period_end)
+                records = fetch_historical([symbol], start=str(period_start), end=str(period_end))
+                if records:
+                    print(symbol, "finished fetching")
+                    all_records.extend([PriceIn(**r) for r in records])
+
+            if all_records:
+                upsert_prices(db_thread, all_records, chunk_size=500)
+                print(f"Inserted/Updated {len(all_records)} records for {symbol}")
+
+    # Chunk symbols and run in parallel
+    for chunk in chunk_symbols(list(missing_periods.keys()), chunk_size):
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            executor.map(fetch_and_insert, chunk)
+
+    return True
 
 # Fetch list of available symbols from Yahoo Finance based on criteria
 def fetch_symbols(

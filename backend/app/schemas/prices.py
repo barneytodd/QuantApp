@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import date
-from typing import Union, List
+from typing import Union, List, Optional
 
 # Input model for historical price data
 class PriceIn(BaseModel):
@@ -22,4 +22,11 @@ class PriceOut(PriceIn):
 # Input model for symbol payloads
 class SymbolPayload(BaseModel):
     symbols: Union[str, List[str]]
-    period: str = "1y"
+    period: Optional[str] = "1y"
+    start: Optional[date] = None
+    end: Optional[date] = None
+
+class GetDataPayload(BaseModel):
+    symbols: List[str]
+    start: Optional[str] = None
+    end: Optional[str] = None

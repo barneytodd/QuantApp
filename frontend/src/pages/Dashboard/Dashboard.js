@@ -85,7 +85,7 @@
       const symbolValues = selectedUploadSymbols.map(s => s.value);
 
       try {
-        const res = await fetch("http://localhost:8000/api/data/ohlcv/", {
+        const res = await fetch("http://localhost:8000/api/data/ohlcv/ingest/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ symbols: symbolValues, period: uploadYears.value }),

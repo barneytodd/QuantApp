@@ -14,7 +14,7 @@ def analyze_and_select(req: PairSelectionRequest, db: Session = Depends(get_db))
     
     prices_dict = {}
     for sym in req.symbols:
-        rows = crud_get_prices(db, sym)
+        rows = crud_get_prices(db, [sym])
         if not rows:
             continue
         prices_dict[sym] = [{"date": r.date, "close": r.close} for r in rows]
