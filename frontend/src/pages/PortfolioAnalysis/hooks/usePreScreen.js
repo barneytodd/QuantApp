@@ -7,51 +7,50 @@ export function usePreScreen() {
     const [filterValues, setFilterValues] = useState({});
     const [filterResults, setFilterResults] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const [progress, setProgress] = useState({ testing: 0, completed: 0, total: 0 });
+    const [fails, setFails] = useState({})
 
-    // default filters
     useEffect(() => {
         if (!filters) return;
         const filterDefaults = Object.fromEntries(
             Object.entries(filters).map(([key, arr]) => [
-            key,
-            arr.map(f => {
-                const { default: value, ...rest } = f;
-                return { value, ...rest };
-            })
+                key,
+                arr.map(f => {
+                    const { default: value, ...rest } = f;
+                    return { value, ...rest };
+                })
             ])
         );
         setFilterValues(filterDefaults);
     }, []);
 
-
     const preScreen = async (uniFilterResults) => {
         if (!uniFilterResults) return;
+        const symbols = uniFilterResults.map(s => s.value);
+        if (!symbols.length) return;
 
-        const symbols = uniFilterResults.map(s => s.value)
-        if (symbols.length === 0) return;
-
+        setFilterResults(null)
         setUploadComplete(false);
         setIsLoading(true);
 
         const today = new Date();
         const start = new Date();
-        start.setFullYear(today.getFullYear() - 3)
+        start.setFullYear(today.getFullYear() - 3);
 
         const todayStr = today.toISOString().split("T")[0].replace(/-/g, "-");
         const startStr = start.toISOString().split("T")[0].replace(/-/g, "-");
 
         try {
-            const res = await fetch("http://localhost:8000/api/data/ohlcv/syncIngest/", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ symbols: symbols, start: startStr, end: todayStr }),
+            // 1️⃣ Sync ingest
+            const ingestRes = await fetch("http://localhost:8000/api/data/ohlcv/syncIngest/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ symbols, start: startStr, end: todayStr }),
             });
-            const data = await res.json();
-            if (data) setUploadComplete(true);
+            await ingestRes.json();
+            setUploadComplete(true);
         } catch (err) {
             console.error(err);
-            alert("Error uploading data to db");
         }
 
         const filterDict = Object.fromEntries(
@@ -59,51 +58,70 @@ export function usePreScreen() {
                 arr.map(f => [f.name, f.value])
             )
         );
-        
+
         setTestingComplete(false);
-        console.log(symbols)
+        setProgress({ completed: 0, total: symbols.length });
 
         try {
+            // 2️⃣ Start pre-screen
             const res = await fetch("http://localhost:8000/api/portfolio/runPreScreen/", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ symbols: symbols, start: startStr, end: todayStr, filters: filterDict }),
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ symbols, start: startStr, end: todayStr, filters: filterDict }),
             });
-            const data = await res.json();
-            if (data) setTestingComplete(true);
-            console.log(data)
-            setFilterResults(
-                Object.fromEntries(
-                    Object.entries(data)
-                    .filter(([_, results]) => {
-                        const { global, ...rest } = results;
-                        const otherPassed = Object.values(rest).some(Boolean);
-                        return global && otherPassed; // only keep if global and another true
-                    })
-                    .map(([sym, results]) => [
-                        sym,
-                        Object.entries(results)
-                        .filter(([, result]) => result)
-                        .map(([group]) => group)
-                    ])
-                )
-            );
+            const { task_id } = await res.json();
+
+            // 3️⃣ SSE for progress
+            const evtSource = new EventSource(`http://localhost:8000/api/portfolio/streamProgress/${task_id}`);
+            evtSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                setProgress(data);
+                if (data.completed === data.total) {
+                    // 4️⃣ Fetch final results
+                    fetch(`http://localhost:8000/api/portfolio/getPreScreenResults/${task_id}`)
+                        .then(res => res.json())
+                        .then(results => {
+                            const { symbols = {}, failed_count = {} } = results;
+                            setFilterResults(
+                                Object.fromEntries(
+                                    Object.entries(symbols)
+                                    .filter(([_, r]) => {
+                                        const { global, ...rest } = r;
+                                        return global && Object.values(rest).some(Boolean);
+                                    })
+                                    .map(([sym, r]) => {
+                                        const { global, ...rest } = r;
+                                        return [
+                                            sym,
+                                            Object.entries(rest)
+                                                .filter(([, val]) => val)
+                                                .map(([group]) => group)
+                                        ];
+                                    })
+                                )
+                            );
+                            setFails(failed_count || {})
+                            setTestingComplete(true);
+                            setIsLoading(false);
+                            evtSource.close();
+                        })
+                }
+            };
         } catch (err) {
             console.error(err);
-            alert("Error running pre-screen");
-        } finally {
-            setIsLoading(false)
+            setIsLoading(false);
         }
-    }
-    
+    };
+
     return {
         filterValues,
         setFilterValues,
         filterResults,
         preScreen,
         isLoading,
-        error,
         uploadComplete,
-        testingComplete
-    }
+        testingComplete,
+        progress,
+        fails
+    };
 }

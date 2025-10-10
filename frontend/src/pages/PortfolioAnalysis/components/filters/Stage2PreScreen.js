@@ -12,7 +12,9 @@ export default function PreScreen({
   preScreenError,
   uploadComplete,
   testingComplete,
-  uniFilterResults
+  uniFilterResults,
+  progress,
+  fails
 }) {
   return (
     <div 
@@ -160,12 +162,46 @@ export default function PreScreen({
                     : filterResults ? 
                       "Filtered" : "Filter"}
             </button>
+
+            {/* Show progress */}
+            {preScreenLoading && !testingComplete && (
+              <div className="ml-2 text-sm text-gray-700 flex flex-col space-y-1">
+                <span>🧪 Testing: {progress.testing}/{progress.total}</span>
+                <span>✅ Completed: {progress.completed}/{progress.total}</span>
+              </div>
+            )}
           </div>
 
           {/* Filter Results */}
           {filterResults != null && (
             <div className="mt-4 text-lg font-medium">
               Filtered to {Object.keys(filterResults).length} results:
+            </div>
+          )}
+        
+          {/* Failed Tests Summary */}
+          {fails && Object.keys(fails).length > 0 && (
+            <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <h3 className="text-md font-semibold text-red-700 mb-2">
+                Failed Tests Summary
+              </h3>
+              {Object.entries(fails).map(([groupName, groupFails]) => {
+                const totalFailed = Object.values(groupFails).reduce((sum, count) => sum + count, 0);
+                return (
+                  <div key={groupName} className="mb-2">
+                    <h4 className="text-sm font-semibold text-red-700">
+                      {groupName} (Total Failed: {totalFailed})
+                    </h4>
+                    <ul className="list-disc list-inside text-red-800 text-sm ml-4">
+                      {Object.entries(groupFails).map(([testName, count]) => (
+                        <li key={testName}>
+                          <span className="font-medium">{testName}</span>: failed {count} time{count !== 1 && "s"}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
             </div>
           )}
         </>

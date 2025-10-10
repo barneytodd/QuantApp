@@ -1,22 +1,91 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+# app/api/portfolio.py
+from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
-from app.schemas import PreScreenPayload
-from app.database import get_db
-from app import crud
 from collections import defaultdict
-from app.services.portfolio.stages.prescreen.run_prescreen import run_tests
+import uuid
+import json
+import time
 
+
+from app.database import get_db
+from app.schemas import PreScreenPayload
+from app import crud
+from app.services.portfolio.stages.prescreen.run_prescreen import run_tests
+from app.tasks import tasks_store
 
 router = APIRouter()
 
+# 1 Start pre-screening
 @router.post("/runPreScreen/")
-def run_prescreen_tests(payload: PreScreenPayload, db: Session = Depends(get_db)):
-    #payload has symbols, start, end, filters
-    rows = crud.get_prices(db, payload.symbols, payload.start, payload.end)
-    
-    grouped_data = defaultdict(list)
-    for row in rows:
-        grouped_data[row.symbol].append({"date": row.date, "close": row.close, "high": row.high, "low": row.low})
-    
-    results = run_tests(grouped_data, payload.filters)
-    return results
+def run_prescreen_tests(payload: PreScreenPayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    task_id = str(uuid.uuid4())
+    tasks_store[task_id] = {"progress": {"testing": 0, "completed": 0, "total": len(payload.symbols)}, "results": {}, "fails": {"global": {}, "momentum": {}, "mean_reversion":{}, "breakout": {}}}
+
+    # Minimal data capture for background task
+    symbols = payload.symbols
+    start = payload.start
+    end = payload.end
+    filters = payload.filters
+
+    def background_task():
+        # Fetch data inside background process
+        rows = crud.get_prices(db, symbols, start, end)
+        grouped_data = defaultdict(list)
+        for row in rows:
+            grouped_data[row.symbol].append({
+                "date": row.date,
+                "close": row.close,
+                "high": row.high,
+                "low": row.low
+            })
+
+        def progress_cb(progress):
+            tasks_store[task_id]["progress"] = {
+                "testing": progress.get("testing", 0),
+                "completed": progress.get("completed", 0),
+                "total": progress.get("total", 0)
+            }
+            print(f"[TASK {task_id}] Progress: "
+              f"testing {tasks_store[task_id]['progress']['testing']}, "
+              f"completed {tasks_store[task_id]['progress']['completed']}/{tasks_store[task_id]['progress']['total']}")
+
+        # Run tests using ProcessPoolExecutor
+        results, fails = run_tests(grouped_data, filters, max_workers=5, progress_callback=progress_cb, task_id=task_id)
+
+    # Schedule background task
+    background_tasks.add_task(background_task)
+
+    return {"task_id": task_id}  # returns immediately
+
+
+# 2 Stream progress via SSE
+@router.get("/streamProgress/{task_id}")
+def stream_progress(task_id: str):
+    def event_generator():
+        last_progress = {"testing": -1, "completed": -1}
+        while True:
+            progress = tasks_store.get(task_id, {}).get("progress", {"testing": 0, "completed": 0, "total": 0})
+            # Yield if either completed or testing changed
+            if (progress["completed"] != last_progress["completed"] or
+                progress["testing"] != last_progress["testing"]):
+                last_progress = progress.copy()
+                yield f"data: {json.dumps(progress)}\n\n"
+            if progress["completed"] >= progress["total"]:
+                break
+            time.sleep(0.1)
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+# 3 Get final results
+@router.get("/getPreScreenResults/{task_id}")
+def get_prescreen_results(task_id: str):
+    task = tasks_store[task_id]
+    if not task:
+        return JSONResponse({"detail": "Task not found or not completed"}, status_code=404)
+
+    results = task.get("results", {})
+    fails = task.get("fails", {})  # make sure you store fails in tasks_store
+
+    # Return a consistent object
+    return {"symbols": results, "failed_count": fails}

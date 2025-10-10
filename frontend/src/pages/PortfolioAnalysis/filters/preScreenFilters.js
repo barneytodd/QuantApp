@@ -4,7 +4,7 @@ export const filters = {
             name: "maxBidAsk",
             label: "Max Average Bid-Ask Spread",
             type: "number",
-            default: 0.01,
+            default: 0.02,
             info: "Maximum allowed average bid-ask spread measured by the proxy (high-low)/close"
         },
         {
@@ -18,7 +18,7 @@ export const filters = {
             name: "skewness",
             label: "Lower Bound for Skew",
             type: "number",
-            default: -2,
+            default: -0.2,
             info: "Minimum allowed value for skewness of results"
         },
         {
@@ -49,7 +49,7 @@ export const filters = {
             name: "avSlope",
             label: "Minimum Required Average MA Slope",
             type: "number",
-            default: 0,
+            default: 0.015,
             info: "Minimum average slope of 200 day MA"
         },
         {
@@ -80,7 +80,7 @@ export const filters = {
             name: "zscoreReversion",
             label: "Z-Score Reversal %",
             type: "number",
-            default: 60,
+            default: 10,
             info: "Minimum required percentage of reversions after 5 days from crossing the reversion threshold"
         },
         {

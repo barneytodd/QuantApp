@@ -1,3 +1,5 @@
+import numpy as np
+
 def above_MA_test(data, MA, short_start, long_start, threshold=0.7):
     """
     Tests what % of time price is above MA over long and short periods.
@@ -12,7 +14,7 @@ def above_MA_test(data, MA, short_start, long_start, threshold=0.7):
 
     for row in data:
         date = row["date"]
-        if date not in MA:
+        if date not in MA or not MA[date]:
             continue
 
         if date >= long_start:
@@ -22,11 +24,11 @@ def above_MA_test(data, MA, short_start, long_start, threshold=0.7):
             if date >= short_start:
                 short_results[result] += 1
 
-    def safe_ratio(a, b):
-        return a / b if b != 0 else 0
+    def safe_pct(a, b):
+        return a / b * 100 if b != 0 else 0
 
-    short_pct = safe_ratio(short_results["above"], short_results["above"] + short_results["below"])
-    long_pct = safe_ratio(long_results["above"], long_results["above"] + long_results["below"])
+    short_pct = safe_pct(short_results["above"], short_results["above"] + short_results["below"])
+    long_pct = safe_pct(long_results["above"], long_results["above"] + long_results["below"])
 
     return (short_pct >= threshold) or (long_pct >= threshold)
 
@@ -50,7 +52,7 @@ def av_slope_test(MA, short_start, long_start, threshold, lookback=20):
         date = dates[i]
         close = values[i]
         prev_close = values[i - lookback]
-        if prev_close == 0 or np.isnan(prev_close):
+        if prev_close == 0 or not prev_close:
             continue
         slope = (close - prev_close) / prev_close
 
@@ -67,32 +69,35 @@ def av_slope_test(MA, short_start, long_start, threshold, lookback=20):
     return mean_long >= threshold or mean_short >= threshold
 
 
-def pos_returns_test(data, short_start, long_start, threshold):
+def pos_returns_test(short_returns, long_returns, threshold):
     """
     Checks whether the percentage of positive daily returns
     exceeds a threshold in either short or long lookback periods.
+
+    short_returns, long_returns: lists or arrays of daily returns
+    long_returns: list or array of daily returns over long period
+    threshold: percentage threshold (e.g., 60 for 60%)
     """
     long_results = {"pos": 0, "neg": 0}
     short_results = {"pos": 0, "neg": 0}
 
-    dates = [row["date"] for row in data]
-    values = [row["close"] for row in data]
+    for r in short_returns:
+        direction = "pos" if r > 0 else "neg"
+        short_results[direction] += 1
 
-    for i in range(1, len(dates)):
-        date = dates[i-1]
-        if date >= long_start:
-            retrn = values[i] - values[i-1]
-            direction = "pos" if retrn > 0 else "neg"
-            long_results[direction] += 1
-            if date >= short_start:
-                short_results[direction] += 1
+    for r in long_returns:
+        direction = "pos" if r > 0 else "neg"
+        long_results[direction] += 1
 
-    long_pct = long_results["pos"] / (long_results["pos"] + long_results["neg"])
-    short_pct = short_results["pos"] / (short_results["pos"] + short_results["neg"])
+    long_pct = long_results["pos"] / (long_results["pos"] + long_results["neg"]) * 100
+    short_pct = short_results["pos"] / (short_results["pos"] + short_results["neg"]) * 100
 
     return long_pct >= threshold or short_pct >= threshold
 
 
 def min_volatility_test(short_vol, long_vol, threshold):
-    """Passes if either short or long period volatility is above the threshold."""
+    """
+    Passes if either short or long period volatility is above the threshold.
+    short_vol, long_vol: annualized volatilities (e.g., stddev of returns)
+    """
     return short_vol >= threshold or long_vol >= threshold

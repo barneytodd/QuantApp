@@ -1,17 +1,18 @@
 import UniverseFilter from "./components/filters/Stage1UniverseFilter"
 import PreScreen from "./components/filters/Stage2PreScreen"
-import InitialBacktest from "./components/filters/Stage3ShortBacktest";
+import PreliminaryBacktest from "./components/filters/Stage3PreliminaryBacktest";
 import StrategySelection from "./components/filters/Stage4StrategySelect";
 import GAOptimisation from "./components/filters/Stage5GAOptimiser";
 
 import { useState } from "react"
 import { useUniverseFilters } from "./hooks/useUniverseFilters";
 import { usePreScreen } from "./hooks/usePreScreen";
+import { usePrelimBacktest } from "./hooks/usePrelimBacktest"
 
 export default function PortfolioBuilder() {
   const [showUniFilter, setShowUniFilter] = useState(false);
   const [showPreScreen, setShowPreScreen] = useState(false);
-  const [showBacktestFilter, setShowBacktestFilter] = useState(false);
+  const [showPrelimBacktest, setShowPrelimBacktest] = useState(false);
   const [showStrategySelector, setShowStrategySelector] = useState(false);
   const [showGAOptimiser, setShowGAOptimiser] = useState(false);
 
@@ -32,8 +33,19 @@ export default function PortfolioBuilder() {
     isLoading: preScreenLoading,
     error: preScreenError,
     uploadComplete: preScreenUploadComplete,
-    testingComplete: preScreenTestingComplete
+    testingComplete: preScreenTestingComplete,
+    progress: preScreenTestingProgress,
+    fails: preScreenFails
   } = usePreScreen();
+
+  const {
+    filterValues: backtestFilterValues,
+    setFilterValues: setBacktestFilterValues,
+    filterResults: backtestFilterResults,
+    runBacktest,
+    isLoading: backtestLoading,
+    error: backtestError
+  } = usePrelimBacktest();
 
   const handleUniverseFilters = async () => {
     await filterUniverse();
@@ -41,6 +53,10 @@ export default function PortfolioBuilder() {
 
   const handlePreScreen = async () => {
     await preScreen(uniFilterResults);
+  }
+
+  const handlePrelimBacktest = async () => {
+    await runBacktest()
   }
 
   return (
@@ -68,10 +84,19 @@ export default function PortfolioBuilder() {
         uploadComplete={preScreenUploadComplete}
         testingComplete={preScreenTestingComplete}
         uniFilterResults={uniFilterResults}
+        progress={preScreenTestingProgress}
+        fails={preScreenFails}
       />
-      <InitialBacktest
-        visible={showBacktestFilter}
-        setVisible={setShowBacktestFilter}
+      <PreliminaryBacktest
+        filterValues={backtestFilterValues}
+        setFilterValues={setBacktestFilterValues}
+        onRunBacktest={handlePrelimBacktest}
+        visible={showPrelimBacktest}
+        setVisible={setShowPrelimBacktest}
+        filterResults={backtestFilterResults}
+        backtestLoading={backtestLoading}
+        backtestError={backtestError}
+        preScreenResults={preScreenFilterResults}
       />
       <StrategySelection 
         visible={showStrategySelector}

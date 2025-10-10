@@ -17,6 +17,6 @@ def run_breakout_tests(short_vol, long_vol, filters):
     """
     
     if not min_volatility_test(short_vol, long_vol, filters["minVolatilityBreakout"]):
-	    return False
-
-    return True
+	    return {"result": False, "test": "minVolatilityBreakoutTestFailed"}
+    
+    return {"result": True}

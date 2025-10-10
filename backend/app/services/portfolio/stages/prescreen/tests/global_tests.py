@@ -76,18 +76,18 @@ def max_drawdown_test(data, long_start, threshold=0.3):
 		
 
 
-def skewness_test(short_data, long_data, threshold=0):
+def skewness_test(short_returns, long_returns, threshold=0):
     """
     Tests skewness (asymmetry of return distribution).
 
-    short_data, long_data: lists or arrays of returns
+    short_returns, long_returns: lists or arrays of returns
     threshold: minimum acceptable skewness (e.g., 0 for symmetric, >0 for right-skewed)
     """
     def safe_skew(x):
         return float(skew(x, bias=False)) if len(x) > 2 else np.nan
 
-    short_skew = safe_skew(short_data)
-    long_skew = safe_skew(long_data)
+    short_skew = safe_skew(short_returns)
+    long_skew = safe_skew(long_returns)
 
     return (
         (not np.isnan(short_skew) and short_skew >= threshold)
@@ -96,11 +96,11 @@ def skewness_test(short_data, long_data, threshold=0):
 
 
 
-def kurtosis_test(short_data, long_data, threshold=3):
+def kurtosis_test(short_returns, long_returns, threshold=3):
     """
     Tests kurtosis (tail heaviness) of return distributions.
     
-    short_data, long_data: lists or arrays of returns
+    short_returns, long_returns: lists or arrays of returns
     threshold: maximum acceptable kurtosis
        - For Fisher=False (normal=3): use threshold=3-4
        - For Fisher=True (normal=0): use threshold=0-1
@@ -108,8 +108,8 @@ def kurtosis_test(short_data, long_data, threshold=3):
     def safe_kurt(x):
         return float(kurtosis(x, fisher=False, bias=False)) if len(x) > 3 else np.nan
 
-    short_kurt = safe_kurt(short_data)
-    long_kurt = safe_kurt(long_data)
+    short_kurt = safe_kurt(short_returns)
+    long_kurt = safe_kurt(long_returns)
 
     return (
         (not np.isnan(short_kurt) and short_kurt <= threshold)
@@ -118,5 +118,10 @@ def kurtosis_test(short_data, long_data, threshold=3):
 
 
 def max_volatility_test(short_vol, long_vol, threshold):
-    """Passes if either short or long period volatility is below the threshold."""
+    """
+    Passes if either short or long period volatility is below the threshold.
+
+    short_vol, long_vol: annualized volatilities 
+    threshold: max acceptable volatility 
+    """
     return short_vol <= threshold or long_vol <= threshold

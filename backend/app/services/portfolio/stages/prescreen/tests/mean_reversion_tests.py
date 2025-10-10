@@ -1,27 +1,20 @@
 import numpy as np
 import pandas as pd
 
-def autocorrelation_test(data, short_start, long_start, threshold):
+def autocorrelation_test(short_returns, long_returns, threshold):
     """
     Tests for mean reversion by computing lag-1 autocorrelation
     of daily returns in short- and long-term windows.
     Negative autocorrelation (below threshold) indicates mean-reverting behavior.
 
     Parameters:
-        data (list[dict]): Historical price data with 'date' and 'close' keys.
-        short_start (datetime): Start date for short-term window.
-        long_start (datetime): Start date for long-term window.
+        short_returns (list[float]): Daily returns in the short-term window.
+        long_returns (list[float]): Daily returns in the long-term window.
         threshold (float): Maximum acceptable autocorrelation (e.g., 0 or -0.05).
 
     Returns:
         bool: True if either short or long autocorrelation <= threshold (mean-reverting).
     """
-
-    short_prices = np.array([row["close"] for row in data if row["date"] >= short_start])
-    long_prices = np.array([row["close"] for row in data if row["date"] >= long_start])
-	
-    short_returns = np.diff(short_prices) / short_prices[:-1]
-    long_returns = np.diff(long_prices) / long_prices[:-1]
 
     results = []
 

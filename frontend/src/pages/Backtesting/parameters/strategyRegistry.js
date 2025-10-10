@@ -1,6 +1,7 @@
 export const strategies = {
   sma_crossover: {
     label: "Moving Average Crossover",
+    type: "momentum",
     params: [
       // --- Basic ---
       { 
@@ -33,6 +34,7 @@ export const strategies = {
 
   bollinger_reversion: {
     label: "Bollinger Band Reversion",
+    type: "meanReversion",
     params: [
       // --- Basic ---
       { 
@@ -65,6 +67,7 @@ export const strategies = {
 
   rsi_reversion: {
     label: "RSI Mean Reversion",
+    type: "meanReversion",
     params: [
       // --- Basic ---
       { 
@@ -122,6 +125,7 @@ export const strategies = {
 
   momentum: {
     label: "Time-Series Momentum",
+    type: "momentum",
     params: [
       // --- Basic ---
       { 
@@ -182,6 +186,7 @@ export const strategies = {
 
   breakout: {
     label: "Breakout Strategy", 
+    type: "breakout",
     params: [
       // --- Basic ---
       { 
@@ -216,6 +221,7 @@ export const strategies = {
 
   pairs_trading: {
     label: "Pairs Trading",
+    type: "meanReversion",
     params: [
       // --- Basic ---
       { 

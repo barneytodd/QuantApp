@@ -4,10 +4,11 @@ from math import sqrt
 def compute_sma(data, period):
     result = []
     closes = [d["close"] for d in data]
+    print(f"closes: {len(closes)}")
     dates = [d["date"] for d in data]
     for i in range(len(closes)):
         if i < period - 1:
-            result.append({"value": None})
+            result.append({"date": dates[i], "value": None})
         else:
             window = closes[i - period + 1:i + 1]
             result.append({"date": dates[i], "value": sum(window) / period})
