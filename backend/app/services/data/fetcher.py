@@ -75,10 +75,8 @@ def ingest_missing_data_parallel(db, symbols, start, end, chunk_size=50, max_wor
         all_records = []
         with SessionLocal() as db_thread:
             for period_start, period_end in missing_periods.get(symbol, []):
-                print(symbol, period_start, period_end)
                 records = fetch_historical([symbol], start=str(period_start), end=str(period_end))
                 if records:
-                    print(symbol, "finished fetching")
                     all_records.extend([PriceIn(**r) for r in records])
 
             if all_records:

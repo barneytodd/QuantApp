@@ -6,6 +6,7 @@ from collections import defaultdict
 import uuid
 import json
 import time
+import asyncio
 
 
 from app.database import get_db
@@ -13,6 +14,7 @@ from app.schemas import PreScreenPayload
 from app import crud
 from app.services.portfolio.stages.prescreen.run_prescreen import run_tests
 from app.tasks import tasks_store
+
 
 router = APIRouter()
 
@@ -29,16 +31,6 @@ def run_prescreen_tests(payload: PreScreenPayload, background_tasks: BackgroundT
     filters = payload.filters
 
     def background_task():
-        # Fetch data inside background process
-        rows = crud.get_prices(db, symbols, start, end)
-        grouped_data = defaultdict(list)
-        for row in rows:
-            grouped_data[row.symbol].append({
-                "date": row.date,
-                "close": row.close,
-                "high": row.high,
-                "low": row.low
-            })
 
         def progress_cb(progress):
             tasks_store[task_id]["progress"] = {
@@ -50,8 +42,9 @@ def run_prescreen_tests(payload: PreScreenPayload, background_tasks: BackgroundT
               f"testing {tasks_store[task_id]['progress']['testing']}, "
               f"completed {tasks_store[task_id]['progress']['completed']}/{tasks_store[task_id]['progress']['total']}")
 
+        print("submitting for tests")
         # Run tests using ProcessPoolExecutor
-        results, fails = run_tests(grouped_data, filters, max_workers=5, progress_callback=progress_cb, task_id=task_id)
+        results, fails = run_tests(symbols, start, end, filters, max_workers=5, progress_callback=progress_cb, task_id=task_id)
 
     # Schedule background task
     background_tasks.add_task(background_task)
@@ -61,20 +54,29 @@ def run_prescreen_tests(payload: PreScreenPayload, background_tasks: BackgroundT
 
 # 2 Stream progress via SSE
 @router.get("/streamProgress/{task_id}")
-def stream_progress(task_id: str):
-    def event_generator():
+async def stream_progress(task_id: str):
+    async def event_generator():
         last_progress = {"testing": -1, "completed": -1}
         while True:
-            progress = tasks_store.get(task_id, {}).get("progress", {"testing": 0, "completed": 0, "total": 0})
-            # Yield if either completed or testing changed
+            progress = tasks_store.get(task_id, {}).get(
+                "progress", {"testing": 0, "completed": 0, "total": 0}
+            )
             if (progress["completed"] != last_progress["completed"] or
                 progress["testing"] != last_progress["testing"]):
                 last_progress = progress.copy()
                 yield f"data: {json.dumps(progress)}\n\n"
+
             if progress["completed"] >= progress["total"]:
+                # Send a final JSON object indicating completion
+                final_event = last_progress.copy()
+                final_event["done"] = True
+                yield f"data: {json.dumps(final_event)}\n\n"
                 break
-            time.sleep(0.1)
+
+            await asyncio.sleep(0.1)
+
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
 
 
 # 3 Get final results

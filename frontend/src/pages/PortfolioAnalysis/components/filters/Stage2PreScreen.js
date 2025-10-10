@@ -187,10 +187,16 @@ export default function PreScreen({
               </h3>
               {Object.entries(fails).map(([groupName, groupFails]) => {
                 const totalFailed = Object.values(groupFails).reduce((sum, count) => sum + count, 0);
+                const totalPassed =
+                  groupName === "global"
+                    ? progress.completed - totalFailed
+                    : (fails.global
+                        ? progress.completed - Object.values(fails.global).reduce((sum, c) => sum + c, 0)
+                        : progress.completed) - totalFailed;
                 return (
                   <div key={groupName} className="mb-2">
                     <h4 className="text-sm font-semibold text-red-700">
-                      {groupName} (Total Failed: {totalFailed})
+                      {groupName} (Total Passed: {totalPassed})
                     </h4>
                     <ul className="list-disc list-inside text-red-800 text-sm ml-4">
                       {Object.entries(groupFails).map(([testName, count]) => (

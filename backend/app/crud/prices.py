@@ -1,4 +1,6 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import text
+from app.database import SessionLocal
 from sqlalchemy import tuple_
 from typing import List, Optional
 from app.models.prices import Price
@@ -27,6 +29,38 @@ def get_prices(db: Session, symbols: List[str], start: Optional[date] = None, en
     if end:
         query = query.filter(Price.date <= end)
     return query.order_by(Price.date.asc()).all()
+
+
+def get_prices_light(db, symbols, start, end):
+    if not symbols:
+        return []
+
+    # Build parameter placeholders dynamically
+    placeholders = ", ".join([f":s{i}" for i in range(len(symbols))])
+    params = {f"s{i}": sym for i, sym in enumerate(symbols)}
+    params.update({"start": start, "end": end})
+
+    sql = text(f"""
+        SELECT symbol, [date], [close], [high], [low]
+        FROM dbo.prices WITH (NOLOCK)
+        WHERE symbol IN ({placeholders})
+          AND [date] BETWEEN :start AND :end
+        ORDER BY symbol, [date];
+    """)
+
+    result = db.execute(sql, params)
+
+    return [
+        {
+            "symbol": r.symbol,
+            "date": r.date,
+            "close": r.close,
+            "high": r.high,
+            "low": r.low,
+        }
+        for r in result
+    ]
+
 
 
 # Upsert a list of PriceIn records into the database

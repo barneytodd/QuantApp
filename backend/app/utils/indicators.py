@@ -4,7 +4,6 @@ from math import sqrt
 def compute_sma(data, period):
     result = []
     closes = [d["close"] for d in data]
-    print(f"closes: {len(closes)}")
     dates = [d["date"] for d in data]
     for i in range(len(closes)):
         if i < period - 1:

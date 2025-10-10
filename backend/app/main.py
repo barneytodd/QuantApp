@@ -13,6 +13,7 @@ from datetime import date
 from typing import List
 from app.api.routes import data, metrics, strategies, symbols, pairs, param_optimiser, portfolio
 
+
 # Create database tables
 Base.metadata.create_all(bind=engine)
 

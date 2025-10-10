@@ -30,6 +30,7 @@ export function usePreScreen() {
         if (!symbols.length) return;
 
         setFilterResults(null)
+        setFails({});
         setUploadComplete(false);
         setIsLoading(true);
 
