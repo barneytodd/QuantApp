@@ -123,10 +123,10 @@ export default function Backtesting() {
 
 
   useEffect(() => {
-    if (strategyType !== "custom") {
+    if (strategyType?.value !== "custom") {
       setShowCustom(false);
     }
-    if (strategyType !== "pairs_trading") {
+    if (strategyType?.value !== "pairs_trading") {
       setShowPairs(false)
     }
   }, [strategyType]);

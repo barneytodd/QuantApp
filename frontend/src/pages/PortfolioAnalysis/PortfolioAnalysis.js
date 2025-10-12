@@ -9,6 +9,12 @@ import { useUniverseFilters } from "./hooks/useUniverseFilters";
 import { usePreScreen } from "./hooks/usePreScreen";
 import { usePrelimBacktest } from "./hooks/usePrelimBacktest"
 
+const precomputedPrelimBacktestResults = {
+    AAPL: ["breakout", "mean_reversion"],
+    MSFT: ["breakout", "momentum", "mean_reversion"],
+    // ...etc
+  };
+
 export default function PortfolioBuilder() {
   const [showUniFilter, setShowUniFilter] = useState(false);
   const [showPreScreen, setShowPreScreen] = useState(false);
@@ -42,10 +48,12 @@ export default function PortfolioBuilder() {
     filterValues: backtestFilterValues,
     setFilterValues: setBacktestFilterValues,
     filterResults: backtestFilterResults,
-    runBacktest,
+    runPrelimBacktest,
     isLoading: backtestLoading,
-    error: backtestError
-  } = usePrelimBacktest();
+    error: backtestError,
+    strategyType,
+    pairsLoading
+  } = usePrelimBacktest(preScreenFilterResults);
 
   const handleUniverseFilters = async () => {
     await filterUniverse();
@@ -56,7 +64,7 @@ export default function PortfolioBuilder() {
   }
 
   const handlePrelimBacktest = async () => {
-    await runBacktest()
+    await runPrelimBacktest()
   }
 
   return (
@@ -97,6 +105,8 @@ export default function PortfolioBuilder() {
         backtestLoading={backtestLoading}
         backtestError={backtestError}
         preScreenResults={preScreenFilterResults}
+        strategyType={strategyType}
+        pairsLoading={pairsLoading}
       />
       <StrategySelection 
         visible={showStrategySelector}

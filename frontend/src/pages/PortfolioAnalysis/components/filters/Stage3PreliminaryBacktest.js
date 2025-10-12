@@ -10,7 +10,9 @@ export default function PreliminaryBacktest({
   filterResults,
   backtestLoading,
   backtestError,
-  preScreenResults
+  preScreenResults,
+  strategyType,
+  pairsLoading
 }) {
   return (
     <div 
@@ -23,10 +25,10 @@ export default function PreliminaryBacktest({
     >
       <div
         className={`flex justify-between items-center ${
-          preScreenResults?.length ? "cursor-pointer" : "cursor-not-allowed text-gray-400"
+          preScreenResults ? "cursor-pointer" : "cursor-not-allowed text-gray-400"
         }`}
         title={
-          preScreenResults?.length
+          preScreenResults
             ? ""
             : "Complete broad universal filter first"
         }
@@ -130,16 +132,20 @@ export default function PreliminaryBacktest({
           <div className="flex justify-start gap-3 mt-5">
             <button
               onClick={onRunBacktest}
+              disabled={strategyType?.value !== "custom"}
               className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {backtestLoading ? "Filtering ..." : filterResults ? "Filtered" : "Filter"}
+              {backtestLoading ? "Filtering ..." : filterResults ? "Filtered" : pairsLoading ? "Loading Pairs" : "Filter"}
             </button>
           </div>
 
           {/* Filter Results */}
           {filterResults != null && (
             <div className="mt-4 text-lg font-medium">
-              Filtered to {filterResults.length} results:
+              Filtered to {Object.values(filterResults).reduce(
+                  (acc, strategies) => acc + strategies.length,
+                  0
+              )} results:
             </div>
           )}
         </>

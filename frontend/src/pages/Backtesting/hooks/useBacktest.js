@@ -63,6 +63,7 @@ export function useBacktest() {
         return; 
       }
       const data = await res.json();
+      console.log(data)
       setBacktestResult(data);
       return data;
     } catch (err) {

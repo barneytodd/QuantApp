@@ -6,6 +6,7 @@ def compute_daily_returns(equity_curve):
     for i in range(1, len(equity_curve)):
         prev = equity_curve[i-1]["value"]
         curr = equity_curve[i]["value"]
+        #if prev == 0: 
         returns.append((curr - prev) / prev)
     return returns
 

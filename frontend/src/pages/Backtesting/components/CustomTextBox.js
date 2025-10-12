@@ -11,12 +11,14 @@ export default function CustomTextBox({
     const [rawText, setRawText] = useState("");
 
     const buildDefaultStrategies = (options) =>
-    options.map((s) => ({
-      label: s.label,
-      name: s.value,
-      symbols: [],
-      weights: [],
-    }));
+    options
+        .filter((s) => s.value !== "custom")
+        .map((s) => ({
+        label: s.label,
+        name: s.value,
+        symbols: [],
+        weights: [],
+        }));
 
     const strategiesToText = (strategies) =>
     strategies

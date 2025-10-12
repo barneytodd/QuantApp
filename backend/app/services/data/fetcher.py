@@ -18,13 +18,13 @@ def fetch_historical(symbols, period="1y", start=None, end=None, interval="1d"):
     all_records = []
     if start and end:
         try:
-            df = yf.download(symbols, start=start, end=end, interval=interval, progress=False, threads=True, group_by='ticker')
+            df = yf.download(symbols, start=start, end=end, interval=interval, progress=False, threads=True, group_by='ticker', auto_adjust=True)
             if df.empty:
                 return None
         except Exception as e:
             return None
     else:
-        df = yf.download(symbols, period=period, interval=interval, progress=False, threads=True, group_by='ticker')
+        df = yf.download(symbols, period=period, interval=interval, progress=False, threads=True, group_by='ticker', auto_adjust=True)
 
     if isinstance(df.columns, pd.MultiIndex):
         for symbol in df.columns.levels[0]:
@@ -133,7 +133,7 @@ def fetch_symbols(
         sub_queries.append(EquityQuery('lt', ['lastclosepriceearnings.lasttwelvemonths', max_price_earnings_ratio]))
 
     query = EquityQuery('and', sub_queries)
-    print(query)
+    print(query)    
 
     while True:
         results = screen(query=query, size=page_size, offset=offset)

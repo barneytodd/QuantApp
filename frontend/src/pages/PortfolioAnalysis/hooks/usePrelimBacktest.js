@@ -2,14 +2,31 @@ import { useState, useEffect } from "react";
 import { filters } from "../filters/prelimBacktestFilters"
 import { strategies } from "../../Backtesting/parameters/strategyRegistry";
 import { useStrategyParams } from "../../Backtesting/hooks/useStrategyParams";
+import { usePairs } from "../../Backtesting/hooks/usePairs"
 
-export function usePrelimBacktest() {
+export function usePrelimBacktest(preScreenResults) {
     const [filterValues, setFilterValues] = useState({});
-    const [filterResults, setFilterResults] = useState(null);
+    const [filterResults, setFilterResults] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // default filters
+    const [allSymbols, setAllSymbols] = useState([]);
+    
+    const { 
+        selectedPairs, 
+        selectPairs, 
+        isLoading: pairsLoading, 
+        error: pairsError 
+    } = usePairs();
+
+    const {
+        strategyType,
+        setStrategyType,
+        basicParams,
+        advancedParams,
+    } = useStrategyParams(allSymbols, selectedPairs);
+
+    // set default filters
     useEffect(() => {
         const filterDefaults = Object.fromEntries(
             Object.values(filters).map((f) => {
@@ -18,28 +35,62 @@ export function usePrelimBacktest() {
             })
         );
         setFilterValues(filterDefaults);
-        console.log(filterDefaults)
     }, [])
 
-    const basicParams = {}
-    const advancedParams = {}
+    // set pairs and symbols
+    useEffect(() => {
+        if (preScreenResults) {
+            setFilterResults({})
+            const momentumSymbols = Object.entries(preScreenResults)
+                    .filter(([symbol, strategies]) => strategies.includes("mean_reversion"))
+                    .map(([symbol]) => symbol);
 
-    const runBacktest = async (preScreenResults) => {
+            const handleSelectPairs = async (symbols) => {
+                await selectPairs(symbols);
+            }
+
+            handleSelectPairs(momentumSymbols);
+
+            const symbols = Object.keys(preScreenResults);
+            setAllSymbols(symbols);
+        }
+    }, [preScreenResults, selectPairs])
+
+    useEffect(() => {
+        if (allSymbols.length > 0 && selectedPairs.length > 0 && strategyType?.value !== "custom") {
+            console.log("started")
+            setStrategyType({value: "custom", label: "custom"});
+            console.log("ended")
+        }
+    }, [allSymbols, selectedPairs, strategyType, setStrategyType]);
+
+    const runPrelimBacktest = async () => {
         if (!preScreenResults) return;
+        console.log(basicParams, advancedParams)
         try {
-            const symbolItems = Object.entries(preScreenResults).flatMap(
+            setIsLoading(true);
+            const symbolItems = [
+                ...Object.entries(preScreenResults).flatMap(
                 ([symbol, types]) =>
                     // for each type, find all strategies that match that type
                     types.flatMap(type =>
                         Object.entries(strategies)
                             .filter(([strategyName, strategyObj]) => strategyObj.type === type)
                             .map(([strategyName, strategyObj]) => ({
-                                symbol,
+                                symbols: [symbol],
                                 strategy: strategyName,
-                                params: strategyObj.params
+                                weight: 1
                             }))
                     )
-                );
+                ),
+
+                ...selectedPairs.map((pair) => ({
+                        symbols: [pair.stock1, pair.stock2],
+                        strategy: "pairs_trading",
+                        weight: 1
+                    })
+                ),
+            ];
 
             const params = Object.fromEntries(
             Object.entries(advancedParams)
@@ -61,7 +112,17 @@ export function usePrelimBacktest() {
                 return; 
             }
             const data = await res.json();
-            setFilterResults(data);
+            const symbolStrategies = data
+                .filter(item => item.metrics?.sharpe_ratio > 0.5 && item.symbol !== "overall")
+                .reduce((acc, item) => {
+                    if (!acc[item.symbol]) {
+                        acc[item.symbol] = [];
+                    }
+                    acc[item.symbol].push(item.strategy);
+                    return acc;
+                }, {});
+            console.log(symbolStrategies)
+            setFilterResults(symbolStrategies);
             return data;
         } catch (err) {
             setError(err);
@@ -75,8 +136,11 @@ export function usePrelimBacktest() {
         filterValues,
         setFilterValues,
         filterResults,
-        runBacktest,
+        runPrelimBacktest,
         isLoading,
-        error
+        error,
+        pairsLoading,
+        pairsError,
+        strategyType
     }
 }
