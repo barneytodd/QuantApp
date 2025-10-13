@@ -4,7 +4,7 @@ import { strategies } from "../../Backtesting/parameters/strategyRegistry";
 import { useStrategyParams } from "../../Backtesting/hooks/useStrategyParams";
 import { usePairs } from "../../Backtesting/hooks/usePairs"
 
-export function usePrelimBacktest(preScreenResults) {
+export function usePrelimBacktest(preScreenResults, setVisible) {
     const [filterValues, setFilterValues] = useState({});
     const [filterResults, setFilterResults] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -38,7 +38,10 @@ export function usePrelimBacktest(preScreenResults) {
         setFilterValues(filterDefaults);
     }, [])
 
-    useEffect(() => setFilterResults(null), [preScreenResults])
+    useEffect(() => {
+        setFilterResults(null);
+        setVisible(false);
+    }, [preScreenResults, setVisible])
 
     // set pairs and symbols
     useEffect(() => {

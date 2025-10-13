@@ -44,7 +44,7 @@ export default function PortfolioBuilder() {
     testingComplete: preScreenTestingComplete,
     progress: preScreenTestingProgress,
     fails: preScreenFails
-  } = usePreScreen(uniFilterResults);
+  } = usePreScreen(uniFilterResults, setShowPreScreen);
 
   const {
     filterValues: backtestFilterValues,
@@ -55,7 +55,7 @@ export default function PortfolioBuilder() {
     error: backtestError,
     strategyType: backtestStrategyType,
     pairsLoading: pairsLoadingForBacktest,
-  } = usePrelimBacktest(preScreenFilterResults);
+  } = usePrelimBacktest(preScreenFilterResults, setShowPrelimBacktest);
 
   const {
     paramValues: strategySelectParamValues,
@@ -67,7 +67,7 @@ export default function PortfolioBuilder() {
     strategyType: strategySelectStrategyType,
     uploadComplete: strategySelectUploadComplete,
     progress: strategySelectProgress
-  } = useStrategySelect(backtestFilterResults)
+  } = useStrategySelect(backtestFilterResults, setShowStrategySelector)
 
   const handleUniverseFilters = async () => {
     await filterUniverse();

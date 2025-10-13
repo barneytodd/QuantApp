@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { params } from "../params/strategySelectParams"
 import { useStrategyParams } from "../../Backtesting/hooks/useStrategyParams";
 
-export function useStrategySelect(prelimBacktestResults) {
+export function useStrategySelect(prelimBacktestResults, setVisible) {
     const [paramValues, setParamValues] = useState({});
     const [filterResults, setFilterResults] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +48,11 @@ export function useStrategySelect(prelimBacktestResults) {
         setParamValues(paramDefaults);
     }, [])
 
-    useEffect(() => setFilterResults(null), [prelimBacktestResults])
+    useEffect(() => {
+        setFilterResults(null);
+        setVisible(false);
+        setProgress({});
+    }, [prelimBacktestResults, setVisible])
 
     useEffect(() => {
         if (allSymbols.length > 0 && strategyType?.value !== "custom") {

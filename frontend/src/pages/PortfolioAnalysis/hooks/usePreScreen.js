@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { filters } from "../params/preScreenFilters"
 
-export function usePreScreen(uniFilterResults) {
+export function usePreScreen(uniFilterResults, setVisible) {
     const [uploadComplete, setUploadComplete] = useState(true);
     const [testingComplete, setTestingComplete] = useState(true);
     const [filterValues, setFilterValues] = useState({});
@@ -24,7 +24,11 @@ export function usePreScreen(uniFilterResults) {
         setFilterValues(filterDefaults);
     }, []);
 
-    useEffect(() => setFilterResults(null), [uniFilterResults])
+    useEffect(() => {
+        setFilterResults(null);
+        setVisible(false);
+        setFails({});
+    }, [uniFilterResults, setVisible])
 
     const preScreen = async () => {
         if (!uniFilterResults) return;
