@@ -51,7 +51,6 @@ export function useStrategySelect(prelimBacktestResults) {
     useEffect(() => setFilterResults(null), [prelimBacktestResults])
 
     useEffect(() => {
-        console.log(allSymbols, selectedPairs, strategyType)
         if (allSymbols.length > 0 && strategyType?.value !== "custom") {
             setStrategyType({value: "custom", label: "custom"});
         }

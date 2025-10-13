@@ -35,7 +35,6 @@ export function useOptimisation() {
 
       const data = await res.json();
       setOptimisationResult(data);
-      console.log(data)
       return data;
     } catch (err) {
       setError(err);

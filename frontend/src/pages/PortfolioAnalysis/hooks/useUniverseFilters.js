@@ -17,7 +17,6 @@ export function useUniverseFilters() {
             })
         );
         setFilterValues(filterDefaults);
-        console.log(filterDefaults)
     }, [])
 
     useEffect(() => {

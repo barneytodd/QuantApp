@@ -50,7 +50,6 @@ export function useBacktest() {
             )
         ),
       };
-      console.log(payload)
 
       const res = await fetch("http://localhost:8000/api/strategies/backtest", {
         method: "POST",
@@ -63,7 +62,6 @@ export function useBacktest() {
         return; 
       }
       const data = await res.json();
-      console.log(data)
       setBacktestResult(data);
       return data;
     } catch (err) {

@@ -89,7 +89,6 @@ export default function CustomTextBox({
                     onBlur={() => {
                         const parsed = parseTextToStrategies(rawText, customStrategy);
                         setCustomStrategy(parsed);
-                        console.log(customStrategy)
                     }}
                     className="border p-2 rounded w-full h-[25em] resize-none font-mono"
                 />

@@ -47,7 +47,6 @@ export function usePrelimBacktest(preScreenResults) {
                     .filter(([symbol, strategies]) => strategies.includes("mean_reversion"))
                     .map(([symbol]) => symbol);
 
-            console.log(preScreenResults, momentumSymbols)
             const runSelectPairs = async (symbols) => {
                 await selectPairs(symbols);
             }
@@ -63,7 +62,6 @@ export function usePrelimBacktest(preScreenResults) {
     }, [preScreenResults, selectPairs, setSelectedPairs])
 
     useEffect(() => {
-        console.log(allSymbols, selectedPairs, strategyType)
         if (allSymbols.length > 0 && strategyType?.value !== "custom") {
             setStrategyType({value: "custom", label: "custom"});
         }
@@ -105,7 +103,6 @@ export function usePrelimBacktest(preScreenResults) {
                 Object.entries(basicParams).map(([k, v]) => [k, { value: v.value, lookback: v.lookback ?? false }])
                 )
             )
-            console.log(symbolItems)
             const res = await fetch("http://localhost:8000/api/strategies/backtest", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -127,7 +124,6 @@ export function usePrelimBacktest(preScreenResults) {
                     return acc;
                 }, {});
             setFilterResults({...symbolStrategies});
-            console.log(symbolStrategies)
             return data;
         } catch (err) {
             setError(err);

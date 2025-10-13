@@ -90,7 +90,6 @@ export default function Backtesting() {
   }
     
   useEffect(() => {
-    console.log(optimisationResult, optimError)
     if (optimisationResult && !optimError) {
       if (optimisationResult.best_basic_params) {
         const basic = optimisationResult.best_basic_params;
