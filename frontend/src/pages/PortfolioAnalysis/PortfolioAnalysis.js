@@ -1,17 +1,19 @@
-import UniverseFilter from "./components/filters/Stage1UniverseFilter"
-import PreScreen from "./components/filters/Stage2PreScreen"
-import PreliminaryBacktest from "./components/filters/Stage3PreliminaryBacktest";
-import StrategySelection from "./components/filters/Stage4StrategySelect";
-import GAOptimisation from "./components/filters/Stage5GAOptimiser";
+import UniverseFilter from "./components/stages/Stage1UniverseFilter"
+import PreScreen from "./components/stages/Stage2PreScreen"
+import PreliminaryBacktest from "./components/stages/Stage3PreliminaryBacktest";
+import StrategySelection from "./components/stages/Stage4StrategySelect";
+import GAOptimisation from "./components/stages/Stage5GAOptimiser";
 
 import { useState } from "react"
 import { useUniverseFilters } from "./hooks/useUniverseFilters";
 import { usePreScreen } from "./hooks/usePreScreen";
-import { usePrelimBacktest } from "./hooks/usePrelimBacktest"
+import { usePrelimBacktest } from "./hooks/usePrelimBacktest";
+import { useStrategySelect } from "./hooks/useStrategySelect";
 
 const precomputedPrelimBacktestResults = {
-    AAPL: ["breakout", "mean_reversion"],
-    MSFT: ["breakout", "momentum", "mean_reversion"],
+    "AAPL": ["breakout", "sma_crossover"],
+    "MSFT": ["momentum", "rsi_reversion"],
+    "AAPL-MSFT": ["pairs_trading"]
     // ...etc
   };
 
@@ -51,9 +53,21 @@ export default function PortfolioBuilder() {
     runPrelimBacktest,
     isLoading: backtestLoading,
     error: backtestError,
-    strategyType,
-    pairsLoading
+    strategyType: backtestStrategyType,
+    pairsLoading: pairsLoadingForBacktest,
   } = usePrelimBacktest(preScreenFilterResults);
+
+  const {
+    paramValues: strategySelectParamValues,
+    setParamValues: setStrategySelectParamValues,
+    filterResults: strategySelectFilterResults,
+    runStrategySelect,
+    isLoading: strategySelectLoading,
+    error: strategySelectError,
+    strategyType: strategySelectStrategyType,
+    uploadComplete: strategySelectUploadComplete,
+    progress: strategySelectProgress
+  } = useStrategySelect(precomputedPrelimBacktestResults)
 
   const handleUniverseFilters = async () => {
     await filterUniverse();
@@ -105,12 +119,22 @@ export default function PortfolioBuilder() {
         backtestLoading={backtestLoading}
         backtestError={backtestError}
         preScreenResults={preScreenFilterResults}
-        strategyType={strategyType}
-        pairsLoading={pairsLoading}
+        strategyType={backtestStrategyType}
+        pairsLoading={pairsLoadingForBacktest}
       />
       <StrategySelection 
+        paramValues={strategySelectParamValues}
+        setParamValues={setStrategySelectParamValues}
+        onRunStrategySelect={runStrategySelect}
         visible={showStrategySelector}
         setVisible={setShowStrategySelector}
+        filterResults={strategySelectFilterResults}
+        strategySelectLoading={strategySelectLoading}
+        strategySelectError={strategySelectError}
+        prelimBacktestResults={precomputedPrelimBacktestResults}
+        strategyType={strategySelectStrategyType}
+        uploadComplete={strategySelectUploadComplete}
+        progress={strategySelectProgress}
       />
       <GAOptimisation 
         visible={showGAOptimiser}

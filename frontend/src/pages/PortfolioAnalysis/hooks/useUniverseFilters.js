@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { filters } from "../filters/universeFilters";
-import { exchangeOptions, industryOptions } from "../filters/uniFilterOptions"
+import { filters } from "../params/universeFilters";
+import { exchangeOptions, industryOptions } from "../params/uniFilterOptions"
 
 export function useUniverseFilters() {
     const [filterValues, setFilterValues] = useState({});

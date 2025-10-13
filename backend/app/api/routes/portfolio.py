@@ -13,7 +13,7 @@ from app.database import get_db
 from app.schemas import PreScreenPayload
 from app import crud
 from app.services.portfolio.stages.prescreen.run_prescreen import run_tests
-from app.tasks import tasks_store
+from app.tasks import prescreen_tasks_store as tasks_store
 
 
 router = APIRouter()

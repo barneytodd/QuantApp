@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { filters } from "../filters/prelimBacktestFilters"
+import { filters } from "../params/prelimBacktestFilters"
 import { strategies } from "../../Backtesting/parameters/strategyRegistry";
 import { useStrategyParams } from "../../Backtesting/hooks/useStrategyParams";
 import { usePairs } from "../../Backtesting/hooks/usePairs"
 
 export function usePrelimBacktest(preScreenResults) {
     const [filterValues, setFilterValues] = useState({});
-    const [filterResults, setFilterResults] = useState({});
+    const [filterResults, setFilterResults] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -40,16 +40,15 @@ export function usePrelimBacktest(preScreenResults) {
     // set pairs and symbols
     useEffect(() => {
         if (preScreenResults) {
-            setFilterResults({})
             const momentumSymbols = Object.entries(preScreenResults)
                     .filter(([symbol, strategies]) => strategies.includes("mean_reversion"))
                     .map(([symbol]) => symbol);
 
-            const handleSelectPairs = async (symbols) => {
+            const runSelectPairs = async (symbols) => {
                 await selectPairs(symbols);
             }
 
-            handleSelectPairs(momentumSymbols);
+            runSelectPairs(momentumSymbols);
 
             const symbols = Object.keys(preScreenResults);
             setAllSymbols(symbols);
@@ -58,15 +57,12 @@ export function usePrelimBacktest(preScreenResults) {
 
     useEffect(() => {
         if (allSymbols.length > 0 && selectedPairs.length > 0 && strategyType?.value !== "custom") {
-            console.log("started")
             setStrategyType({value: "custom", label: "custom"});
-            console.log("ended")
         }
     }, [allSymbols, selectedPairs, strategyType, setStrategyType]);
 
     const runPrelimBacktest = async () => {
         if (!preScreenResults) return;
-        console.log(basicParams, advancedParams)
         try {
             setIsLoading(true);
             const symbolItems = [
@@ -113,7 +109,7 @@ export function usePrelimBacktest(preScreenResults) {
             }
             const data = await res.json();
             const symbolStrategies = data
-                .filter(item => item.metrics?.sharpe_ratio > 0.5 && item.symbol !== "overall")
+                .filter(item => item.metrics?.sharpe_ratio > filterValues?.sharpe?.value && item.symbol !== "overall")
                 .reduce((acc, item) => {
                     if (!acc[item.symbol]) {
                         acc[item.symbol] = [];
@@ -121,7 +117,6 @@ export function usePrelimBacktest(preScreenResults) {
                     acc[item.symbol].push(item.strategy);
                     return acc;
                 }, {});
-            console.log(symbolStrategies)
             setFilterResults(symbolStrategies);
             return data;
         } catch (err) {
@@ -141,6 +136,6 @@ export function usePrelimBacktest(preScreenResults) {
         error,
         pairsLoading,
         pairsError,
-        strategyType
+        strategyType, 
     }
 }

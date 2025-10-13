@@ -23,6 +23,7 @@ def compute_metrics(equity_curve, risk_free_rate=0.01):
 
     trading_days = 252
     mean_annual = mean_daily * trading_days
+    cagr = (equity_curve[-1]["value"] / equity_curve[0]["value"]) ** (trading_days / n) - 1
     vol_annual = std_daily * sqrt(trading_days)
     sharpe = (mean_annual - risk_free_rate) / vol_annual if vol_annual > 0 else 0
 
@@ -35,6 +36,7 @@ def compute_metrics(equity_curve, risk_free_rate=0.01):
 
     return {
         "mean_return": mean_annual,
+        "cagr": cagr * 100,
         "annualised_volatility": vol_annual,
         "sharpe_ratio": sharpe,
         "max_drawdown": max_drawdown * 100

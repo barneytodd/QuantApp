@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { filters } from "../filters/preScreenFilters"
+import { filters } from "../params/preScreenFilters"
 
 export function usePreScreen() {
     const [uploadComplete, setUploadComplete] = useState(true);

@@ -4,7 +4,7 @@ from concurrent.futures import ProcessPoolExecutor
 import asyncio
 from datetime import datetime, timedelta
 import numpy as np
-from app.tasks import tasks_store
+from app.tasks import prescreen_tasks_store as tasks_store
 from app import crud
 from app.database import SessionLocal
 from app.database_async import get_connection, release_connection, init_db_pool

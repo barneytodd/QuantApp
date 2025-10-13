@@ -30,10 +30,10 @@ export default function PreliminaryBacktest({
         title={
           preScreenResults
             ? ""
-            : "Complete broad universal filter first"
+            : "Complete pre-screen first"
         }
         onClick={() => {
-          if (true) { //(preScreenResults?.length) {
+          if (preScreenResults?.length) {
             setVisible((v) => !v);
           }
         }}

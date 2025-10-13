@@ -48,6 +48,7 @@ def ingest_prices_synchronously(payload: SymbolPayload, db: Session = Depends(ge
     result = fetcher.ingest_missing_data_parallel(db, symbols, payload.start, payload.end)
 
     if result:
+        print("Data ingestion complete")
         return {"status": "ingestion complete", "symbols": symbols}
 
     else:
