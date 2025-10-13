@@ -49,7 +49,6 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
                 pass  # don't fail backtest if callback fails
 
         signals = {}
-
         # --- 1. Generate signals per strategy ---
         for strategy_key, info in symbols.items():
             strategy = info["strategy"]
@@ -172,31 +171,32 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
             equity_curves["overall"].append({"date": date, "value": portfolio_value})
 
     # --- 6. close out remaining positions at end ---
-    info = symbols[strategy_key]
-    stocks = info["symbol"].split("-") if info["strategy"] == "pairs_trading" else [info["symbol"]]
+    for strategy_key, info in symbols.items():
+        if len(equity_curves[strategy_key]) > 0:
+            stocks = info["symbol"].split("-") if info["strategy"] == "pairs_trading" else [info["symbol"]]
 
-    pos_list = [positions[stock][strategy_key] for stock in stocks]
-    entry_list = [entry_prices[stock][strategy_key] for stock in stocks]
-    price_list = [last_prices[stock] for stock in stocks]
+            pos_list = [positions[stock][strategy_key] for stock in stocks]
+            entry_list = [entry_prices[stock][strategy_key] for stock in stocks]
+            price_list = [last_prices[stock] for stock in stocks]
 
-    capital[strategy_key], new_trades = close_position(
-        stocks,
-        price_list,
-        capital[strategy_key],
-        entry_list,
-        pos_list,
-        date,
-        entry_dates[strategy_key]["date"],
-        slippage_pct,
-        transaction_pct,
-        transaction_fixed
-    )
+            capital[strategy_key], new_trades = close_position(
+                stocks,
+                price_list,
+                capital[strategy_key],
+                entry_list,
+                pos_list,
+                all_dates[-1],
+                entry_dates[strategy_key]["date"],
+                slippage_pct,
+                transaction_pct,
+                transaction_fixed
+            )
 
-    trades[strategy_key].extend(new_trades)
-    for stock in stocks:
-        positions[stock][strategy_key] = 0
-        entry_prices[stock][strategy_key] = None
-    entry_dates[strategy_key]["idx"] = entry_dates[strategy_key]["date"] = None
+            trades[strategy_key].extend(new_trades)
+            for stock in stocks:
+                positions[stock][strategy_key] = 0
+                entry_prices[stock][strategy_key] = None
+            entry_dates[strategy_key]["idx"] = entry_dates[strategy_key]["date"] = None
 
     results = []
     for strategy_key, curve in equity_curves.items():
