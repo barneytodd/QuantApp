@@ -20,36 +20,41 @@ router = APIRouter()
 
 # 1 Start pre-screening
 @router.post("/runPreScreen/")
-def run_prescreen_tests(payload: PreScreenPayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def run_prescreen_tests(payload: PreScreenPayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     task_id = str(uuid.uuid4())
-    tasks_store[task_id] = {"progress": {"testing": 0, "completed": 0, "total": len(payload.symbols)}, "results": {}, "fails": {"global": {}, "momentum": {}, "mean_reversion":{}, "breakout": {}}}
+    tasks_store[task_id] = {
+        "progress": {"testing": 0, "completed": 0, "total": len(payload.symbols)},
+        "results": {},
+        "fails": {"global": {}, "momentum": {}, "mean_reversion": {}, "breakout": {}}
+    }
 
-    # Minimal data capture for background task
     symbols = payload.symbols
     start = payload.start
     end = payload.end
     filters = payload.filters
 
-    def background_task():
+    def progress_cb(progress):
+        tasks_store[task_id]["progress"] = progress
+        print(f"[TASK {task_id}] Progress: "
+              f"testing {progress['testing']}, completed {progress['completed']}/{progress['total']}")
 
-        def progress_cb(progress):
-            tasks_store[task_id]["progress"] = {
-                "testing": progress.get("testing", 0),
-                "completed": progress.get("completed", 0),
-                "total": progress.get("total", 0)
-            }
-            print(f"[TASK {task_id}] Progress: "
-              f"testing {tasks_store[task_id]['progress']['testing']}, "
-              f"completed {tasks_store[task_id]['progress']['completed']}/{tasks_store[task_id]['progress']['total']}")
+    async def background_task_async():
+        print(f"[TASK {task_id}] starting pre-screen tests")
+        try:
+            results, fails = await run_tests(
+                symbols, start, end, filters,
+                max_workers=5,
+                progress_callback=progress_cb,
+                task_id=task_id
+            )
+            print(f"[TASK {task_id}] finished successfully")
+        except Exception as e:
+            print(f"[TASK {task_id}] failed: {e}")
 
-        print("submitting for tests")
-        # Run tests using ProcessPoolExecutor
-        results, fails = run_tests(symbols, start, end, filters, max_workers=5, progress_callback=progress_cb, task_id=task_id)
+    asyncio.create_task(background_task_async())
 
-    # Schedule background task
-    background_tasks.add_task(background_task)
+    return {"task_id": task_id}
 
-    return {"task_id": task_id}  # returns immediately
 
 
 # 2 Stream progress via SSE

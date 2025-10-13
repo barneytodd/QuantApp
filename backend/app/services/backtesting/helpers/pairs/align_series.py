@@ -7,6 +7,9 @@ def align_series(prices_dict, stock1, stock2):
     """
     df1 = pd.DataFrame(prices_dict[stock1])
     df2 = pd.DataFrame(prices_dict[stock2])
+
+    if df1.empty or df2.empty:
+        return pd.DataFrame(columns=["date", stock1, stock2])
     
     # Keep only date + close
     df1 = df1[["date", "close"]].rename(columns={"close": stock1})

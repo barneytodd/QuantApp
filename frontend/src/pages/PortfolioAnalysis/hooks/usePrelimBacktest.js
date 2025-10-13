@@ -14,6 +14,7 @@ export function usePrelimBacktest(preScreenResults) {
     
     const { 
         selectedPairs, 
+        setSelectedPairs,
         selectPairs, 
         isLoading: pairsLoading, 
         error: pairsError 
@@ -37,6 +38,8 @@ export function usePrelimBacktest(preScreenResults) {
         setFilterValues(filterDefaults);
     }, [])
 
+    useEffect(() => setFilterResults(null), [preScreenResults])
+
     // set pairs and symbols
     useEffect(() => {
         if (preScreenResults) {
@@ -44,25 +47,31 @@ export function usePrelimBacktest(preScreenResults) {
                     .filter(([symbol, strategies]) => strategies.includes("mean_reversion"))
                     .map(([symbol]) => symbol);
 
+            console.log(preScreenResults, momentumSymbols)
             const runSelectPairs = async (symbols) => {
                 await selectPairs(symbols);
             }
-
-            runSelectPairs(momentumSymbols);
-
+            if (Object.keys(preScreenResults).length >= 2) {
+                runSelectPairs(momentumSymbols);
+            }
+            else {
+                setSelectedPairs([])
+            }
             const symbols = Object.keys(preScreenResults);
             setAllSymbols(symbols);
         }
-    }, [preScreenResults, selectPairs])
+    }, [preScreenResults, selectPairs, setSelectedPairs])
 
     useEffect(() => {
-        if (allSymbols.length > 0 && selectedPairs.length > 0 && strategyType?.value !== "custom") {
+        console.log(allSymbols, selectedPairs, strategyType)
+        if (allSymbols.length > 0 && strategyType?.value !== "custom") {
             setStrategyType({value: "custom", label: "custom"});
         }
     }, [allSymbols, selectedPairs, strategyType, setStrategyType]);
 
     const runPrelimBacktest = async () => {
         if (!preScreenResults) return;
+        setFilterResults(null)
         try {
             setIsLoading(true);
             const symbolItems = [
@@ -96,7 +105,7 @@ export function usePrelimBacktest(preScreenResults) {
                 Object.entries(basicParams).map(([k, v]) => [k, { value: v.value, lookback: v.lookback ?? false }])
                 )
             )
-
+            console.log(symbolItems)
             const res = await fetch("http://localhost:8000/api/strategies/backtest", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -117,7 +126,8 @@ export function usePrelimBacktest(preScreenResults) {
                     acc[item.symbol].push(item.strategy);
                     return acc;
                 }, {});
-            setFilterResults(symbolStrategies);
+            setFilterResults({...symbolStrategies});
+            console.log(symbolStrategies)
             return data;
         } catch (err) {
             setError(err);

@@ -177,7 +177,7 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
 
     pos_list = [positions[stock][strategy_key] for stock in stocks]
     entry_list = [entry_prices[stock][strategy_key] for stock in stocks]
-    price_list = [current_prices[stock] for stock in stocks]
+    price_list = [last_prices[stock] for stock in stocks]
 
     capital[strategy_key], new_trades = close_position(
         stocks,

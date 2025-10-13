@@ -136,7 +136,11 @@ export default function StrategySelector({
               disabled={strategyType?.value !== "custom"}
               className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {strategySelectLoading ? "Running Backtests ..." : filterResults ? "Selected Strategies" : !uploadComplete ? "Loading Data ..." : "Select Strategies"}
+              {strategySelectLoading && (Object.keys(progress).length === 0 || progress.overall_progress === 0)
+                ? "Loading Data ..." : strategySelectLoading
+                ? "Running Backtests ..." : filterResults 
+                ? "Selected Strategies" : !uploadComplete 
+                ? "Loading Data ..." : "Select Strategies"}
             </button>
           </div>
 
@@ -147,7 +151,7 @@ export default function StrategySelector({
             </div>
           )}
 
-          {progress && !filterResults && (
+          {progress && !filterResults && !strategySelectError && (
             <div className="mt-4">
               {/* Overall Progress */}
               {typeof progress.overall_progress === "number" && (

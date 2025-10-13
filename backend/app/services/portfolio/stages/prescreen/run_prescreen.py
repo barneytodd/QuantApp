@@ -7,7 +7,7 @@ import numpy as np
 from app.tasks import prescreen_tasks_store as tasks_store
 from app import crud
 from app.database import SessionLocal
-from app.database_async import get_connection, release_connection, init_db_pool
+from app.database_async import get_connection, release_connection, init_db_pool, close_db_pool
 import itertools
 import time
 
@@ -150,7 +150,6 @@ async def fetch_prices(symbols, start, end, queue: asyncio.Queue, stop_signal, l
 
 async def run_tests_async(symbols, start, end, filters, max_workers=5, progress_callback=None, task_id=None):
     """Run tests while streaming price data from SQL."""
-    await init_db_pool()
 
     queue = asyncio.Queue(maxsize=50)
     stop_signal = object()
@@ -262,12 +261,8 @@ async def run_tests_async(symbols, start, end, filters, max_workers=5, progress_
     print("All tasks completed.")
     await fetch_task  # ensure fetcher finishes cleanly
 
-    # Final pool close
-    from app.database_async import close_db_pool
-    await close_db_pool()
-
     return results, failed_count
 
 
-def run_tests(symbols, start, end, filters, max_workers=5, progress_callback=None, task_id=None):
-    return asyncio.run(run_tests_async(symbols, start, end, filters, max_workers, progress_callback, task_id))
+async def run_tests(symbols, start, end, filters, max_workers=5, progress_callback=None, task_id=None):
+    return await run_tests_async(symbols, start, end, filters, max_workers, progress_callback, task_id)

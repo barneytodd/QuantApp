@@ -20,13 +20,14 @@ export function useStrategySelect(prelimBacktestResults) {
     )
 
     const selectedPairs = useMemo(
-        () => Object.keys(prelimBacktestResults)
+        () => Object.keys(prelimBacktestResults ?? {})
                 .filter((s) => s.includes("-"))
                 .map((s) => ({
                     "stock1": s.split("-")[0],
                     "stock2": s.split("-")[1]
                 })), 
-    [prelimBacktestResults])
+        [prelimBacktestResults]
+    )
 
     const {
         strategyType,
@@ -47,8 +48,11 @@ export function useStrategySelect(prelimBacktestResults) {
         setParamValues(paramDefaults);
     }, [])
 
+    useEffect(() => setFilterResults(null), [prelimBacktestResults])
+
     useEffect(() => {
-        if (allSymbols.length > 0 && selectedPairs.length > 0 && strategyType?.value !== "custom") {
+        console.log(allSymbols, selectedPairs, strategyType)
+        if (allSymbols.length > 0 && strategyType?.value !== "custom") {
             setStrategyType({value: "custom", label: "custom"});
         }
     }, [allSymbols, selectedPairs, strategyType, setStrategyType]);
@@ -151,6 +155,9 @@ export function useStrategySelect(prelimBacktestResults) {
         if (!prelimBacktestResults) return;
         setIsLoading(true);
         setUploadComplete(false);
+        setProgress({});
+        setFilterResults(null);
+        setError(null);
 
         const today = new Date();
         const start = new Date();

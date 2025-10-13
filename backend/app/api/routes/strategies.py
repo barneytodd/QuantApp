@@ -14,7 +14,7 @@ from app.services.backtesting.helpers.data.data_preparation import (
 )
 from app.services.backtesting.tasks.tasks import run_segment
 from app.services.backtesting.engines.backtest_engine import run_backtest
-from app.utils.data_helpers import fetch_price_data
+from app.utils.data_helpers import fetch_price_data, fetch_price_data_light
 from app.tasks import walkforward_tasks_store as tasks_store
 
 
@@ -65,7 +65,7 @@ async def run_walkforward_async(task_id, windows, all_symbols, strategy_symbols,
     processes = []
     for seg_id, window in enumerate(windows, start=1):
         # Fetch segment data
-        data = fetch_price_data(db, all_symbols, window["start"], window["end"], lookback)
+        data = fetch_price_data_light(db, all_symbols, window["start"], window["end"], lookback)
 
         p = Process(
             target=run_segment,
@@ -117,11 +117,12 @@ async def run_walkforward_async(task_id, windows, all_symbols, strategy_symbols,
 
 # === 3. Launch walkforward task ===
 @router.post("/backtest/walkforward/start")
-def start_walkforward_backtest(
+async def start_walkforward_backtest(
     payload: StrategyRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
+    print("Received walkforward start payload")
     try:
         all_symbols, strategy_symbols, params, lookback = prepare_backtest_inputs(payload)
     except ValueError as e:
@@ -141,10 +142,8 @@ def start_walkforward_backtest(
     }
 
     # Launch async walkforward execution in background
-    async def task_wrapper():
-        await run_walkforward_async(task_id, windows, all_symbols, strategy_symbols, params, lookback, db)
+    asyncio.create_task(run_walkforward_async(task_id, windows, all_symbols, strategy_symbols, params, lookback, db))
 
-    background_tasks.add_task(asyncio.run, task_wrapper())
     return {"task_id": task_id}
 
 

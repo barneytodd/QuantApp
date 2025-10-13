@@ -18,6 +18,12 @@ def check_signal(position, date_idx, date, entry_date, data, params, strategy, l
 	signal: str indicating trading signal
 	index: int 
 	"""
+	if strategy == "pairs_trading":
+		if data.empty:
+			return "hold"
+	elif not data or len(data) == 0:
+		return "hold"
+
 	if date_idx < lookback:
 		return "hold"
 

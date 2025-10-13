@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.crud import get_prices as crud_get_prices
+from app.crud import get_prices as get_prices, get_prices_light
 from typing import Optional, List
 import numpy as np
 from sqlalchemy import func
@@ -12,7 +12,7 @@ def fetch_price_data(db: Session, symbols: list[str], start: Optional[str] = Non
     """Fetch OHLCV data from DB and convert to dict."""
     data_dict = {}
     for symbol in symbols:
-        data_rows = crud_get_prices(db, [symbol], start, end, lookback)
+        data_rows = get_prices(db, [symbol], start, end, lookback)
         if not data_rows:
             continue
         data_dict[symbol] = [
@@ -27,6 +27,25 @@ def fetch_price_data(db: Session, symbols: list[str], start: Optional[str] = Non
             }
             for r in data_rows
         ]
+    return data_dict
+
+def fetch_price_data_light(db: Session, symbols: list[str], start: Optional[str] = None, end: Optional[str] = None, lookback: Optional[int] = 0):
+    """Fetch OHLCV data from DB and convert to dict."""
+    data_dict = {}
+    for symbol in symbols:
+        data_rows = get_prices_light(db, [symbol], start, end, lookback)
+        if not data_rows:
+            data_dict[symbol] = []
+        else:
+            data_dict[symbol] = [
+                {
+                    "date": r["date"].isoformat(),
+                    "high": r["high"],
+                    "low": r["low"],
+                    "close": r["close"],
+                }
+                for r in data_rows
+            ]
     return data_dict
 
 def convert_numpy(obj):

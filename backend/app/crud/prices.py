@@ -31,9 +31,22 @@ def get_prices(db: Session, symbols: List[str], start: Optional[date] = None, en
     return query.order_by(Price.date.asc()).all()
 
 
-def get_prices_light(db, symbols, start, end):
+def get_prices_light(db, symbols, start, end, lookback):
     if not symbols:
         return []
+    
+    if start and lookback and lookback > 0:
+        # Find the cutoff date by looking back N trading days
+        subquery = (
+            db.query(Price.date)
+            .filter(Price.symbol.in_(symbols), Price.date <= start)
+            .order_by(Price.date.desc())
+            .limit(lookback)
+            .subquery()
+        )
+        cutoff_date = db.query(subquery.c.date).order_by(subquery.c.date.asc()).first()
+        if cutoff_date:
+            start = cutoff_date[0]
 
     # Build parameter placeholders dynamically
     placeholders = ", ".join([f":s{i}" for i in range(len(symbols))])

@@ -7,6 +7,7 @@ from app.models import Price, Base
 from app.schemas import PriceIn, PriceOut, SymbolPayload, StatsOut
 from app.crud import get_prices, upsert_prices, get_all_symbols
 from .database import SessionLocal, engine
+from .database_async import init_db_pool, close_db_pool
 from .services.data import fetcher
 import pandas as pd
 from datetime import date
@@ -61,4 +62,13 @@ def get_db():
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+@app.on_event("startup")
+async def on_startup():
+    await init_db_pool()
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    await close_db_pool()
+
 
