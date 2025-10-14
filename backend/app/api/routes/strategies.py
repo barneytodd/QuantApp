@@ -2,7 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 from concurrent.futures import ProcessPoolExecutor
-from multiprocessing import Queue, Process
+from multiprocessing import Manager, Process
 import json, asyncio, os, uuid
 
 from app.database import get_db
@@ -43,74 +43,70 @@ def run_standard_backtest(payload: StrategyRequest, db: Session = Depends(get_db
 
 # === 2. Walkforward async engine ===
 async def run_walkforward_async(task_id, windows, all_symbols, strategy_symbols, params, lookback, db):
-    """
-    Run walk-forward segments in parallel and update tasks_store
-    by listening to a multiprocessing.Queue for live progress updates.
-    """
+    manager = Manager()
+    progress_state = manager.dict()
+    progress_state["segments"] = manager.dict()
+    progress_state["results"] = manager.dict()
+    progress_state["overall_progress"] = 0.0
+    progress_state["done_segments"] = 0
 
+    # Initialize task in store
     tasks_store[task_id] = {
-        "progress": {},
-        "results": {},
         "status": "running",
+        "progress": {},
         "overall_progress": 0.0,
+        "results": {},
         "total_segments": len(windows),
     }
 
-    progress_queue = Queue()  # multiprocessing queue for progress
+    # Kick off listener that mirrors progress_state into tasks_store
+    asyncio.create_task(sync_progress_state_to_store(task_id, progress_state))
 
-    # Start all segment processes
-    processes = []
+    with ProcessPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
+        loop = asyncio.get_running_loop()
+        tasks = []
 
-    for seg_id, window in enumerate(windows, start=1):
-        # Fetch segment data
-        data = fetch_price_data_light(db, all_symbols, window["start"], window["end"], lookback)
+        for seg_id, window in enumerate(windows, start=1):
+            data = fetch_price_data_light(db, all_symbols, window["start"], window["end"], lookback)
+            progress_state["segments"][seg_id] = manager.dict(progress_pct=0.0, done=False)
+            # submit run_segment using pool executor
+            tasks.append(loop.run_in_executor(
+                pool,
+                run_segment,
+                seg_id, data, strategy_symbols, params, lookback, progress_state
+            ))
 
-        p = Process(
-            target=run_segment,
-            args=(data, seg_id, strategy_symbols, params, lookback, progress_queue)
-        )
-        p.start()
-        processes.append(p)
+        await asyncio.gather(*tasks)
 
-        # Initialize progress
-        tasks_store[task_id]["progress"][seg_id] = {
-            "progress_pct": 0.0,
-            "done": False
-        }
+    progress_state["done_segments"] = len(windows)
+    progress_state["overall_progress"] = 100.0
+    tasks_store[task_id]["status"] = "done"
 
-    # Listen to the queue asynchronously
-    loop = asyncio.get_running_loop()
-    completed_segments = set()
-    total_segments = len(windows)
+async def sync_progress_state_to_store(task_id, progress_state):
+    """Continuously mirror the Manager dictionary into tasks_store."""
 
-    while len(completed_segments) < total_segments:
-        # Use run_in_executor to read from the blocking queue without blocking the event loop
-        msg = await loop.run_in_executor(None, progress_queue.get)
+    while tasks_store[task_id]["status"] == "running":
+        total_segments = len(progress_state["segments"])
+        if total_segments == 0:
+            await asyncio.sleep(0.2)
+            continue
 
-        seg_id = msg["segment_id"]
-        tasks_store[task_id]["progress"][seg_id]["progress_pct"] = msg["progress_pct"]
-        tasks_store[task_id]["progress"][seg_id]["done"] = msg["done"]
-
-        # If result is included, store it
-        if msg.get("result") is not None:
-            tasks_store[task_id]["results"][seg_id] = msg["result"]
-
-        if msg["done"]:
-            completed_segments.add(seg_id)
-            print(f"[{task_id}] Segment {seg_id} completed.")
-
-        # Update overall progress
-        overall = sum(v["progress_pct"] for v in tasks_store[task_id]["progress"].values()) / total_segments
+        # Compute aggregate progress
+        overall = sum(seg["progress_pct"] for seg in progress_state["segments"].values()) / total_segments
         tasks_store[task_id]["overall_progress"] = overall
 
-        await asyncio.sleep(0.01)  # small sleep to avoid busy-loop
+        # Mirror segment data
+        for seg_id, seg_data in progress_state["segments"].items():
+            tasks_store[task_id]["progress"][seg_id] = {
+                "progress_pct": seg_data["progress_pct"],
+                "done": seg_data["done"],
+            }
 
-    # Wait for all processes to exit
-    for p in processes:
-        p.join()
+        # Mirror results as they arrive
+        for seg_id, result in progress_state["results"].items():
+            tasks_store[task_id]["results"][seg_id] = result
 
-    tasks_store[task_id]["status"] = "done"
-    print(f"[{task_id}] Walk-forward backtest completed.")
+        await asyncio.sleep(0.3)
 
 
 # === 3. Launch walkforward task ===

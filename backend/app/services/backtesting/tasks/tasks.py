@@ -1,23 +1,21 @@
-from multiprocessing import Queue
 from app.services.backtesting.engines.backtest_engine import run_backtest
-import sys
 
-def run_segment(segment_data, segment_id, strategy_symbols, params, lookback, progress_queue=None):
-    # In child process, define a callback that puts progress into the queue
+def run_segment(segment_id, data, strategy_symbols, params, lookback, progress_state):
+    """Run one backtest segment and update shared progress_state directly."""
+
     def progress_callback(current_idx, total):
         pct = round(current_idx / total * 100, 2)
-        progress_queue.put({
-            "segment_id": segment_id,
-            "progress_pct": pct,
-            "done": False
-        })
+        progress_state["segments"][segment_id]["progress_pct"] = pct
 
-    result = run_backtest(segment_data, strategy_symbols, params, lookback, progress_callback)
+    # Run backtest and get result
+    result = run_backtest(data, strategy_symbols, params, lookback, progress_callback)
 
-    progress_queue.put({
-        "segment_id": segment_id,
-        "progress_pct": 100.0,
-        "done": True,
-        "result": result
-    })
+    # Update final segment state
+    seg_state = progress_state["segments"][segment_id]
+    seg_state["progress_pct"] = 100.0
+    seg_state["done"] = True
 
+    # Store result in shared dict
+    progress_state["results"][segment_id] = result
+
+    return result
