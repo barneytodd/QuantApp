@@ -229,7 +229,6 @@ async def run_tests_async(symbols, start, end, filters, max_workers=5, progress_
 
             await check_done()
 
-        print("--------------", in_flight.keys())
         # Wait for any remaining tasks
         while in_flight:
             # Copy keys to avoid mutation issues

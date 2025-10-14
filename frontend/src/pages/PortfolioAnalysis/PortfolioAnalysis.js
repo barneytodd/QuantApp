@@ -54,7 +54,8 @@ export default function PortfolioBuilder() {
     isLoading: backtestLoading,
     error: backtestError,
     strategyType: backtestStrategyType,
-    pairsLoading: pairsLoadingForBacktest,
+    pairsLoading: BacktestPairsLoading,
+    pairsProgress: BacktestPairsProgress
   } = usePrelimBacktest(preScreenFilterResults, setShowPrelimBacktest);
 
   const {
@@ -120,7 +121,8 @@ export default function PortfolioBuilder() {
         backtestError={backtestError}
         preScreenResults={preScreenFilterResults}
         strategyType={backtestStrategyType}
-        pairsLoading={pairsLoadingForBacktest}
+        pairsLoading={BacktestPairsLoading}
+        pairsProgress={BacktestPairsProgress}
       />
       <StrategySelection 
         paramValues={strategySelectParamValues}

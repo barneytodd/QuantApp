@@ -7,6 +7,7 @@ import uuid
 import json
 import time
 import asyncio
+import os
 
 
 from app.database import get_db
@@ -35,15 +36,14 @@ async def run_prescreen_tests(payload: PreScreenPayload, background_tasks: Backg
 
     def progress_cb(progress):
         tasks_store[task_id]["progress"] = progress
-        print(f"[TASK {task_id}] Progress: "
-              f"testing {progress['testing']}, completed {progress['completed']}/{progress['total']}")
 
     async def background_task_async():
         print(f"[TASK {task_id}] starting pre-screen tests")
         try:
+            max_workers = min(len(symbols), os.cpu_count() or 4)
             results, fails = await run_tests(
                 symbols, start, end, filters,
-                max_workers=5,
+                max_workers=max_workers,
                 progress_callback=progress_cb,
                 task_id=task_id
             )

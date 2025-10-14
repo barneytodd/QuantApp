@@ -12,7 +12,8 @@ export default function PreliminaryBacktest({
   backtestError,
   preScreenResults,
   strategyType,
-  pairsLoading
+  pairsLoading,
+  pairsProgress
 }) {
   return (
     <div 
@@ -135,8 +136,15 @@ export default function PreliminaryBacktest({
               disabled={strategyType?.value !== "custom" || pairsLoading}
               className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {backtestLoading ? "Filtering ..." : filterResults ? "Filtered" : pairsLoading ? "Loading Pairs" : "Filter"}
+              {backtestLoading ? "Filtering ..." : filterResults ? "Filtered" : pairsLoading ? "Selecting Pairs" : "Filter"}
             </button>
+
+            {/* Show pairs progress next to button */}
+            {pairsLoading && (
+              <span className="text-sm font-medium text-gray-700">
+                ({pairsProgress?.completed || 0}/{pairsProgress?.total || 0})
+              </span>
+            )}
           </div>
 
           {/* Filter Results */}

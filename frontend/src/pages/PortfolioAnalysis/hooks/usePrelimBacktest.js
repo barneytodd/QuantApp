@@ -9,6 +9,7 @@ export function usePrelimBacktest(preScreenResults, setVisible) {
     const [filterResults, setFilterResults] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [selectRun, setSelectRun] = useState(false)
 
     const [allSymbols, setAllSymbols] = useState([]);
     
@@ -16,6 +17,7 @@ export function usePrelimBacktest(preScreenResults, setVisible) {
         selectedPairs, 
         setSelectedPairs,
         selectPairs, 
+        progress: pairsProgress,
         isLoading: pairsLoading, 
         error: pairsError 
     } = usePairs();
@@ -39,36 +41,47 @@ export function usePrelimBacktest(preScreenResults, setVisible) {
     }, [])
 
     useEffect(() => {
+        console.log("resetting");
         setFilterResults(null);
         setVisible(false);
+        setSelectRun(false)
     }, [preScreenResults, setVisible])
 
     // set pairs and symbols
     useEffect(() => {
+        console.log("pairs", preScreenResults, selectRun)
         if (preScreenResults) {
-            const momentumSymbols = Object.entries(preScreenResults)
-                    .filter(([symbol, strategies]) => strategies.includes("mean_reversion"))
-                    .map(([symbol]) => symbol);
+            if (!selectRun) {
+                setSelectRun(true);
+                const momentumSymbols = Object.entries(preScreenResults)
+                        .filter(([symbol, strategies]) => strategies.includes("mean_reversion"))
+                        .map(([symbol]) => symbol);
 
-            const runSelectPairs = async (symbols) => {
-                await selectPairs(symbols);
+                const runSelectPairs = async (symbols) => {
+                    await selectPairs(symbols);
+                }
+                if (Object.keys(preScreenResults).length >= 2) {
+                    runSelectPairs(momentumSymbols);
+                }
+                else {
+                    setSelectedPairs([])
+                }
             }
-            if (Object.keys(preScreenResults).length >= 2) {
-                runSelectPairs(momentumSymbols);
-            }
-            else {
-                setSelectedPairs([])
-            }
+        }
+    }, [preScreenResults, selectPairs, setSelectedPairs, selectRun])
+
+    useEffect(() => {
+        if (preScreenResults) {
             const symbols = Object.keys(preScreenResults);
             setAllSymbols(symbols);
         }
-    }, [preScreenResults, selectPairs, setSelectedPairs])
+    }, [preScreenResults])
 
     useEffect(() => {
         if (allSymbols.length > 0 && strategyType?.value !== "custom") {
             setStrategyType({value: "custom", label: "custom"});
         }
-    }, [allSymbols, selectedPairs, strategyType, setStrategyType]);
+    }, [allSymbols, strategyType, setStrategyType]);
 
     const runPrelimBacktest = async () => {
         if (!preScreenResults) return;
@@ -145,6 +158,7 @@ export function usePrelimBacktest(preScreenResults, setVisible) {
         error,
         pairsLoading,
         pairsError,
-        strategyType, 
+        pairsProgress,
+        strategyType
     }
 }

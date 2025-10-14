@@ -65,7 +65,7 @@ export default function ParamsCard({
                     </button>
 
                     {pairsError && (
-                    <p className="text-red-500 mt-2">{pairsError}</p>
+                      <p className="text-red-500 mt-2">{pairsError}</p>
                     )}
                 </>
             )}
