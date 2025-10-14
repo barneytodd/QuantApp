@@ -1,5 +1,6 @@
 from multiprocessing import Queue
 from app.services.backtesting.engines.backtest_engine import run_backtest
+import sys
 
 def run_segment(segment_data, segment_id, strategy_symbols, params, lookback, progress_queue=None):
     # In child process, define a callback that puts progress into the queue

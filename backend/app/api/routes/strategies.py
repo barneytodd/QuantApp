@@ -47,9 +47,6 @@ async def run_walkforward_async(task_id, windows, all_symbols, strategy_symbols,
     Run walk-forward segments in parallel and update tasks_store
     by listening to a multiprocessing.Queue for live progress updates.
     """
-    import os
-    from app.tasks import walkforward_tasks_store as tasks_store
-    from app.services.backtesting.engines.backtest_engine import run_backtest
 
     tasks_store[task_id] = {
         "progress": {},
@@ -63,6 +60,7 @@ async def run_walkforward_async(task_id, windows, all_symbols, strategy_symbols,
 
     # Start all segment processes
     processes = []
+
     for seg_id, window in enumerate(windows, start=1):
         # Fetch segment data
         data = fetch_price_data_light(db, all_symbols, window["start"], window["end"], lookback)
@@ -126,10 +124,12 @@ async def start_walkforward_backtest(
     try:
         all_symbols, strategy_symbols, params, lookback = prepare_backtest_inputs(payload)
     except ValueError as e:
+        print("Error preparing backtest inputs:", e)
         raise HTTPException(status_code=400, detail=str(e))
 
     windows = create_walkforward_windows(params["startDate"], params["endDate"], window_length=3)
     if not windows:
+        print("Error creating walk-forward windows")
         raise HTTPException(status_code=400, detail="Invalid walk-forward configuration")
 
     task_id = str(uuid.uuid4())

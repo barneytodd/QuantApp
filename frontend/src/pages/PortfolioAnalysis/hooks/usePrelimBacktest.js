@@ -9,9 +9,10 @@ export function usePrelimBacktest(preScreenResults, setVisible) {
     const [filterResults, setFilterResults] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [selectRun, setSelectRun] = useState(false)
+    const [startSelect, setStartSelect] = useState(false);
 
     const [allSymbols, setAllSymbols] = useState([]);
+    const [momentumSymbols, setMomentumSymbols] = useState([])
     
     const { 
         selectedPairs, 
@@ -41,41 +42,37 @@ export function usePrelimBacktest(preScreenResults, setVisible) {
     }, [])
 
     useEffect(() => {
-        console.log("resetting");
         setFilterResults(null);
         setVisible(false);
-        setSelectRun(false)
-    }, [preScreenResults, setVisible])
-
-    // set pairs and symbols
-    useEffect(() => {
-        console.log("pairs", preScreenResults, selectRun)
-        if (preScreenResults) {
-            if (!selectRun) {
-                setSelectRun(true);
-                const momentumSymbols = Object.entries(preScreenResults)
-                        .filter(([symbol, strategies]) => strategies.includes("mean_reversion"))
-                        .map(([symbol]) => symbol);
-
-                const runSelectPairs = async (symbols) => {
-                    await selectPairs(symbols);
-                }
-                if (Object.keys(preScreenResults).length >= 2) {
-                    runSelectPairs(momentumSymbols);
-                }
-                else {
-                    setSelectedPairs([])
-                }
-            }
-        }
-    }, [preScreenResults, selectPairs, setSelectedPairs, selectRun])
-
-    useEffect(() => {
+        setMomentumSymbols([])
         if (preScreenResults) {
             const symbols = Object.keys(preScreenResults);
             setAllSymbols(symbols);
+            
+            const momentumSyms = Object.entries(preScreenResults)
+            .filter(([symbol, strategies]) => strategies.includes("mean_reversion"))
+            .map(([symbol]) => symbol);
+            setMomentumSymbols(momentumSyms)
+
+            if (momentumSyms.length >= 2) {
+                setStartSelect(true);
+            }
+            else setSelectedPairs([]);
         }
-    }, [preScreenResults])
+        else {
+            setStartSelect(false);
+        }
+    }, [preScreenResults, setVisible, setSelectedPairs])
+
+    // set pairs and symbols
+    useEffect(() => {
+        if (!startSelect || !momentumSymbols) return;
+
+        (async () => await selectPairs(momentumSymbols))();
+       
+        setStartSelect(false);
+    }, [startSelect, momentumSymbols, selectPairs]);
+
 
     useEffect(() => {
         if (allSymbols.length > 0 && strategyType?.value !== "custom") {

@@ -41,6 +41,7 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
     all_dates = sorted({row["date"] for d in data.values() for row in d})
 
     for idx, date in enumerate(all_dates):
+        print("Completed:", idx+1, "of", len(all_dates), "dates", end="\r")
         # Report progress
         if progress_callback is not None:
             try:

@@ -6,3 +6,5 @@ prescreen_tasks_store = defaultdict(lambda: {"progress": {"testing": 0, "complet
 walkforward_tasks_store ={}
 
 pairs_tasks_store = {}
+
+ingest_tasks_store = {}

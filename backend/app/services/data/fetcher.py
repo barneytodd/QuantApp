@@ -81,13 +81,14 @@ def ingest_missing_data_parallel(db, symbols, start, end, chunk_size=50, max_wor
 
             if all_records:
                 upsert_prices(db_thread, all_records, chunk_size=500)
+                db_thread.commit()
                 print(f"Inserted/Updated {len(all_records)} records for {symbol}")
 
     # Chunk symbols and run in parallel
     for chunk in chunk_symbols(list(missing_periods.keys()), chunk_size):
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             executor.map(fetch_and_insert, chunk)
-
+    print("Data ingestion complete")
     return True
 
 # Fetch list of available symbols from Yahoo Finance based on criteria

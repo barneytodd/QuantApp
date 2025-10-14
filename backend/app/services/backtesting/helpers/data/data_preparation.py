@@ -50,7 +50,6 @@ def create_walkforward_windows(start_date: str, end_date: str, window_length: in
     end = datetime.strptime(end_date, "%Y-%m-%d")
     windows = []
     current_start = start
-    print(start, end)
     while current_start + relativedelta(years=window_length) <= end + relativedelta(days=1):
         current_end = min(current_start + relativedelta(years=window_length), end)
         windows.append({

@@ -34,7 +34,6 @@ export function useStrategySelect(prelimBacktestResults, setVisible) {
         setStrategyType,
         basicParams,
         advancedParams,
-        setAdvancedParams,
     } = useStrategyParams(allSymbols, selectedPairs);
 
     // set default params
@@ -194,13 +193,13 @@ export function useStrategySelect(prelimBacktestResults, setVisible) {
                     )
                 );
             
-            setAdvancedParams(prev => ({
-                ...prev,
-                startDate: { ...prev.startDate, value: start.toISOString().split("T")[0] },
-            }));
+            const updatedAdvancedParams = {
+                ...advancedParams,
+                startDate: { ...advancedParams.startDate, value: start.toISOString().split("T")[0] },
+            };
 
             const params = Object.fromEntries(
-                Object.entries(advancedParams)
+                Object.entries(updatedAdvancedParams)
                     .filter(([key, _]) => !key.endsWith("_weight"))
                     .map(([k, v]) => [k, { value: v.value, lookback: v.lookback ?? false }])
                     .concat(
@@ -215,6 +214,10 @@ export function useStrategySelect(prelimBacktestResults, setVisible) {
                 body: JSON.stringify({ symbolItems, params }),
             });
             const { task_id } = await startRes.json();
+
+            if (!task_id) {
+                throw new Error("No task_id returned from backend");
+            }
 
             // 3️⃣ Stream progress via SSE
             await new Promise((resolve, reject) => {
