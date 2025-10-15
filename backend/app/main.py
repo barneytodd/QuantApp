@@ -12,7 +12,7 @@ from .services.data import fetcher
 import pandas as pd
 from datetime import date
 from typing import List
-from app.api.routes import data, metrics, strategies, symbols, pairs, param_optimiser, portfolio
+from app.api.routes import data, metrics, backtest, symbols, pairs, param_optimiser, portfolio
 
 
 # Create database tables
@@ -42,7 +42,7 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(strategies.router, prefix="/api/strategies", tags=["Backtest"])
+app.include_router(backtest.router, prefix="/api/strategies", tags=["Backtest"])
 app.include_router(data.router, prefix="/api/data", tags=["Data"])
 app.include_router(metrics.router, prefix="/api/metrics", tags=["Metrics"])
 app.include_router(symbols.router, prefix="/api/symbols", tags=["Data"])

@@ -1,27 +1,94 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { strategies } from "../parameters/strategyRegistry";
+import { globalParams } from "../parameters/globalParams";
 
 export function useOptimisation() {
   const [optimisationResult, setOptimisationResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [stratParams, setStratParams] = useState({});
+  const [globParams, setGlobParams] = useState({})
+
+  useEffect(() => {
+    const strategyParamsDict = Object.fromEntries(
+      Object.entries(strategies).map(([strat, stratInfo]) => [
+        strat,
+        Object.fromEntries(
+          stratInfo.params.map(p => [
+            p.name,
+            p.type === "number"
+            ? {
+                type: p.integer ? "int" : "float",
+                min: p.bounds[0],
+                max: p.bounds[1],
+                lookback: p.lookback,
+                value: p.default
+              }
+            : {
+                type: p.type,
+                choices: p.options,
+                lookback: p.lookback,
+                value: p.default
+              }
+          ])
+        )
+      ])
+    );
+
+    const today = new Date();
+    const start = new Date();
+    start.setFullYear(today.getFullYear() - 10);
+
+    const startStr = start.toISOString().split("T")[0].replace(/-/g, "-");
+
+    const globalParamsDict = Object.fromEntries(
+      globalParams.map(g => ([
+        g.name, 
+        {
+          value: g.name === "startDate" 
+            ? startStr
+            : g.default, 
+          lookback: g.lookback ?? null
+        }
+      ]))
+    )
+    
+    setStratParams(strategyParamsDict);
+    setGlobParams(globalParamsDict);
+  }, [])
   
 
-  const optimiseParameters = async ({ symbols, strategyType, basicParams, advancedParams, optimParams, selectedPairs }) => {
+  const optimiseParameters = async ({ strategyTypesWithSymbols, optimParams }) => {
     setIsLoading(true);
     setError(null);
+    console.log(strategyTypesWithSymbols, optimParams)
+
+    const strats = Object.fromEntries(
+      Object.entries(strategyTypesWithSymbols).map(([strat, symbolItems]) => [
+        strat,
+        {
+          symbolItems: symbolItems,
+          param_space: stratParams[strat]
+        }
+      ])
+    )
+    console.log(strats)
+    const optimisationParams = Object.fromEntries(
+      Object.entries(optimParams).map(([name, param]) => [
+        name,
+        param.value
+      ])
+    )
+
+    const payload = {
+      strategies: strats,
+      globalParams: globParams,
+      optimParams: optimisationParams
+    };
+
+    console.log(payload)
 
     try {
-      const payload = {
-        strategy: strategyType?.value,
-        symbols: strategyType?.value === "pairs_trading" ? selectedPairs.map((s) => [s.stock1, s.stock2]) : symbols.map((s) => [s.value]),
-        params: {
-          ...Object.fromEntries(Object.entries(basicParams).map(([k, v]) => [k, {"value": v.value, "type": v.type, "bounds": v.bounds, "optimise": v.optimise, "integer": v.integer, "category": v.category, "options": v.options}])),
-          ...Object.fromEntries(Object.entries(advancedParams).map(([k, v]) => [k, {"value": v.value, "type": v.type, "bounds": v.bounds, "optimise": v.optimise, "integer": v.integer, "category": v.category, "options": v.options}])),
-        },
-        optimParams: {
-          ...Object.fromEntries(Object.entries(optimParams).map(([k, v]) => [k, v.value])),
-        }
-      };
       const res = await fetch("http://localhost:8000/api/params/optimise", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -38,6 +105,7 @@ export function useOptimisation() {
       return data;
     } catch (err) {
       setError(err);
+      setIsLoading(false);
       alert("Optimisation failed");
     } finally {
       setIsLoading(false);

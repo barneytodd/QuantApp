@@ -26,7 +26,7 @@ def prepare_backtest_inputs(payload):
         key_base = "-".join(item["symbols"])
         strategy = item["strategy"]
         key = f"{key_base}_{strategy}"  # Unique key per symbol-strategy pair
-
+        print( "Mapping key:", key)
         strategy_symbols[key] = {
             "symbol": key_base,   # e.g. "AAPL" or "AAPL-MSFT"
             "strategy": strategy,
@@ -34,6 +34,7 @@ def prepare_backtest_inputs(payload):
         }
 
     # --- Compute lookback window ---
+    print( "Params:", payload.params)
     max_lookback = max(
         (v["value"] for k, v in payload.params.items() if v.get("lookback")), default=0
     )
@@ -83,6 +84,7 @@ def aggregate_walkforward_results(segment_results):
             pair_key = (symbol, strategy)
 
             metrics = strat_result.get("metrics") or {}
+            print(symbol, metrics)
             trade_stats = strat_result.get("tradeStats") or {}
 
             # if no trades, count it and skip from averages
@@ -91,12 +93,12 @@ def aggregate_walkforward_results(segment_results):
                 continue
 
             # Only aggregate if trades exist
-            if "sharpe" in metrics and metrics["sharpe"] is not None:
-                metrics_per_pair[pair_key]["sharpe"].append(metrics["sharpe"])
+            if "sharpe_ratio" in metrics and metrics["sharpe_ratio"] is not None:
+                metrics_per_pair[pair_key]["sharpe"].append(metrics["sharpe_ratio"])
             if "cagr" in metrics and metrics["cagr"] is not None:
                 metrics_per_pair[pair_key]["cagr"].append(metrics["cagr"])
-            if "maxDrawdown" in metrics and metrics["maxDrawdown"] is not None:
-                metrics_per_pair[pair_key]["maxDrawdown"].append(metrics["maxDrawdown"])
+            if "max_drawdown" in metrics and metrics["max_drawdown"] is not None:
+                metrics_per_pair[pair_key]["maxDrawdown"].append(metrics["max_drawdown"])
             if "winRate" in trade_stats and trade_stats["winRate"] is not None:
                 metrics_per_pair[pair_key]["winRate"].append(trade_stats["winRate"])
 

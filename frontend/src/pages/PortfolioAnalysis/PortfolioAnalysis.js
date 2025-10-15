@@ -2,18 +2,19 @@ import UniverseFilter from "./components/stages/Stage1UniverseFilter"
 import PreScreen from "./components/stages/Stage2PreScreen"
 import PreliminaryBacktest from "./components/stages/Stage3PreliminaryBacktest";
 import StrategySelection from "./components/stages/Stage4StrategySelect";
-import GAOptimisation from "./components/stages/Stage5GAOptimiser";
+import ParamOptimisation from "./components/stages/Stage5ParamOptimsation";
 
 import { useState } from "react"
 import { useUniverseFilters } from "./hooks/useUniverseFilters";
 import { usePreScreen } from "./hooks/usePreScreen";
 import { usePrelimBacktest } from "./hooks/usePrelimBacktest";
 import { useStrategySelect } from "./hooks/useStrategySelect";
+import { useParamOptimisation } from "./hooks/useParamOptimisation"
 
-const precomputedPrelimBacktestResults = {
-    "AAPL": ["breakout", "sma_crossover"],
-    "MSFT": ["momentum", "rsi_reversion"],
-    "AAPL-MSFT": ["pairs_trading"]
+const precomputedStrategySelectResults = {
+    "AAPL": {strategy: "breakout", score: 1},
+    "MSFT": {strategy: "momentum", score: 0.5},
+    "AMZN-GOOG": {strategy: "pairs_trading", score: 0.75}
     // ...etc
   };
 
@@ -22,7 +23,7 @@ export default function PortfolioBuilder() {
   const [showPreScreen, setShowPreScreen] = useState(false);
   const [showPrelimBacktest, setShowPrelimBacktest] = useState(false);
   const [showStrategySelector, setShowStrategySelector] = useState(false);
-  const [showGAOptimiser, setShowGAOptimiser] = useState(false);
+  const [showParamOptimisation, setShowParamOptimisation] = useState(false);
 
   const {
     filterValues: uniFilterValues, 
@@ -61,7 +62,7 @@ export default function PortfolioBuilder() {
   const {
     paramValues: strategySelectParamValues,
     setParamValues: setStrategySelectParamValues,
-    filterResults: strategySelectFilterResults,
+    filterResults: strategySelectResults,
     runStrategySelect,
     isLoading: strategySelectLoading,
     error: strategySelectError,
@@ -69,6 +70,18 @@ export default function PortfolioBuilder() {
     uploadComplete: strategySelectUploadComplete,
     progress: strategySelectProgress
   } = useStrategySelect(backtestFilterResults, setShowStrategySelector)
+
+  const {
+    paramValues: paramOptimisationParamValues,
+    setParamValues: setParamOptimisationParamValues,
+    filterResults: paramOptimisationResults,
+    runParamOptimisation,
+    isLoading: paramOptimisationLoading,
+    error: paramOptimisationError,
+    strategyType: paramOptimisationStrategyType,
+    uploadComplete: paramOptimisationUploadComplete,
+    progress: paramOptimisationProgress
+  } = useParamOptimisation(precomputedStrategySelectResults, setShowParamOptimisation)
 
   const handleUniverseFilters = async () => {
     await filterUniverse();
@@ -80,6 +93,14 @@ export default function PortfolioBuilder() {
 
   const handlePrelimBacktest = async () => {
     await runPrelimBacktest()
+  }
+
+  const handleStrategySelect = async () => {
+    await runStrategySelect()
+  }
+
+  const handleParamOptimisation = async () => {
+    await runParamOptimisation()
   }
 
   return (
@@ -127,10 +148,10 @@ export default function PortfolioBuilder() {
       <StrategySelection 
         paramValues={strategySelectParamValues}
         setParamValues={setStrategySelectParamValues}
-        onRunStrategySelect={runStrategySelect}
+        onRunStrategySelect={handleStrategySelect}
         visible={showStrategySelector}
         setVisible={setShowStrategySelector}
-        filterResults={strategySelectFilterResults}
+        filterResults={strategySelectResults}
         strategySelectLoading={strategySelectLoading}
         strategySelectError={strategySelectError}
         prelimBacktestResults={backtestFilterResults}
@@ -138,9 +159,19 @@ export default function PortfolioBuilder() {
         uploadComplete={strategySelectUploadComplete}
         progress={strategySelectProgress}
       />
-      <GAOptimisation 
-        visible={showGAOptimiser}
-        setVisible={setShowGAOptimiser}
+      <ParamOptimisation 
+        paramValues={paramOptimisationParamValues}
+        setParamValues={setParamOptimisationParamValues}
+        onRunParamOptimisation={handleParamOptimisation}
+        visible={showParamOptimisation}
+        setVisible={setShowParamOptimisation}
+        filterResults={paramOptimisationResults}
+        paramOptimisationLoading={paramOptimisationLoading}
+        paramOptimisationError={paramOptimisationError}
+        strategySelectResults={precomputedStrategySelectResults}
+        strategyType={paramOptimisationStrategyType}
+        uploadComplete={paramOptimisationUploadComplete}
+        progress={paramOptimisationProgress}
       />
     </div>
   );

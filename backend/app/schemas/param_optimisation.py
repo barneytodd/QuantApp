@@ -2,7 +2,6 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 
 class ParamOptimisationRequest(BaseModel):
-    strategy: str                      
-    symbols: List[List[str]]
-    params: Dict[str, Any]
+    strategies: Dict[str, Any]                     
+    globalParams: Dict[str, Any]
     optimParams: Dict[str, Any]

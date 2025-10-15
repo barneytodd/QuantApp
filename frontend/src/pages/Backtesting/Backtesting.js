@@ -59,11 +59,12 @@ export default function Backtesting() {
   const handleRunBacktest = async () => {
     const syms = strategyType?.value === "custom" 
       ? customStrategy.flatMap((s) =>
-        s.symbols.map((symbol, idx) => ({
-          symbols: [symbol],
-          strategy: s.name,
-          weight: s.weights[idx] ?? null, // use null if weight is missing
-        })))
+          s.symbols.map((symbol, idx) => ({
+            symbols: [symbol],
+            strategy: s.name,
+            weight: s.weights[idx] ?? null, 
+          }))
+        )
       : strategyType?.value === "pairs_trading" 
         ? selectedPairs.map(p => ({
             symbols: [p.stock1, p.stock2],
@@ -86,8 +87,43 @@ export default function Backtesting() {
 
 
   const handleOptimise = async () => {
-    await optimiseParameters({ symbols: selectedSymbols, strategyType, basicParams, advancedParams, optimParams, selectedPairs });
-  }
+    const strategyTypesWithSymbols = Object.fromEntries(
+      strategyType?.value === "custom"
+        ? customStrategy.map((s) => [
+            s.name,
+            s.symbols.map((symbol, idx) => ({
+              symbols: [symbol],
+              strategy: s.name,
+              weight: s.weights?.[idx] ?? null,
+            })),
+          ])
+        : strategyType?.value === "pairs_trading"
+          ? [
+              [
+                strategyType?.value,
+                selectedPairs.map((p) => ({
+                  symbols: [p.stock1, p.stock2],
+                  strategy: strategyType?.value,
+                  weight: advancedParams?.[`${p.stock1}-${p.stock2}_weight`]?.value ?? null,
+                })),
+              ],
+            ]
+          : [
+              [
+                strategyType?.value,
+                selectedSymbols.map((s) => ({
+                  symbols: [s.value],
+                  strategy: strategyType?.value,
+                  weight: advancedParams?.[`${s.value}_weight`]?.value ?? null,
+                })),
+              ],
+            ]
+    );
+
+    console.log("Optimiser config:", strategyTypesWithSymbols, optimParams);
+
+    await optimiseParameters({ strategyTypesWithSymbols, optimParams, });
+  };
     
   useEffect(() => {
     if (optimisationResult && !optimError) {

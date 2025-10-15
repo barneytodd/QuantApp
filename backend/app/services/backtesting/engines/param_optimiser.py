@@ -1,55 +1,42 @@
-# app/services/optimiser.py
-from skopt import gp_minimize
-from skopt.space import Real, Integer, Categorical
-from skopt.utils import use_named_args
-from app.utils.data_helpers import convert_numpy
-from ..helpers.optimisation.cross_validation import cross_val_score
+import optuna
+import asyncio
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
+from app.services.backtesting.helpers.optimisation.objective import make_single_strategy_objective
 
 
-# --- Parameter optimisation ---
-def optimise_parameters(data, symbols, param_space, optim_params, initial_capital=10000):
-    """
-    data: dict {symbol: [{"date":..., "close":...}, ...]} - stores data separately for each symbol
-    symbols: dict { symbol: strategy } - stores pairs as single symbols
-    param_space: dict of strategy parameters
-    optim_params: dict of optimisation parameters
-    """
-    sk_space = []
-    names = []
-    iterations = optim_params["iterations"]
+def _run_single_study(strategy_name, cfg, global_params, n_trials, window_length):
+    """Run one Optuna study in a separate process."""
+    study = optuna.create_study(direction="maximize")
+    objective = make_single_strategy_objective(strategy_name, cfg, global_params, window_length)
+    study.optimize(objective, n_trials=n_trials)
+    return {
+        "strategy": strategy_name,
+        "best_params": study.best_params,
+        "best_score": study.best_value
+    }
 
-    fixed_params = {p:v["value"] for p,v in param_space.items() if not v["optimise"]}
-    train_params = {p:v for p,v in param_space.items() if v["optimise"]}
 
-    # Build skopt search space
-    for name, param in train_params.items():
-        names.append(name)
-        if param["type"] == "number":
-            if param["integer"]:
-                sk_space.append(Integer(param["bounds"][0], param["bounds"][1], name=name))
-            else:
-                sk_space.append(Real(param["bounds"][0], param["bounds"][1], name=name))
-        elif param["type"] == "categorical":
-            sk_space.append(Categorical(param["options"], name=name))
+async def optimise_multiple_strategies_async(strategies_config, global_params, n_trials=50, window_length=3):
+    """Run multiple strategies in parallel using ProcessPoolExecutor."""
+    results = []
+    with ProcessPoolExecutor() as pool:
+        loop = asyncio.get_running_loop()
+        tasks = []
+        for strategy_name, cfg in strategies_config.items():
+            task = loop.run_in_executor(
+                pool,
+                partial(_run_single_study, strategy_name, cfg, global_params, n_trials, window_length)
+            )
+            tasks.append(task)
 
-    trials = []
+        results = await asyncio.gather(*tasks)
 
-    @use_named_args(sk_space)
-    def objective(**kwargs):
-        score = cross_val_score(data, symbols, fixed_params, kwargs, optim_params, initial_capital)
-        trials.append({"params": kwargs, "score": score})
-        return -score  # maximize Sharpe -> minimize negative
+    return {r["strategy"]: r for r in results}
 
-    res = gp_minimize(objective, sk_space, n_calls=int(iterations), random_state=42)
-    best_params = dict(zip(names, res.x))
-    best_score = -res.fun
 
-    best_basic_params = {k:v for k,v in best_params.items() if param_space[k]["category"] == "basic"}
-    best_advanced_params = {k:v for k,v in best_params.items() if param_space[k]["category"] == "advanced"}
-
-    return convert_numpy({
-        "best_basic_params": best_basic_params,
-        "best_advanced_params": best_advanced_params,
-        "best_score": float(best_score),
-        "trials": trials,
-    })
+def optimise_parameters(strategies_config, global_params, optimisation_params):
+    """Sync FastAPI entrypoint."""
+    n_trials = optimisation_params.get("iterations", 50)
+    window_length = optimisation_params.get("foldLength", 252)
+    return asyncio.run(optimise_multiple_strategies_async(strategies_config, global_params, n_trials, window_length))
