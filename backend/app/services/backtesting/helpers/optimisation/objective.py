@@ -5,11 +5,9 @@ from app.schemas import StrategyRequest
 from app.api.routes.backtest import run_walkforward_async
 from app.tasks import walkforward_tasks_store as tasks_store
 from .scoring import composite_score
-from app.services.backtesting.helpers.data.data_preparation import (
-    prepare_backtest_inputs,
-    create_walkforward_windows,
-    aggregate_walkforward_results,
-)
+from app.services.backtesting.helpers.data.data_preparation import prepare_backtest_inputs, create_walkforward_windows
+from app.services.backtesting.helpers.data.data_aggregation import compute_walkforward_results, aggregate_walkforward_results
+
 
 def make_single_strategy_objective(strategy_name, cfg, global_params, window_length=3):
     async def async_objective(trial):

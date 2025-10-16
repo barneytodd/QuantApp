@@ -7,11 +7,10 @@ import json, asyncio, os, uuid
 
 from app.database import get_db
 from app.schemas import StrategyRequest
-from app.services.backtesting.helpers.data.data_preparation import (
-    prepare_backtest_inputs,
-    create_walkforward_windows,
-    aggregate_walkforward_results,
-)
+from app.services.backtesting.helpers.data.data_preparation import prepare_backtest_inputs, create_walkforward_windows
+from app.services.backtesting.helpers.data.data_aggregation import compute_walkforward_results, aggregate_walkforward_results
+
+
 from app.services.backtesting.tasks.tasks import run_segment
 from app.services.backtesting.engines.backtest_engine import run_backtest
 from app.utils.data_helpers import fetch_price_data, fetch_price_data_light
@@ -123,18 +122,20 @@ async def start_walkforward_backtest(
         print("Error preparing backtest inputs:", e)
         raise HTTPException(status_code=400, detail=str(e))
 
-    windows = create_walkforward_windows(params["startDate"], params["endDate"], window_length=3)
+    windows = create_walkforward_windows(params["startDate"], params["endDate"], window_length=1)
     if not windows:
         print("Error creating walk-forward windows")
         raise HTTPException(status_code=400, detail="Invalid walk-forward configuration")
 
+    window_length = 3
     task_id = str(uuid.uuid4())
     tasks_store[task_id] = {
         "progress": {},
         "results": {},
         "status": "pending",
         "overall_progress": 0.0,
-        "total_segments": len(windows)
+        "total_segments": len(windows),
+        "window_length": window_length
     }
 
     # Launch async walkforward execution in background
@@ -184,7 +185,12 @@ def get_walkforward_aggregated_results(task_id: str):
     # flatten all segment results
     segments = [task["results"][seg_id] for seg_id in sorted(task["results"].keys())]
 
-    aggregated = aggregate_walkforward_results(segments)
+    # compute walk-forward results
+    window_length = task.get("window_length", 3)
+
+    walkforward_results = compute_walkforward_results(segments, window_length)
+
+    aggregated = aggregate_walkforward_results(walkforward_results)
     return {
         "task_id": task_id,
         "status": task["status"],
