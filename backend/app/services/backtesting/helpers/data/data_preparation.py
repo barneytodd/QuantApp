@@ -26,7 +26,6 @@ def prepare_backtest_inputs(payload):
         key_base = "-".join(item["symbols"])
         strategy = item["strategy"]
         key = f"{key_base}_{strategy}"  # Unique key per symbol-strategy pair
-        print( "Mapping key:", key)
         strategy_symbols[key] = {
             "symbol": key_base,   # e.g. "AAPL" or "AAPL-MSFT"
             "strategy": strategy,
@@ -34,7 +33,6 @@ def prepare_backtest_inputs(payload):
         }
 
     # --- Compute lookback window ---
-    print( "Params:", payload.params)
     max_lookback = max(
         (v["value"] for k, v in payload.params.items() if v.get("lookback")), default=0
     )

@@ -11,5 +11,14 @@ def optimise_strategy_parameters(payload: ParamOptimisationRequest):
     strategies_config = payload.strategies
     global_params = payload.globalParams
     optimisation_params = payload.optimParams
-    results = optimise_parameters(strategies_config, global_params, optimisation_params)
+    if payload.scoringParams is not None:
+        scoring_params = payload.scoringParams
+    else:
+        scoring_params = {
+            "sharpe": 0.5,
+            "cagr": 0.3,
+            "max_drawdown": 0.2,
+            "win_rate": 0.1
+        }
+    results = optimise_parameters(strategies_config, global_params, optimisation_params, scoring_params)
     return results

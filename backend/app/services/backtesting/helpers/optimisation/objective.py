@@ -2,7 +2,7 @@ from .scoring import composite_score
 import copy, asyncio
 from .backtest import run_strategy_backtest
 
-def make_single_strategy_objective(strategy_name, cfg, global_params, window_length=3):
+def make_single_strategy_objective(strategy_name, cfg, global_params, scoring_params, window_length=3):
     async def async_objective(trial):
         # build per-strategy trial params
         param_space = cfg["param_space"]
@@ -26,9 +26,8 @@ def make_single_strategy_objective(strategy_name, cfg, global_params, window_len
         }
         # run combined backtest for all strategies with current params
         backtest_result = await run_strategy_backtest(backtest_cfg, global_params, window_length)
-        print(backtest_result)
-        score = composite_score(backtest_result)
-        print(score)
+
+        score = composite_score(backtest_result, scoring_params)
         return score
 
     def objective(trial):

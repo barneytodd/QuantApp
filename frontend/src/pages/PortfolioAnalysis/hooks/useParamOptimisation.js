@@ -1,83 +1,72 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
+import { useOptimisation } from "../../Backtesting/hooks/useOptimisation";
+import { useOptimisationParams } from "../../Backtesting/hooks/useOptimisationParams";
 import { params } from "../params/paramOptimisationParams"
-import { useStrategyParams } from "../../Backtesting/hooks/useStrategyParams";
 
 export function useParamOptimisation(strategySelectResults, setVisible) {
-    const [paramValues, setParamValues] = useState({});
-    const [filterResults, setFilterResults] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [uploadComplete, setUploadComplete] = useState(true);
     const [progress, setProgress] = useState({});
+    const [scoringParams, setScoringParams] = useState({});
+    const { optimParams } = useOptimisationParams()
 
-    const allSymbols = useMemo(
-        () => [
-            ...new Set(
-            Object.keys(strategySelectResults ?? {}).flatMap((s) => s.split("-"))
-            )
-        ],
-        [strategySelectResults]
-    )
+    const { 
+        optimisationResult, 
+        setOptimisationResult,
+        optimiseParameters, 
+        isLoading: optimLoading, 
+        error: optimError 
+    } = useOptimisation();
 
-    const selectedPairs = useMemo(
-        () => Object.keys(strategySelectResults ?? {})
-                .filter((s) => s.includes("-"))
-                .map((s) => ({
-                    "stock1": s.split("-")[0],
-                    "stock2": s.split("-")[1]
-                })), 
-        [strategySelectResults]
-    )
-
-    const {
-        strategyType,
-        setStrategyType,
-        basicParams,
-        advancedParams,
-    } = useStrategyParams(allSymbols, selectedPairs);
-
-    // set default params
     useEffect(() => {
-        const paramDefaults = Object.fromEntries(
-            Object.values(params).map((p) => {
-                const { default: value, name, ...rest } = p;
+        const scoringParamDefaults = Object.fromEntries(
+            Object.values(params).map((param) => {
+                const { default: value, name, ...rest } = param;
                 return [name, { value, ...rest }];
             })
-        );
-        setParamValues(paramDefaults);
+        )
+        setScoringParams(scoringParamDefaults)
     }, [])
 
     useEffect(() => {
-        setFilterResults(null);
         setVisible(false);
+        setOptimisationResult(null);
         setProgress({});
-    }, [strategySelectResults, setVisible])
-
-    useEffect(() => {
-        if (allSymbols.length > 0 && strategyType?.value !== "custom") {
-            setStrategyType({value: "custom", label: "custom"});
-        }
-    }, [allSymbols, selectedPairs, strategyType, setStrategyType]);
+    }, [strategySelectResults, setVisible, setOptimisationResult])
 
 
     const runParamOptimisation = async () => {
-        if (!strategySelectResults) return;
-        setIsLoading(true);
-        setUploadComplete(false);
-        setProgress({});
-        setFilterResults(null);
-        setError(null);
+        if (!strategySelectResults || Object.keys(strategySelectResults).length === 0) {
+            console.warn("No strategy selection results provided");
+            return;
+        }
+
+        const strategyTypesWithSymbols = Object.entries(strategySelectResults)
+            .reduce((acc, [symbol, { strategy, score }]) => {
+                if (!acc[strategy]) acc[strategy] = [];
+                acc[strategy].push({
+                    symbols: symbol.split("-"),
+                    strategy,
+                    weight: 1 // or you can use score if you want weighted importance
+                });
+                return acc;
+            }, {});
+        
+        const scoringParamValues = Object.fromEntries(
+            Object.entries(scoringParams).map(([name, param]) => [
+                name,
+                param.value
+            ])
+        )
+
+        await optimiseParameters({ strategyTypesWithSymbols, optimParams, scoringParamValues })
     }
 
     return {
-        paramValues,
-        setParamValues,
-        filterResults,
+        scoringParams,
+        setScoringParams,
+        optimisationResult,
         runParamOptimisation,
-        isLoading,
-        error,
-        strategyType,
-        uploadComplete,
+        optimLoading,
+        optimError,
         progress
     }
 }

@@ -58,9 +58,10 @@ export function useOptimisation() {
   }, [])
   
 
-  const optimiseParameters = async ({ strategyTypesWithSymbols, optimParams }) => {
+  const optimiseParameters = async ({ strategyTypesWithSymbols, optimParams, scoringParams }) => {
     setIsLoading(true);
     setError(null);
+    setOptimisationResult(null);
     console.log(strategyTypesWithSymbols, optimParams)
 
     const strats = Object.fromEntries(
@@ -83,7 +84,8 @@ export function useOptimisation() {
     const payload = {
       strategies: strats,
       globalParams: globParams,
-      optimParams: optimisationParams
+      optimParams: optimisationParams,
+      scoringParams: scoringParams
     };
 
     console.log(payload)
@@ -112,5 +114,5 @@ export function useOptimisation() {
     }
   };
 
-  return { optimisationResult, optimiseParameters, isLoading, error };
+  return { optimisationResult, setOptimisationResult, optimiseParameters, isLoading, error };
 }

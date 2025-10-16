@@ -14,14 +14,14 @@ export const params = {
         info: "Set weighting for compound annual growth rate in the combined metric used to optimise parameters"
     },
     maxDrawdown: {
-        name: "maxDrawdown",
+        name: "max_drawdown",
         label: "Max Drawdown",
         type: "number",
         default: 0.2,
         info: "Set weighting for max drawdown in the combined metric used to optimise parameters"
     },
     winRate: {
-        name: "winRate",
+        name: "win_rate",
         label: "Win Rate",
         type: "number",
         default: 0.1,

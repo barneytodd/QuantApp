@@ -5,10 +5,10 @@ from functools import partial
 from app.services.backtesting.helpers.optimisation.objective import make_single_strategy_objective
 
 
-def _run_single_study(strategy_name, cfg, global_params, strategies_config, window_length, n_trials):
+def _run_single_study(strategy_name, cfg, global_params, scoring_params, strategies_config, window_length, n_trials):
     """Run one Optuna study in a separate process."""
     study = optuna.create_study(direction="maximize")
-    objective = make_single_strategy_objective(strategy_name, cfg, global_params, window_length)
+    objective = make_single_strategy_objective(strategy_name, cfg, global_params, scoring_params, window_length)
     study.optimize(objective, n_trials=n_trials)
     return {
         "strategy": strategy_name,
@@ -17,7 +17,7 @@ def _run_single_study(strategy_name, cfg, global_params, strategies_config, wind
     }
 
 
-async def optimise_multiple_strategies_async(strategies_config, global_params, n_trials=50, window_length=3):
+async def optimise_multiple_strategies_async(strategies_config, global_params, scoring_params, n_trials=50, window_length=3):
     """Run multiple strategies in parallel using ProcessPoolExecutor."""
     results = []
     with ProcessPoolExecutor() as pool:
@@ -26,7 +26,7 @@ async def optimise_multiple_strategies_async(strategies_config, global_params, n
         for strategy_name, cfg in strategies_config.items():
             task = loop.run_in_executor(
                 pool,
-                partial(_run_single_study, strategy_name, cfg, global_params, strategies_config, window_length, n_trials)
+                partial(_run_single_study, strategy_name, cfg, global_params, scoring_params, strategies_config, window_length, n_trials)
             )
             tasks.append(task)
 
@@ -35,8 +35,8 @@ async def optimise_multiple_strategies_async(strategies_config, global_params, n
     return {r["strategy"]: r for r in results}
 
 
-def optimise_parameters(strategies_config, global_params, optimisation_params):
+def optimise_parameters(strategies_config, global_params, optimisation_params, scoring_params):
     """Sync FastAPI entrypoint."""
     n_trials = optimisation_params.get("iterations", 50)
     window_length = optimisation_params.get("foldLength", 252)
-    return asyncio.run(optimise_multiple_strategies_async(strategies_config, global_params, n_trials, window_length))
+    return asyncio.run(optimise_multiple_strategies_async(strategies_config, global_params, scoring_params, n_trials, window_length))

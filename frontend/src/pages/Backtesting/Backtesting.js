@@ -119,10 +119,7 @@ export default function Backtesting() {
               ],
             ]
     );
-
-    console.log("Optimiser config:", strategyTypesWithSymbols, optimParams);
-
-    await optimiseParameters({ strategyTypesWithSymbols, optimParams, });
+    await optimiseParameters({ strategyTypesWithSymbols, optimParams, scoringParams: null});
   };
     
   useEffect(() => {

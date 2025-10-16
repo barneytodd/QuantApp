@@ -72,14 +72,12 @@ export default function PortfolioBuilder() {
   } = useStrategySelect(backtestFilterResults, setShowStrategySelector)
 
   const {
-    paramValues: paramOptimisationParamValues,
-    setParamValues: setParamOptimisationParamValues,
-    filterResults: paramOptimisationResults,
+    scoringParams: paramOptimisationParams,
+    setScoringParams: setParamOptimisationParams,
+    optimisationResult: paramOptimisationResults,
     runParamOptimisation,
-    isLoading: paramOptimisationLoading,
-    error: paramOptimisationError,
-    strategyType: paramOptimisationStrategyType,
-    uploadComplete: paramOptimisationUploadComplete,
+    optimLoading: paramOptimisationLoading,
+    optimError: paramOptimisationError,
     progress: paramOptimisationProgress
   } = useParamOptimisation(precomputedStrategySelectResults, setShowParamOptimisation)
 
@@ -160,17 +158,15 @@ export default function PortfolioBuilder() {
         progress={strategySelectProgress}
       />
       <ParamOptimisation 
-        paramValues={paramOptimisationParamValues}
-        setParamValues={setParamOptimisationParamValues}
         onRunParamOptimisation={handleParamOptimisation}
         visible={showParamOptimisation}
         setVisible={setShowParamOptimisation}
+        paramValues={paramOptimisationParams}
+        setParamValues={setParamOptimisationParams}
         filterResults={paramOptimisationResults}
         paramOptimisationLoading={paramOptimisationLoading}
         paramOptimisationError={paramOptimisationError}
         strategySelectResults={precomputedStrategySelectResults}
-        strategyType={paramOptimisationStrategyType}
-        uploadComplete={paramOptimisationUploadComplete}
         progress={paramOptimisationProgress}
       />
     </div>

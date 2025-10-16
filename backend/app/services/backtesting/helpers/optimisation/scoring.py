@@ -1,4 +1,4 @@
-def composite_score(aggregated_results, weights=None):
+def composite_score(aggregated_results, scoring_params, weights=None):
     metrics_list = [
         {
             "sharpe": r["avgSharpe"], 
@@ -20,7 +20,12 @@ def composite_score(aggregated_results, weights=None):
         cagr = metrics["cagr"] / 50
         max_dd = 1 - (metrics["max_drawdown"] / 50)
         win_rate = metrics["win_rate"] / 100
-        score = (0.5 * sharpe + 0.3 * cagr + 0.3 * max_dd + 0.1 * win_rate)
+        score = (
+            scoring_params["sharpe"] * sharpe 
+            + scoring_params["cagr"] * cagr 
+            + scoring_params["max_drawdown"] * max_dd 
+            + scoring_params["win_rate"] * win_rate
+        )
         scores.append(score * w)
 
     return sum(scores)
