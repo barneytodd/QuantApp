@@ -163,7 +163,7 @@ export function useStrategySelect(prelimBacktestResults, setVisible) {
 
         const today = new Date();
         const start = new Date();
-        start.setFullYear(today.getFullYear() - 4);
+        start.setFullYear(today.getFullYear() - 10);
 
         const todayStr = today.toISOString().split("T")[0].replace(/-/g, "-");
         const startStr = start.toISOString().split("T")[0].replace(/-/g, "-");

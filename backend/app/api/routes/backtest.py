@@ -41,7 +41,7 @@ def run_standard_backtest(payload: StrategyRequest, db: Session = Depends(get_db
 
 
 # === 2. Walkforward async engine ===
-async def run_walkforward_async(task_id, windows, all_symbols, strategy_symbols, params, lookback, db):
+async def run_walkforward_async(task_id, windows, all_symbols, strategy_symbols, params, lookback, db, window_length=3):
     manager = Manager()
     progress_state = manager.dict()
     progress_state["segments"] = manager.dict()
@@ -56,6 +56,7 @@ async def run_walkforward_async(task_id, windows, all_symbols, strategy_symbols,
         "overall_progress": 0.0,
         "results": {},
         "total_segments": len(windows),
+        "window_length": window_length
     }
 
     # Kick off listener that mirrors progress_state into tasks_store

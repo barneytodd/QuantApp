@@ -41,12 +41,12 @@ def make_single_strategy_objective(strategy_name, cfg, global_params, window_len
             params = params
         ))
 
-        windows = create_walkforward_windows(params["startDate"], params["endDate"], window_length=window_length)
+        windows = create_walkforward_windows(params["startDate"], params["endDate"], window_length=1)
         task_id = str(uuid.uuid4())
         print(f"[TASK {task_id}] Starting walk-forward with: ", windows, all_symbols, strategy_symbols, params, lookback)
         # Instead of create_task -> await directly
         await run_walkforward_async(
-            task_id, windows, all_symbols, strategy_symbols, params, lookback, db
+            task_id, windows, all_symbols, strategy_symbols, params, lookback, db, window_length=window_length
         )
 
         task = tasks_store[task_id]
