@@ -7,7 +7,8 @@ export const strategies = {
       { 
         name: "shortPeriod", 
         label: "Short SMA Period", 
-        type: "number", default: 20, 
+        type: "number", 
+        default: 20, 
         bounds: [5, 30], 
         category: "basic", 
         optimise: true, 

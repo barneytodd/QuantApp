@@ -5,7 +5,7 @@ from functools import partial
 from app.services.backtesting.helpers.optimisation.objective import make_single_strategy_objective
 
 
-def _run_single_study(strategy_name, cfg, global_params, n_trials, window_length):
+def _run_single_study(strategy_name, cfg, global_params, strategies_config, window_length, n_trials):
     """Run one Optuna study in a separate process."""
     study = optuna.create_study(direction="maximize")
     objective = make_single_strategy_objective(strategy_name, cfg, global_params, window_length)
@@ -26,7 +26,7 @@ async def optimise_multiple_strategies_async(strategies_config, global_params, n
         for strategy_name, cfg in strategies_config.items():
             task = loop.run_in_executor(
                 pool,
-                partial(_run_single_study, strategy_name, cfg, global_params, n_trials, window_length)
+                partial(_run_single_study, strategy_name, cfg, global_params, strategies_config, window_length, n_trials)
             )
             tasks.append(task)
 

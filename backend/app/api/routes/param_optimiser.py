@@ -7,7 +7,7 @@ from app.schemas import ParamOptimisationRequest
 router = APIRouter()
 
 @router.post("/optimise")
-def optimise_multi_strategy(payload: ParamOptimisationRequest):
+def optimise_strategy_parameters(payload: ParamOptimisationRequest):
     strategies_config = payload.strategies
     global_params = payload.globalParams
     optimisation_params = payload.optimParams

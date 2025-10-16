@@ -192,8 +192,9 @@ def get_walkforward_aggregated_results(task_id: str):
     walkforward_results = compute_walkforward_results(segments, window_length)
 
     aggregated = aggregate_walkforward_results(walkforward_results)
+    symbol_results = [r for r in aggregated if r["symbol"] != "overall"]
     return {
         "task_id": task_id,
         "status": task["status"],
-        "aggregated_results": aggregated
+        "aggregated_results": symbol_results
     }

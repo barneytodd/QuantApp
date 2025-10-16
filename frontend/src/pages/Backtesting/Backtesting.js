@@ -126,29 +126,30 @@ export default function Backtesting() {
   };
     
   useEffect(() => {
-    if (optimisationResult && !optimError) {
-      if (optimisationResult.best_basic_params) {
-        const basic = optimisationResult.best_basic_params;
-        setBasicParams(prev => {
-          const updated = { ...prev };
-          for (const k in basic) {
-            updated[k] = { ...(prev[k] || {}), value: basic[k] };
+    if (optimisationResult && !optimError && optimisationResult.best_params) {
+      const bestParams = optimisationResult.best_params;
+
+      setBasicParams(prev => {
+        const updated = { ...prev };
+        Object.keys(bestParams).forEach(key => {
+          if (key in prev) {
+            updated[key] = { ...(prev[key] || {}), value: bestParams[key] };
           }
-          return updated;
         });
-      }
-      if (optimisationResult.best_advanced_params) {
-        const advanced = optimisationResult.best_advanced_params;
-        setAdvancedParams(prev => {
-          const updated = { ...prev };
-          for (const k in advanced) {
-            updated[k] = { ...(prev[k] || {}), value: advanced[k] };
+        return updated;
+      });
+
+      setAdvancedParams(prev => {
+        const updated = { ...prev };
+        Object.keys(bestParams).forEach(key => {
+          if (key in prev) {
+            updated[key] = { ...(prev[key] || {}), value: bestParams[key] };
           }
-          return updated;
         });
-      }
+        return updated;
+      });
     }
-  }, [optimisationResult, optimError, setBasicParams, setAdvancedParams])
+  }, [optimisationResult, optimError, setBasicParams, setAdvancedParams]);
 
 
   const handleSelectPairs = async () => {

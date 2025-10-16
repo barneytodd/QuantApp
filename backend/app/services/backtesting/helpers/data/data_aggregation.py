@@ -20,7 +20,7 @@ def compute_walkforward_results(results, window_length):
         wins = 0
         total_trades = 0
         for i in range(start, start+window_length):
-            for idx, strat_result in enumerate(results[i][:-1]):
+            for idx, strat_result in enumerate(results[i]):
                 symbol = strat_result.get("symbol")
                 strategy = strat_result.get("strategy")
                 strategies[symbol] = strategy
@@ -30,10 +30,11 @@ def compute_walkforward_results(results, window_length):
                         "date": item["date"], 
                         "value": item["value"] * initial_capitals.get(symbol, 10000) / assumed_initial_capital
                     }
-                    for item in strat_result.get("equityCurve")
+                    for item in strat_result.get("equityCurve") if item["value"] is not None
                 ]
                 equity_curves.setdefault(symbol, []).extend(equity_curve)
-                initial_capitals[symbol] = strat_result["finalCapital"]
+                if strat_result["finalCapital"] is not None:
+                    initial_capitals[symbol] = strat_result["finalCapital"]
                 trades.setdefault(symbol, []).extend(strat_result.get("trades", []))
                 trade_stats = strat_result["tradeStats"]
                 if trade_stats:
@@ -48,6 +49,8 @@ def compute_walkforward_results(results, window_length):
             segment_result.append({
                 "symbol": symbol,
                 "strategy": strategy,
+                "equity_curve": equity_curves[symbol],
+                "trades": trades[symbol],
                 "metrics": metrics,
                 "tradeStats": trade_stats
             })
@@ -112,5 +115,8 @@ def aggregate_walkforward_results(segment_results):
             "avgMaxDrawdown": safe_mean(vals["maxDrawdown"]),
             "avgWinRate": safe_mean(vals["winRate"]),
         })
-
+        
     return aggregated
+
+
+
