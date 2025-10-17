@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useOptimisation } from "../../Backtesting/hooks/useOptimisation";
-import { useOptimisationParams } from "../../Backtesting/hooks/useOptimisationParams";
 import { params } from "../params/paramOptimisationParams"
 
 export function useParamOptimisation(strategySelectResults, setVisible) {
+    const [optimisationParams, setOptimisationParams] = useState({});
     const [progress, setProgress] = useState({});
-    const [scoringParams, setScoringParams] = useState({});
-    const { optimParams } = useOptimisationParams()
+    const evtSourceRef = useRef(null);
+    
 
     const { 
         optimisationResult, 
@@ -17,19 +17,26 @@ export function useParamOptimisation(strategySelectResults, setVisible) {
     } = useOptimisation();
 
     useEffect(() => {
-        const scoringParamDefaults = Object.fromEntries(
+        const optimisationParamDefaults = Object.fromEntries(
             Object.values(params).map((param) => {
                 const { default: value, name, ...rest } = param;
                 return [name, { value, ...rest }];
             })
         )
-        setScoringParams(scoringParamDefaults)
+
+        setOptimisationParams(optimisationParamDefaults)
     }, [])
+
 
     useEffect(() => {
         setVisible(false);
         setOptimisationResult(null);
         setProgress({});
+        return () => {
+            if (evtSourceRef.current) {
+                evtSourceRef.current.close();
+            }
+        };
     }, [strategySelectResults, setVisible, setOptimisationResult])
 
 
@@ -38,6 +45,8 @@ export function useParamOptimisation(strategySelectResults, setVisible) {
             console.warn("No strategy selection results provided");
             return;
         }
+        setOptimisationResult(null);
+        setProgress({});
 
         const strategyTypesWithSymbols = Object.entries(strategySelectResults)
             .reduce((acc, [symbol, { strategy, score }]) => {
@@ -51,18 +60,51 @@ export function useParamOptimisation(strategySelectResults, setVisible) {
             }, {});
         
         const scoringParamValues = Object.fromEntries(
-            Object.entries(scoringParams).map(([name, param]) => [
-                name,
-                param.value
-            ])
+            Object.entries(optimisationParams)
+                .filter(([_, param]) => param.group === "scoringParams")
+                .map(([name, param]) => [
+                    name,
+                    param.value
+                ])
         )
 
-        await optimiseParameters({ strategyTypesWithSymbols, optimParams, scoringParamValues })
+        evtSourceRef.current = new EventSource(
+            "http://localhost:8000/api/params/optimisation/stream"
+        );
+
+        evtSourceRef.current.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            if (data.done) {
+                if (evtSourceRef.current) {
+                    evtSourceRef.current.close();
+                    evtSourceRef.current = null;
+                }
+                return;
+            }
+
+            setProgress(data);
+            };
+
+        evtSourceRef.current.onerror = () => {
+            if (evtSourceRef.current) {
+                evtSourceRef.current.close();
+                evtSourceRef.current = null;
+            }
+        };
+
+        try {
+            await optimiseParameters({ strategyTypesWithSymbols, optimParams: optimisationParams, scoringParams: scoringParamValues })
+        }
+        catch {
+            setProgress({});
+        }
+        setProgress({});
     }
 
     return {
-        scoringParams,
-        setScoringParams,
+        optimisationParams,
+        setOptimisationParams,
         optimisationResult,
         runParamOptimisation,
         optimLoading,

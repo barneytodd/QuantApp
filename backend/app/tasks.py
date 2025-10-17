@@ -7,4 +7,4 @@ walkforward_tasks_store ={}
 
 pairs_tasks_store = {}
 
-ingest_tasks_store = {}
+param_optimisation_tasks_store = {}

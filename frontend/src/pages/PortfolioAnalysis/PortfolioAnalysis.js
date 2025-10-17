@@ -72,8 +72,8 @@ export default function PortfolioBuilder() {
   } = useStrategySelect(backtestFilterResults, setShowStrategySelector)
 
   const {
-    scoringParams: paramOptimisationParams,
-    setScoringParams: setParamOptimisationParams,
+    optimisationParams: paramOptimisationParams,
+    setOptimisationParams: setParamOptimisationParams,
     optimisationResult: paramOptimisationResults,
     runParamOptimisation,
     optimLoading: paramOptimisationLoading,

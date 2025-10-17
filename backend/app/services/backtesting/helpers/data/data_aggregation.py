@@ -80,7 +80,6 @@ def aggregate_walkforward_results(segment_results):
             pair_key = (symbol, strategy)
 
             metrics = strat_result.get("metrics") or {}
-            print(symbol, metrics)
             trade_stats = strat_result.get("tradeStats") or {}
 
             # if no trades, count it and skip from averages
