@@ -3,6 +3,7 @@ import PreScreen from "./components/stages/Stage2PreScreen"
 import PreliminaryBacktest from "./components/stages/Stage3PreliminaryBacktest";
 import StrategySelection from "./components/stages/Stage4StrategySelect";
 import ParamOptimisation from "./components/stages/Stage5ParamOptimsation";
+import PortfolioWeights from "./components/stages/Stage6PortfolioWeights";
 
 import { useState } from "react"
 import { useUniverseFilters } from "./hooks/useUniverseFilters";
@@ -10,13 +11,41 @@ import { usePreScreen } from "./hooks/usePreScreen";
 import { usePrelimBacktest } from "./hooks/usePrelimBacktest";
 import { useStrategySelect } from "./hooks/useStrategySelect";
 import { useParamOptimisation } from "./hooks/useParamOptimisation"
+import { usePortfolioWeights } from "./hooks/usePortfolioWeights";
 
-const precomputedStrategySelectResults = {
-    "AAPL": {strategy: "breakout", score: 1},
-    "MSFT": {strategy: "momentum", score: 0.5},
-    "AMZN-GOOG": {strategy: "pairs_trading", score: 0.75}
-    // ...etc
-  };
+
+const precomputedParamOptimisationResults = {
+  "breakout": {
+    "best_params": {"lookback": 20, "breakoutMultiplier": 0.0}, 
+    "aggregated_results": [
+      {"symbol": "AAPL", "strategy": "breakout", "returns": [
+        0.0015, -0.0005, 0.0025, 0.001, -0.0015, 0.003, 0.002, -0.0005, 0.0015, 0.0005,
+        -0.002, 0.001, 0.0005, -0.0005, 0.0015, 0.002, -0.001, 0.003, 0.0015, -0.0005,
+        0.0005, 0.001, -0.001, 0.002, 0.0005, 0.001, -0.0005, 0.0025, 0.002, -0.001
+      ]}
+    ]
+  },
+  "momentum": {
+    "best_params": {"shortPeriod": 20, "longPeriod": 50},
+    "aggregated_results": [
+      {"symbol": "MSFT", "strategy": "momentum", "returns": [
+        0.002, -0.001, 0.003, 0.001, -0.002, 0.004, 0.003, -0.001, 0.002, 0.001,
+        -0.003, 0.002, 0.001, -0.001, 0.002, 0.003, -0.002, 0.004, 0.002, -0.001,
+        0.001, 0.002, -0.002, 0.003, 0.001, 0.002, -0.001, 0.004, 0.003, -0.002
+      ]}
+    ]
+  },
+  "pairs_trading": {
+    "best_params": {"lookback": 20, "entryZ": 2, "exitZ": 0.5, "hedgeRatio": 1.0},
+    "aggregated_results": [
+      {"symbol": "AMZN-GOOG", "strategy": "pairs_trading", "returns": [
+        0.004, -0.003, 0.006, 0.002, -0.004, 0.008, 0.005, -0.002, 0.004, 0.003,
+        -0.006, 0.004, 0.002, -0.003, 0.004, 0.006, -0.004, 0.007, 0.004, -0.002,
+        0.002, 0.003, -0.003, 0.005, 0.002, 0.003, -0.002, 0.006, 0.005, -0.003
+      ]}
+    ]
+  }
+}
 
 export default function PortfolioBuilder() {
   const [showUniFilter, setShowUniFilter] = useState(false);
@@ -24,6 +53,7 @@ export default function PortfolioBuilder() {
   const [showPrelimBacktest, setShowPrelimBacktest] = useState(false);
   const [showStrategySelector, setShowStrategySelector] = useState(false);
   const [showParamOptimisation, setShowParamOptimisation] = useState(false);
+  const [showPortfolioWeights, setShowPortfolioWeights] = useState(false);
 
   const {
     filterValues: uniFilterValues, 
@@ -79,7 +109,20 @@ export default function PortfolioBuilder() {
     optimLoading: paramOptimisationLoading,
     optimError: paramOptimisationError,
     progress: paramOptimisationProgress
-  } = useParamOptimisation(precomputedStrategySelectResults, setShowParamOptimisation)
+  } = useParamOptimisation(strategySelectResults, setShowParamOptimisation)
+
+  const {
+    portfolioWeightsParams,
+    setPortfolioWeightsParams,
+    portfolioWeightsResult,
+    runPortfolioWeights,
+    isLoading: portfolioWeightsLoading,
+    loadingInputs: portfolioWeightsInputsLoading,
+    loadingHrp: portfolioWeightsHrpLoading,
+    loadingOptimisation: portfolioWeightsOptimisationLoading,
+    error: portfolioWeightsError,
+    progress: portfolioWeightsProgress
+  } = usePortfolioWeights(precomputedParamOptimisationResults, setShowPortfolioWeights)
 
   const handleUniverseFilters = async () => {
     await filterUniverse();
@@ -90,15 +133,19 @@ export default function PortfolioBuilder() {
   }
 
   const handlePrelimBacktest = async () => {
-    await runPrelimBacktest()
+    await runPrelimBacktest();
   }
 
   const handleStrategySelect = async () => {
-    await runStrategySelect()
+    await runStrategySelect();
   }
 
   const handleParamOptimisation = async () => {
-    await runParamOptimisation()
+    await runParamOptimisation();
+  }
+
+  const handlePortfolioWeights = async () => {
+    await runPortfolioWeights();
   }
 
   return (
@@ -166,8 +213,23 @@ export default function PortfolioBuilder() {
         filterResults={paramOptimisationResults}
         paramOptimisationLoading={paramOptimisationLoading}
         paramOptimisationError={paramOptimisationError}
-        strategySelectResults={precomputedStrategySelectResults}
+        strategySelectResults={strategySelectResults}
         progress={paramOptimisationProgress}
+      />
+      <PortfolioWeights 
+        onRunPortfolioWeights={handlePortfolioWeights}
+        visible={showPortfolioWeights}
+        setVisible={setShowPortfolioWeights}
+        paramValues={portfolioWeightsParams}
+        setParamValues={setPortfolioWeightsParams}
+        filterResults={portfolioWeightsResult}
+        portfolioWeightsLoading={portfolioWeightsLoading}
+        inputsLoading={portfolioWeightsInputsLoading}
+        hrpLoading={portfolioWeightsHrpLoading}
+        optimisationLoading={portfolioWeightsOptimisationLoading}
+        portfolioWeightsError={portfolioWeightsError}
+        paramOptimisationResults={precomputedParamOptimisationResults}
+        progress={portfolioWeightsProgress}
       />
     </div>
   );

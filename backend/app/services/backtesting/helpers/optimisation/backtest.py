@@ -36,7 +36,5 @@ async def run_strategy_backtest(cfg, global_params, window_length=3):
     window_length = task.get("window_length", 3)
     walkforward_results = compute_walkforward_results(segments, window_length)
     aggregated = aggregate_walkforward_results(walkforward_results)
-        
-    overall_results = [r for r in aggregated if r["symbol"] == "overall"]    
 
-    return overall_results
+    return aggregated

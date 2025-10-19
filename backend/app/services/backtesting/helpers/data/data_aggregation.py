@@ -71,6 +71,7 @@ def aggregate_walkforward_results(segment_results):
         "maxDrawdown": [],
         "winRate": [],
         "no_trade_segments": 0,
+        "complete_equity_curve": []
     })
 
     for segment in segment_results:
@@ -96,9 +97,20 @@ def aggregate_walkforward_results(segment_results):
                 metrics_per_pair[pair_key]["maxDrawdown"].append(metrics["max_drawdown"])
             if "winRate" in trade_stats and trade_stats["winRate"] is not None:
                 metrics_per_pair[pair_key]["winRate"].append(trade_stats["winRate"])
+            if "equity_curve" in strat_result and strat_result["equity_curve"] is not None:
+                metrics_per_pair[pair_key]["complete_equity_curve"].extend(strat_result["equity_curve"])
 
     def safe_mean(values):
         return float(np.mean(values)) if values else None
+
+    def compute_returns(equity_curve):
+        if not equity_curve:
+            return None
+        df = pd.DataFrame(equity_curve).sort_values("date")
+        df = df.drop_duplicates(subset="date", keep="first")
+        df["return"] = df["value"].pct_change()
+        df = df.dropna(subset=["return"])
+        return df.to_list()
 
     aggregated = []
     for (symbol, strategy), vals in metrics_per_pair.items():
@@ -113,6 +125,7 @@ def aggregate_walkforward_results(segment_results):
             "avgCAGR": safe_mean(vals["cagr"]),
             "avgMaxDrawdown": safe_mean(vals["maxDrawdown"]),
             "avgWinRate": safe_mean(vals["winRate"]),
+            "returns": compute_returns(vals["complete_equity_curve"])
         })
         
     return aggregated

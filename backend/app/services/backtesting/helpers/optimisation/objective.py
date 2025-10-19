@@ -27,7 +27,7 @@ def make_single_strategy_objective(strategy_name, cfg, global_params, scoring_pa
         }
         # run combined backtest for all strategies with current params
         backtest_result = await run_strategy_backtest(backtest_cfg, global_params, window_length)
-
+        overall_results = [r for r in backtest_result if r["symbol"] == "overall"]
         score = composite_score(backtest_result, scoring_params)
 
         if strategy_name in tasks_store:
@@ -36,7 +36,7 @@ def make_single_strategy_objective(strategy_name, cfg, global_params, scoring_pa
             store_entry["best_params"] = trial_params
             store_entry["best_score"] = score
 
-        return score
+        return score, backtest_result
 
     def objective(trial):
         # This runs in separate process, so it's safe

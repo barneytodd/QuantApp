@@ -113,7 +113,7 @@ export function usePrelimBacktest(preScreenResults, setVisible) {
                 .filter(([key, _]) => !key.endsWith("_weight"))
                 .map(([k, v]) => [k, { value: v.value, lookback: v.lookback ?? false }])
                 .concat(
-                Object.entries(basicParams).map(([k, v]) => [k, { value: v.value, lookback: v.lookback ?? false }])
+                    Object.entries(basicParams).map(([k, v]) => [k, { value: v.value, lookback: v.lookback ?? false }])
                 )
             )
             const res = await fetch("http://localhost:8000/api/strategies/backtest", {
