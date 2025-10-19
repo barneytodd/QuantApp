@@ -1,6 +1,6 @@
 from pydantic import BaseModel
-from typing import List, Dict, Any
-from datetime import date
+from typing import List, Dict, Any, Optional
+from datetime import datetime, date
 
 class PreScreenPayload(BaseModel):
     symbols: List[str]                      
@@ -21,3 +21,8 @@ class OptimisePayload(BaseModel):
     risk_matrix: dict       # {"symbols": [...], "cov_matrix": [[...], [...], ...]}
     baseline_weights: dict  # {"AAPL": 0.3, "MSFT": 0.25, ...}
     params: Dict[str, Any] = {}  # Additional parameters like risk_aversion, baseline_reg, max_weight
+
+class SavePortfolioPayload(BaseModel):
+    portfolio: Dict[str, Any]  # {"sma_crossover": {"symbolsWithWeights": [{"symbol": "AAPL", "weight": 0.3}, ...], "params": {"shortPeriod": 20, ...}}, ...}
+    metadata: Optional[Dict[str, Any]] = {}
+    timestamp: Optional[datetime] = None

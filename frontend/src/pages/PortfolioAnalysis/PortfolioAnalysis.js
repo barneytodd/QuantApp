@@ -121,7 +121,9 @@ export default function PortfolioBuilder() {
     loadingHrp: portfolioWeightsHrpLoading,
     loadingOptimisation: portfolioWeightsOptimisationLoading,
     error: portfolioWeightsError,
-    progress: portfolioWeightsProgress
+    savePortfolioToDB,
+    saving: savingPortfolio,
+    saved: savedPortfolio
   } = usePortfolioWeights(precomputedParamOptimisationResults, setShowPortfolioWeights)
 
   const handleUniverseFilters = async () => {
@@ -146,6 +148,10 @@ export default function PortfolioBuilder() {
 
   const handlePortfolioWeights = async () => {
     await runPortfolioWeights();
+  }
+
+  const handleSavePortfolioToDB = async () => {
+    await savePortfolioToDB(portfolioWeightsResult);
   }
 
   return (
@@ -229,7 +235,9 @@ export default function PortfolioBuilder() {
         optimisationLoading={portfolioWeightsOptimisationLoading}
         portfolioWeightsError={portfolioWeightsError}
         paramOptimisationResults={precomputedParamOptimisationResults}
-        progress={portfolioWeightsProgress}
+        onSavePortfolio={handleSavePortfolioToDB}
+        savingPortfolio={savingPortfolio}
+        savedPortfolio={savedPortfolio}
       />
     </div>
   );

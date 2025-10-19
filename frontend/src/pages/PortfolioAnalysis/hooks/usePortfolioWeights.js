@@ -5,12 +5,14 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
     const [portfolioWeightsParams, setPortfolioWeightsParams] = useState({});
     const [portfolioWeightsResult, setPortfolioWeightsResult] = useState(null);
 
-    const [progress, setProgress] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [loadingInputs, setLoadingInputs] = useState(false);
     const [loadingHrp, setLoadingHrp] = useState(false);
     const [loadingOptimisation, setLoadingOptimisation] = useState(false);
+
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
     
 
     useEffect(() => {
@@ -28,8 +30,26 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
     useEffect(() => {
         setVisible(false);
         setPortfolioWeightsResult(null);
-        setProgress({});
+        setError(null);
+        setSaved(false);
     }, [paramOptimisationResults, setVisible, setPortfolioWeightsResult])
+
+    const buildPortfolio = async (weights, parameters) => {
+        const portfolio = Object.fromEntries(
+            Object.entries(parameters).map(([strat, paramResults]) => [
+                strat,
+                {
+                    "symbols": paramResults.aggregated_results.map((symbolInfo) => ({
+                        "symbol": symbolInfo.symbol,
+                        "weight": weights[symbolInfo.symbol]
+                    })),
+                    "params": paramResults.best_params
+                }
+            ])
+        );
+        return portfolio;
+    };
+    
 
 
     const runPortfolioWeights = async () => {
@@ -39,8 +59,8 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
         }
         
         setPortfolioWeightsResult(null);
-        setProgress({});
         setIsLoading(true);
+        setSaved(false);
 
         // 1. estimate returns and risk
             // for now use backtest results weighted to give more weight to recent results
@@ -116,7 +136,7 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
      
         
         // 3. formulate objective, apply costraints, solve optimisation
-        let optimisationData;
+        let portfolio;
         try { 
             setLoadingOptimisation(true);
 
@@ -159,8 +179,9 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
                 return;
             }
 
-            optimisationData = await response.json();
-            setPortfolioWeightsResult(optimisationData)
+            const optimisationData = await response.json();
+            portfolio = await buildPortfolio(optimisationData.weights, paramOptimisationResults)
+            setPortfolioWeightsResult(portfolio)
 
         } catch (err) {
             setError(err);
@@ -173,6 +194,47 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
         }        
     }
 
+    const savePortfolioToDB = async (portfolio, metadata = {}) => {
+        if (!portfolio || Object.keys(portfolio).length === 0) {
+            alert("No portfolio provided")
+            return;
+        }
+        
+        setSaving(true);
+        setSaved(false);
+        try {
+            console.log(portfolio)
+            const response = await fetch("http://localhost:8000/api/portfolio/save", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify( {portfolio} )
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                console.error("Failed to save portfolio:", text);
+                setSaving(false);
+                alert("Failed to save portfolio to database");
+                return false;
+            }
+
+            const data = await response.json();
+            console.log("Portfolio saved successfully:", data);
+            return true;
+
+        } catch (err) {
+            console.error("Error saving portfolio:", err);
+            setSaving(false);
+            alert("Error saving portfolio to database");
+            return false;
+        } finally {
+            setSaving(false);
+            setSaved(true);
+        }
+    };
+
     return {
         portfolioWeightsParams,
         setPortfolioWeightsParams,
@@ -183,6 +245,8 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
         loadingHrp,
         loadingOptimisation,
         error,
-        progress
+        savePortfolioToDB,
+        saving,
+        saved
     }
 }
