@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends  
-from app.schemas import SavePortfolioPayload
+from app.schemas import SavePortfolioPayload, PortfolioOut
+from typing import List
 from datetime import datetime
 from app.database import get_db
 from sqlalchemy.orm import Session
@@ -29,3 +30,12 @@ async def save_portfolio(payload: SavePortfolioPayload, db: Session = Depends(ge
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to save portfolio: {e}")
+
+
+@router.get("/list", response_model=List[PortfolioOut])
+def list_portfolios(db: Session = Depends(get_db)):
+    """
+    Load all saved portfolios from the database.
+    """
+    portfolios = db.query(Portfolio).order_by(Portfolio.created_at.desc()).all()
+    return portfolios

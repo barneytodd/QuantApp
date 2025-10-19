@@ -28,17 +28,19 @@ export function useBacktest() {
     setIsLoading(true);
     setError(null);
 
-    const symbolItemsWithWeights = symbolItems.map(item => {
-      const weightParam = item.strategy === "pairs_trading" 
-        ? advancedParams[`${item.symbols[0]}-${item.symbols[1]}_weight`] 
-        : advancedParams[`${item.symbols[0]}_weight`];
-      return {
-        ...item,
-        weight: weightParam?.value ?? 0
-      };
-    });
-
     try {
+      const symbolItemsWithWeights = symbolItems
+        .map(item => {
+          const weightParam = item.strategy === "pairs_trading" 
+            ? advancedParams[`${item.symbols[0]}-${item.symbols[1]}_weight`] 
+            : advancedParams[`${item.symbols[0]}_weight`];
+          return {
+            ...item,
+            weight: item.weight ?? weightParam?.value ?? 0
+          };
+        })
+        .filter(item => item.weight !== 0);
+    
       const payload = {
         symbolItems: symbolItemsWithWeights,
         params: Object.fromEntries(

@@ -26,3 +26,13 @@ class SavePortfolioPayload(BaseModel):
     portfolio: Dict[str, Any]  # {"sma_crossover": {"symbolsWithWeights": [{"symbol": "AAPL", "weight": 0.3}, ...], "params": {"shortPeriod": 20, ...}}, ...}
     metadata: Optional[Dict[str, Any]] = {}
     timestamp: Optional[datetime] = None
+
+
+class PortfolioOut(BaseModel):
+    id: int
+    data: dict
+    meta: Optional[dict] = None
+    created_at: datetime
+
+    class Config:
+        orm_mode = True

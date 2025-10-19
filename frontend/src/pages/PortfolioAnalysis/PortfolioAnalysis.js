@@ -25,10 +25,10 @@ const precomputedParamOptimisationResults = {
       ]}
     ]
   },
-  "momentum": {
+  "sma_crossover": {
     "best_params": {"shortPeriod": 20, "longPeriod": 50},
     "aggregated_results": [
-      {"symbol": "MSFT", "strategy": "momentum", "returns": [
+      {"symbol": "MSFT", "strategy": "sma_crossover", "returns": [
         0.002, -0.001, 0.003, 0.001, -0.002, 0.004, 0.003, -0.001, 0.002, 0.001,
         -0.003, 0.002, 0.001, -0.001, 0.002, 0.003, -0.002, 0.004, 0.002, -0.001,
         0.001, 0.002, -0.002, 0.003, 0.001, 0.002, -0.001, 0.004, 0.003, -0.002

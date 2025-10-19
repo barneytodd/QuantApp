@@ -38,8 +38,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/backtesting" element={<Backtesting />} />
-          <Route path="/simulator" element={<TradingSimulatorPage />} />
           <Route path="/portfolio" element={<PortfolioBuilder />} />
+          <Route path="/simulator" element={<TradingSimulatorPage />} />
         </Routes>
       </div>
     </Router>

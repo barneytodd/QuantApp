@@ -16,8 +16,8 @@ export default function Sidebar({ isOpen, onClose }) {
       <nav className="flex flex-col p-4 gap-4">
         <Link to="/" onClick={onClose} className="hover:text-teal-600 font-medium">Dashboard</Link>
         <Link to="/backtesting" onClick={onClose} className="hover:text-teal-600 font-medium">Backtesting</Link>
-        <Link to="/simulator" onClick={onClose} className="hover:text-teal-600 font-medium">Trading Simulator</Link>
         <Link to="/portfolio" onClick={onClose} className="hover:text-teal-600 font-medium">Portfolio Analysis</Link>
+        <Link to="/simulator" onClick={onClose} className="hover:text-teal-600 font-medium">Trading Simulator</Link>
       </nav>
     </div>
   );

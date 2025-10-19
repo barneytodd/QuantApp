@@ -6,7 +6,7 @@ import { useOptimisation } from "./hooks/useOptimisation";
 import { useOptimisationParams } from "./hooks/useOptimisationParams";
 import { usePairs } from "./hooks/usePairs";
 
-import StrategySelector from "./components/StrategySelector";
+import SingleSelect from "../../components/ui/SingleSelect";
 import SymbolSelector from "./components/SymbolSelector";
 import ParamsCard from "./components/ParamsCard";
 import PairsSelectionTable from "./components/PairsSelectionTable";
@@ -169,10 +169,12 @@ export default function Backtesting() {
     <div className="space-y-6">
       {/* Strategy + Params */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StrategySelector
-          strategyType={strategyType}
-          setStrategyType={setStrategyType}
+        <SingleSelect
+          currentValue={strategyType}
+          setCurrentValue={setStrategyType}
           options={strategyTypeOptions}
+          title="Trading Strategy"
+          placeholder="Select a strategy"
         />
 
         <SymbolSelector
