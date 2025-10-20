@@ -59,16 +59,18 @@ async def run_walkforward_async(task_id, windows, all_symbols, strategy_symbols,
         "window_length": window_length
     }
 
+    for seg_id, window in enumerate(windows, start=1):
+        progress_state["segments"][seg_id] = manager.dict(progress_pct=0.0, done=False)
+
     # Kick off listener that mirrors progress_state into tasks_store
     asyncio.create_task(sync_progress_state_to_store(task_id, progress_state))
 
-    with ProcessPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
+    with ProcessPoolExecutor(max_workers=os.cpu_count() - 1 or 3) as pool:
         loop = asyncio.get_running_loop()
         tasks = []
 
         for seg_id, window in enumerate(windows, start=1):
             data = fetch_price_data_light(db, all_symbols, window["start"], window["end"], lookback)
-            progress_state["segments"][seg_id] = manager.dict(progress_pct=0.0, done=False)
             # submit run_segment using pool executor
             tasks.append(loop.run_in_executor(
                 pool,
