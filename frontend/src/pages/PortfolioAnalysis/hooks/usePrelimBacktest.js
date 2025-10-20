@@ -4,7 +4,7 @@ import { strategies } from "../../Backtesting/parameters/strategyRegistry";
 import { useStrategyParams } from "../../Backtesting/hooks/useStrategyParams";
 import { usePairs } from "../../Backtesting/hooks/usePairs"
 
-export function usePrelimBacktest(preScreenResults, setVisible) {
+export function usePrelimBacktest(preScreenResults, endDate, setVisible) {
     const [filterValues, setFilterValues] = useState({});
     const [filterResults, setFilterResults] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -108,10 +108,22 @@ export function usePrelimBacktest(preScreenResults, setVisible) {
                 ),
             ];
 
+            const end = new Date(endDate.value);
+            const start = new Date(end);
+            start.setFullYear(end.getFullYear() - 1);
+
+            const startStr = start.toISOString().split("T")[0].replace(/-/g, "-");
+
             const params = Object.fromEntries(
             Object.entries(advancedParams)
                 .filter(([key, _]) => !key.endsWith("_weight"))
-                .map(([k, v]) => [k, { value: v.value, lookback: v.lookback ?? false }])
+                .map(([k, v]) => [
+                    k, 
+                    { 
+                        value: k === "startDate" ? startStr : k === "endDate" ? endDate.value : v.value, 
+                        lookback: v.lookback ?? false 
+                    }
+                ])
                 .concat(
                     Object.entries(basicParams).map(([k, v]) => [k, { value: v.value, lookback: v.lookback ?? false }])
                 )

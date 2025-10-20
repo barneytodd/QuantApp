@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useOptimisation } from "../../Backtesting/hooks/useOptimisation";
 import { params } from "../params/paramOptimisationParams"
 
-export function useParamOptimisation(strategySelectResults, setVisible) {
+export function useParamOptimisation(strategySelectResults, startDate, endDate, setVisible) {
     const [optimisationParams, setOptimisationParams] = useState({});
     const [progress, setProgress] = useState({});
     const evtSourceRef = useRef(null);
@@ -14,7 +14,7 @@ export function useParamOptimisation(strategySelectResults, setVisible) {
         optimiseParameters, 
         isLoading: optimLoading, 
         error: optimError 
-    } = useOptimisation();
+    } = useOptimisation(startDate, endDate);
 
     useEffect(() => {
         const optimisationParamDefaults = Object.fromEntries(
@@ -45,6 +45,7 @@ export function useParamOptimisation(strategySelectResults, setVisible) {
             console.warn("No strategy selection results provided");
             return;
         }
+        console.log(strategySelectResults)
         setOptimisationResult(null);
         setProgress({});
 

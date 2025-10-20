@@ -4,8 +4,9 @@ import PreliminaryBacktest from "./components/stages/Stage3PreliminaryBacktest";
 import StrategySelection from "./components/stages/Stage4StrategySelect";
 import ParamOptimisation from "./components/stages/Stage5ParamOptimsation";
 import PortfolioWeights from "./components/stages/Stage6PortfolioWeights";
+import ParamCard from "../../components/ui/ParamCard";
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useUniverseFilters } from "./hooks/useUniverseFilters";
 import { usePreScreen } from "./hooks/usePreScreen";
 import { usePrelimBacktest } from "./hooks/usePrelimBacktest";
@@ -14,39 +15,6 @@ import { useParamOptimisation } from "./hooks/useParamOptimisation"
 import { usePortfolioWeights } from "./hooks/usePortfolioWeights";
 
 
-const precomputedParamOptimisationResults = {
-  "breakout": {
-    "best_params": {"lookback": 20, "breakoutMultiplier": 0.0}, 
-    "aggregated_results": [
-      {"symbol": "AAPL", "strategy": "breakout", "returns": [
-        0.0015, -0.0005, 0.0025, 0.001, -0.0015, 0.003, 0.002, -0.0005, 0.0015, 0.0005,
-        -0.002, 0.001, 0.0005, -0.0005, 0.0015, 0.002, -0.001, 0.003, 0.0015, -0.0005,
-        0.0005, 0.001, -0.001, 0.002, 0.0005, 0.001, -0.0005, 0.0025, 0.002, -0.001
-      ]}
-    ]
-  },
-  "sma_crossover": {
-    "best_params": {"shortPeriod": 20, "longPeriod": 50},
-    "aggregated_results": [
-      {"symbol": "MSFT", "strategy": "sma_crossover", "returns": [
-        0.002, -0.001, 0.003, 0.001, -0.002, 0.004, 0.003, -0.001, 0.002, 0.001,
-        -0.003, 0.002, 0.001, -0.001, 0.002, 0.003, -0.002, 0.004, 0.002, -0.001,
-        0.001, 0.002, -0.002, 0.003, 0.001, 0.002, -0.001, 0.004, 0.003, -0.002
-      ]}
-    ]
-  },
-  "pairs_trading": {
-    "best_params": {"lookback": 20, "entryZ": 2, "exitZ": 0.5, "hedgeRatio": 1.0},
-    "aggregated_results": [
-      {"symbol": "AMZN-GOOG", "strategy": "pairs_trading", "returns": [
-        0.004, -0.003, 0.006, 0.002, -0.004, 0.008, 0.005, -0.002, 0.004, 0.003,
-        -0.006, 0.004, 0.002, -0.003, 0.004, 0.006, -0.004, 0.007, 0.004, -0.002,
-        0.002, 0.003, -0.003, 0.005, 0.002, 0.003, -0.002, 0.006, 0.005, -0.003
-      ]}
-    ]
-  }
-}
-
 export default function PortfolioBuilder() {
   const [showUniFilter, setShowUniFilter] = useState(false);
   const [showPreScreen, setShowPreScreen] = useState(false);
@@ -54,6 +22,9 @@ export default function PortfolioBuilder() {
   const [showStrategySelector, setShowStrategySelector] = useState(false);
   const [showParamOptimisation, setShowParamOptimisation] = useState(false);
   const [showPortfolioWeights, setShowPortfolioWeights] = useState(false);
+
+  const [startDate, setStartDate] = useState({});
+  const [endDate, setEndDate] = useState({});
 
   const {
     filterValues: uniFilterValues, 
@@ -75,7 +46,7 @@ export default function PortfolioBuilder() {
     testingComplete: preScreenTestingComplete,
     progress: preScreenTestingProgress,
     fails: preScreenFails
-  } = usePreScreen(uniFilterResults, setShowPreScreen);
+  } = usePreScreen(uniFilterResults, endDate, setShowPreScreen);
 
   const {
     filterValues: backtestFilterValues,
@@ -87,7 +58,7 @@ export default function PortfolioBuilder() {
     strategyType: backtestStrategyType,
     pairsLoading: BacktestPairsLoading,
     pairsProgress: BacktestPairsProgress
-  } = usePrelimBacktest(preScreenFilterResults, setShowPrelimBacktest);
+  } = usePrelimBacktest(preScreenFilterResults, endDate, setShowPrelimBacktest);
 
   const {
     paramValues: strategySelectParamValues,
@@ -99,7 +70,7 @@ export default function PortfolioBuilder() {
     strategyType: strategySelectStrategyType,
     uploadComplete: strategySelectUploadComplete,
     progress: strategySelectProgress
-  } = useStrategySelect(backtestFilterResults, setShowStrategySelector)
+  } = useStrategySelect(backtestFilterResults, startDate, endDate, setShowStrategySelector)
 
   const {
     optimisationParams: paramOptimisationParams,
@@ -109,7 +80,7 @@ export default function PortfolioBuilder() {
     optimLoading: paramOptimisationLoading,
     optimError: paramOptimisationError,
     progress: paramOptimisationProgress
-  } = useParamOptimisation(strategySelectResults, setShowParamOptimisation)
+  } = useParamOptimisation(strategySelectResults, startDate, endDate, setShowParamOptimisation)
 
   const {
     portfolioWeightsParams,
@@ -124,7 +95,7 @@ export default function PortfolioBuilder() {
     savePortfolioToDB,
     saving: savingPortfolio,
     saved: savedPortfolio
-  } = usePortfolioWeights(precomputedParamOptimisationResults, setShowPortfolioWeights)
+  } = usePortfolioWeights(paramOptimisationResults, setShowPortfolioWeights)
 
   const handleUniverseFilters = async () => {
     await filterUniverse();
@@ -154,9 +125,33 @@ export default function PortfolioBuilder() {
     await savePortfolioToDB(portfolioWeightsResult);
   }
 
+  useEffect(() => {
+    const today = new Date();
+    const start = new Date();
+    const end = new Date()
+    start.setFullYear(today.getFullYear() - 11);
+    end.setFullYear(today.getFullYear() - 1)
+
+    const startStr = start.toISOString().split("T")[0].replace(/-/g, "-");
+    const endStr = end.toISOString().split("T")[0].replace(/-/g, "-");
+
+    setStartDate({value: startStr, type: "date", label: "Start Date"})
+    setEndDate({value: endStr, type: "date", label: "End Date"})
+  }, [])
+
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold">Build Portfolio</h1>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <ParamCard
+          param={startDate} 
+          setParam={setStartDate}
+        />
+        <ParamCard
+          param={endDate}
+          setParam={setEndDate}
+        />
+      </div>
       <UniverseFilter 
         filterValues={uniFilterValues}
         setFilterValues={setUniFilterValues}
@@ -234,7 +229,7 @@ export default function PortfolioBuilder() {
         hrpLoading={portfolioWeightsHrpLoading}
         optimisationLoading={portfolioWeightsOptimisationLoading}
         portfolioWeightsError={portfolioWeightsError}
-        paramOptimisationResults={precomputedParamOptimisationResults}
+        paramOptimisationResults={paramOptimisationResults}
         onSavePortfolio={handleSavePortfolioToDB}
         savingPortfolio={savingPortfolio}
         savedPortfolio={savedPortfolio}

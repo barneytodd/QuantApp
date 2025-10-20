@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { strategies } from "../parameters/strategyRegistry";
 import { globalParams } from "../parameters/globalParams";
 
-export function useOptimisation() {
+export function useOptimisation(startDate=null, endDate=null) {
   const [optimisationResult, setOptimisationResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -46,8 +46,10 @@ export function useOptimisation() {
         g.name, 
         {
           value: g.name === "startDate" 
-            ? startStr
-            : g.default, 
+            ? startDate?.value ?? startStr
+            : g.name === "endDate" 
+              ? endDate?.value ?? g.default
+              : g.default, 
           lookback: g.lookback ?? null
         }
       ]))
@@ -55,7 +57,7 @@ export function useOptimisation() {
     
     setStratParams(strategyParamsDict);
     setGlobParams(globalParamsDict);
-  }, [])
+  }, [endDate?.value, startDate?.value])
   
 
   const optimiseParameters = async ({ strategyTypesWithSymbols, optimParams, scoringParams }) => {
@@ -73,7 +75,7 @@ export function useOptimisation() {
         }
       ])
     )
-    console.log(strats)
+
     const optimisationParams = Object.fromEntries(
       Object.entries(optimParams).map(([name, param]) => [
         name,

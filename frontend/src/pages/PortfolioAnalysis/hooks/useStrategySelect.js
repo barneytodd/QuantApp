@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { params } from "../params/strategySelectParams"
 import { useStrategyParams } from "../../Backtesting/hooks/useStrategyParams";
 
-export function useStrategySelect(prelimBacktestResults, setVisible) {
+export function useStrategySelect(prelimBacktestResults, startDate, endDate, setVisible) {
     const [paramValues, setParamValues] = useState({});
     const [filterResults, setFilterResults] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -131,22 +131,19 @@ export function useStrategySelect(prelimBacktestResults, setVisible) {
 
             // Combine individual scores (equal weighting)
             const combinedIndividualScore = 
-                singleA && singleB ?
-                    0.5 * (singleA.score + singleB.score) : singleA ?
-                    singleA.score : singleB ?
-                    singleB.score : -Infinity;
+                singleA && singleB 
+                    ? 0.5 * (singleA.score + singleB.score) : singleA 
+                        ? singleA.score : singleB 
+                            ? singleB.score : -Infinity;
 
             // Compare pair vs. individuals
             if (pairResult.score > combinedIndividualScore) {
                 // Pair performs better → keep pair, remove singles
                 if (finalResults[stock1]) delete finalResults[stock1];
                 if (finalResults[stock2]) delete finalResults[stock2];
-                finalResults[pair] = pairResult;
             } else {
                 // Individuals perform better → remove pair
                 delete finalResults[pair];
-                finalResults[stock1] = singleA;
-                finalResults[stock2] = singleB;
             }
         });
 
@@ -162,18 +159,14 @@ export function useStrategySelect(prelimBacktestResults, setVisible) {
         setError(null);
 
         const today = new Date();
-        const start = new Date();
-        start.setFullYear(today.getFullYear() - 10);
-
         const todayStr = today.toISOString().split("T")[0].replace(/-/g, "-");
-        const startStr = start.toISOString().split("T")[0].replace(/-/g, "-");
 
         try {
             // 1️⃣ Sync ingest
             const ingestRes = await fetch("http://localhost:8000/api/data/ohlcv/syncIngest/", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ symbols: allSymbols, start: startStr, end: todayStr }),
+                body: JSON.stringify({ symbols: allSymbols, start: startDate.value, end: todayStr }),
             });
             await ingestRes.json();
             setUploadComplete(true);
@@ -195,7 +188,8 @@ export function useStrategySelect(prelimBacktestResults, setVisible) {
             
             const updatedAdvancedParams = {
                 ...advancedParams,
-                startDate: { ...advancedParams.startDate, value: start.toISOString().split("T")[0] },
+                startDate: { ...advancedParams.startDate, value: startDate.value },
+                endDate: { ...advancedParams.endDate, value: endDate.value }
             };
 
             const params = Object.fromEntries(
@@ -243,6 +237,7 @@ export function useStrategySelect(prelimBacktestResults, setVisible) {
             const aggRes = await fetch(`http://localhost:8000/api/strategies/backtest/walkforward/results/${task_id}`);
             if (!aggRes.ok) throw new Error("Failed to fetch aggregated results");
             const data = await aggRes.json();
+            console.log(data.aggregated_results)
             const symbolResults = data.aggregated_results
                 .filter(item => item.symbol !== "overall")
                 .reduce((acc, item) => {
@@ -257,8 +252,11 @@ export function useStrategySelect(prelimBacktestResults, setVisible) {
                         }
                     return acc;
                 }, {});
+            console.log(symbolResults)
             const strategyBySymbol = chooseStrategy(symbolResults)
+            console.log(strategyBySymbol)
             const finalResults = chooseSingleOrPair(strategyBySymbol)
+            console.log(finalResults)
             setFilterResults(finalResults);
             return data;
         } catch (err) {

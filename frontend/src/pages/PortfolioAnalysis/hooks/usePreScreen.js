@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { filters } from "../params/preScreenFilters"
 
-export function usePreScreen(uniFilterResults, setVisible) {
+export function usePreScreen(uniFilterResults, endDate, setVisible) {
     const [uploadComplete, setUploadComplete] = useState(true);
     const [testingComplete, setTestingComplete] = useState(true);
     const [filterValues, setFilterValues] = useState({});
@@ -40,19 +40,18 @@ export function usePreScreen(uniFilterResults, setVisible) {
         setUploadComplete(false);
         setIsLoading(true);
 
-        const today = new Date();
-        const start = new Date();
-        start.setFullYear(today.getFullYear() - 3);
+        const end = new Date(endDate.value);
+        const start = new Date(end);
+        start.setFullYear(end.getFullYear() - 3);
 
-        const todayStr = today.toISOString().split("T")[0].replace(/-/g, "-");
         const startStr = start.toISOString().split("T")[0].replace(/-/g, "-");
-
+        console.log(startStr, endDate.value)
         try {
             // 1️⃣ Sync ingest
             const ingestRes = await fetch("http://localhost:8000/api/data/ohlcv/syncIngest/", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ symbols, start: startStr, end: todayStr }),
+                body: JSON.stringify({ symbols, start: startStr, end: endDate.value }),
             });
             await ingestRes.json();
             setUploadComplete(true);
@@ -74,7 +73,7 @@ export function usePreScreen(uniFilterResults, setVisible) {
             const res = await fetch("http://localhost:8000/api/portfolio/runPreScreen/", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ symbols, start: startStr, end: todayStr, filters: filterDict }),
+                body: JSON.stringify({ symbols, start: startStr, end: endDate.value, filters: filterDict }),
             });
             const { task_id } = await res.json();
 
