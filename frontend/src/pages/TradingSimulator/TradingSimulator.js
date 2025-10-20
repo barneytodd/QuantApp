@@ -5,7 +5,7 @@ import { useSymbols } from "../Backtesting/hooks/useSymbols";
 import { globalParams } from "../Backtesting/parameters/globalParams";
 import { strategies } from "../Backtesting/parameters/strategyRegistry";
 
-import ParamCard from "./components/ParamCard";
+import ParamCard from "../../components/ui/ParamCard";
 import SingleSelect from "../../components/ui/SingleSelect";
 
 
@@ -24,19 +24,12 @@ export default function TradingSimulatorPage() {
   const [activeTab, setActiveTab] = useState(null);
 
   const { benchmarkData } = useSymbols();
-
-  
-  const {
-    availablePortfolios,
-    getPortoliosLoading,
-    getPortfoliosError
-  } = useLoadPortfolios()
+  const { availablePortfolios } = useLoadPortfolios()
 
   const {
     backtestResult, 
     runBacktest, 
     isLoading: backtestLoading, 
-    error: backtestError 
   } = useBacktest();
 
   useEffect(() => {
@@ -154,7 +147,7 @@ export default function TradingSimulatorPage() {
             </div>
   
             {activeTab === "Overview" && (
-              <OverviewTab results={backtestResult} benchmark={benchmarkData} />
+              <OverviewTab results={backtestResult} benchmark={benchmarkData} showIndividual={false}/>
             )}
             {activeTab === "Trade Analytics" && (
               <TradeAnalyticsTab results={backtestResult} />

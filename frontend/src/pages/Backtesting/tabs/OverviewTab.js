@@ -3,7 +3,7 @@ import EquityChart from "../charts/EquityChart";
 import { mapBenchmark } from "../charts/chartCalcs";
 import MetricCard from "../../../components/ui/MetricCard";
 
-export function OverviewTab({ results, benchmark }) {
+export function OverviewTab({ results, benchmark, showIndividual=true }) {
   const [selectedTicker, setSelectedTicker] = useState("overall");
   // List of tickers excluding "overall"
   const tickers = results
@@ -14,10 +14,9 @@ export function OverviewTab({ results, benchmark }) {
   const selectedResult = results.find(r => r.symbol === selectedTicker);
   // Prepare equity data for the chart
   const equityData = useMemo(() => {
-    if (selectedTicker !== "overall") return [selectedResult];
-
+    if (selectedTicker !== "overall" || !showIndividual) return [selectedResult];
     return results;
-  }, [results, selectedTicker, selectedResult]);
+  }, [results, selectedTicker, selectedResult, showIndividual]);
 
   return (
     <div className="space-y-4">
