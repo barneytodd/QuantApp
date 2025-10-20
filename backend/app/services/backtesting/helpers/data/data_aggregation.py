@@ -1,6 +1,7 @@
 from ..backtest.metrics import compute_metrics, compute_trade_stats
 from collections import defaultdict
 import numpy as np
+import pandas as pd
 
 def compute_walkforward_results(results, window_length):
     """
@@ -110,7 +111,7 @@ def aggregate_walkforward_results(segment_results):
         df = df.drop_duplicates(subset="date", keep="first")
         df["return"] = df["value"].pct_change()
         df = df.dropna(subset=["return"])
-        return df.to_list()
+        return df.to_dict(orient="records")
 
     aggregated = []
     for (symbol, strategy), vals in metrics_per_pair.items():

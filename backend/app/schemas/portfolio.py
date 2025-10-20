@@ -9,7 +9,7 @@ class PreScreenPayload(BaseModel):
     filters: Dict[str, Any]
 
 class PortfolioInputsPayload(BaseModel):
-    returns: Dict[str, List[float]]  # {"AAPL": [...], "MSFT": [...], ...}
+    returns: Dict[str, Any]  # {"AAPL": [...], "MSFT": [...], ...}
     ewma_decay: float = 0.94
 
 class HrpPayload(BaseModel):
