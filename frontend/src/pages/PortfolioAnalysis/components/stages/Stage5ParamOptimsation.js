@@ -129,7 +129,7 @@ export default function ParamOptimsation({
               {
                 paramOptimisationLoading
                 ? "Optimising Parameters..." : filterResults 
-                ? "Completed Optimisation..." : "Optimise Parameters"
+                ? "Completed Optimisation" : "Optimise Parameters"
               }
             </button>
           </div>
@@ -165,7 +165,7 @@ export default function ParamOptimsation({
             <div className="mt-4 text-lg font-medium">
               Optimised parameters to: {Object.entries(filterResults).map(([key, value]) => (
                 <div key={key}>
-                  <strong>{key}:</strong> {JSON.stringify(value)}
+                  <strong>{key}:</strong> {JSON.stringify(value.best_params)}
                 </div>
               ))}
             </div>

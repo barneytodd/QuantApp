@@ -39,10 +39,12 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
             Object.entries(parameters).map(([strat, paramResults]) => [
                 strat,
                 {
-                    "symbols": paramResults.aggregated_results.map((symbolInfo) => ({
-                        "symbol": symbolInfo.symbol,
-                        "weight": weights[symbolInfo.symbol]
-                    })),
+                    "symbols": paramResults.aggregated_results
+                        .filter((symbolInfo) => weights[symbolInfo.symbol])
+                        .map((symbolInfo) => ({
+                            "symbol": symbolInfo.symbol,
+                            "weight": weights[symbolInfo.symbol]
+                        })),
                     "params": paramResults.best_params
                 }
             ])
@@ -68,13 +70,15 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
         let inputData;
         try {
             setLoadingInputs(true);
-
+            console.log(paramOptimisationResults)
             const returns = Object.fromEntries(
                 Object.entries(paramOptimisationResults).flatMap(([_, strat_results]) => 
-                    strat_results.aggregated_results.map((result) => [
-                        result.symbol,
-                        result.returns
-                    ])
+                    strat_results.aggregated_results
+
+                        .map((result) => [
+                            result.symbol,
+                            result.returns
+                        ])
                 )
             )
 
@@ -180,6 +184,7 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
             }
 
             const optimisationData = await response.json();
+            console.log(optimisationData)
             portfolio = await buildPortfolio(optimisationData.weights, paramOptimisationResults)
             setPortfolioWeightsResult(portfolio)
 
@@ -203,7 +208,6 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
         setSaving(true);
         setSaved(false);
         try {
-            console.log(portfolio)
             const response = await fetch("http://localhost:8000/api/portfolio/save", {
                 method: "POST",
                 headers: {
