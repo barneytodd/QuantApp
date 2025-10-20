@@ -2,7 +2,8 @@
 import concurrent.futures
 from concurrent.futures import ProcessPoolExecutor
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 import numpy as np
 from app.tasks import prescreen_tasks_store as tasks_store
 from app import crud
@@ -14,16 +15,15 @@ import time
 from .tests.run_tests import run_breakout_tests, run_global_tests, run_mean_reversion_tests, run_momentum_tests
 
 
-def test_symbol(symbol, symbol_data, filters):
+def test_symbol(symbol, symbol_data, end, filters):
     start_time = datetime.now().isoformat()
 
     try:
         symbol_results = {"global": True, "momentum": True, "mean_reversion": True, "breakout": True}
         fails = {"global": [], "momentum": [], "mean_reversion": [], "breakout": []}
 
-        today = datetime.today()
-        short_start = (today - timedelta(days=round(0.5 * 365))).date()
-        long_start = (today - timedelta(days=round(3 * 365))).date()
+        short_start = end - relativedelta(months=6)
+        long_start = end - relativedelta(years=3)
 
         short_data = [row for row in symbol_data if row["date"] >= short_start]
         long_data = [row for row in symbol_data if row["date"] >= long_start]
@@ -221,7 +221,7 @@ async def run_tests_async(symbols, start, end, filters, max_workers=5, progress_
                     await asyncio.sleep(0.1)
                     await check_done()
 
-                fut = executor.submit(test_symbol, sym, data, filters)
+                fut = executor.submit(test_symbol, sym, data, end, filters)
                 in_flight[fut] = sym
                 async with lock:
                     testing_count["value"] += 1
