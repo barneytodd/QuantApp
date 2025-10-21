@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,28 +10,35 @@ from app.api import (
 from app.models import Base
 from app.database import SessionLocal, engine, init_db_pool, close_db_pool
 
-
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
-# Initialize FastAPI app
+# Lifespan context manager replaces on_event startup/shutdown
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: initialize DB pool
+    await init_db_pool()
+    yield
+    # Shutdown: close DB pool
+    await close_db_pool()
+
+# Initialize FastAPI with lifespan
 app = FastAPI(
     title="Trading Strategy API",
-    description="API for running trading strategy backtests",
-    version="1.0.0"
+    description="API for running trading strategy backtests and portfolio analysis",
+    version="1.0.0",
+    lifespan=lifespan
 )
 
+# CORS configuration
 origins = [
-    "http://localhost:3000",  # frontend dev server
+    "http://localhost:3000",
     "http://127.0.0.1:3000"
 ]
 
-
-
-# CORS middleware for React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # React dev server
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,7 +55,7 @@ app.include_router(prescreen.router, prefix="/api/portfolio", tags=["Portfolio"]
 app.include_router(portfolio_weights.router, prefix="/api/portfolio", tags=["Portfolio"])
 app.include_router(save_portfolio.router, prefix="/api/portfolio", tags=["Portfolio"])
 
-# Dependency - provides database sessions to endpoints
+# Database session dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -55,17 +63,7 @@ def get_db():
     finally:
         db.close()
 
-# Health check endpoint
+# Health check
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
-
-@app.on_event("startup")
-async def on_startup():
-    await init_db_pool()
-
-@app.on_event("shutdown")
-async def on_shutdown():
-    await close_db_pool()
-
-

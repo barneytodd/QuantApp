@@ -1,22 +1,36 @@
 from ..momentum_tests import min_volatility_test
 
-def run_breakout_tests(short_vol, long_vol, filters):
+# === Breakout Strategy Heuristic Test Engine ===
+
+def run_breakout_tests(short_vol: float, long_vol: float, filters: dict) -> dict:
     """
-    Runs a series of breakout - based heuristic tests on a stock to test suitability for breakout strategies.
+    Run heuristic breakout suitability tests on a stock.
 
-    The function checks:
-      1. Minimum volatility - ensures the stock has enough price movement to support breakout strategies.
+    The function checks if a stock is suitable for breakout strategies
+    based on volatility and other numeric thresholds.
 
-    Parameters:
-        short_vol (float): Annualized short-term volatility.
-        long_vol (float): Annualized long-term volatility.
-        filters (dict): Dictionary containing numeric thresholds for each breakout test.
+    Current implemented test:
+        1. Minimum volatility test - ensures the stock has sufficient price movement
+           to support breakout strategies.
+
+    Args:
+        short_vol: float, annualized short-term volatility of the stock
+        long_vol: float, annualized long-term volatility of the stock
+        filters: dict, numeric thresholds for each breakout test, e.g.,
+            {"minVolatilityBreakout": 0.2}
 
     Returns:
-        bool: True if the stock passes all breakout heuristic tests, False otherwise.
+        dict:
+            result: bool, True if all tests pass, False otherwise
+            test: optional string, name of the failed test if any
     """
-    
+
+    # --- Test 1: Minimum volatility ---
     if not min_volatility_test(short_vol, long_vol, filters["minVolatilityBreakout"]):
-        return {"result": False, "test": "minVolatilityBreakoutTestFailed"}
-    
+        return {
+            "result": False,
+            "test": "minVolatilityBreakoutTestFailed"
+        }
+
+    # --- All tests passed ---
     return {"result": True}

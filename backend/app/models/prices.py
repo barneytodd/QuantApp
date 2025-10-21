@@ -1,11 +1,12 @@
 from sqlalchemy import Column, String, Float, Integer, Date, UniqueConstraint
-
 from app.database import Base
 
-# ORM model for historical OHLCV price data
 class Price(Base):
     __tablename__ = "prices"
-    __table_args__ = (UniqueConstraint("symbol", "date", name="uix_symbol_date"), {"schema": "dbo", "extend_existing": True})
+    __table_args__ = (
+        UniqueConstraint("symbol", "date", name="uix_symbol_date"),  # Ensure no duplicates per symbol per date
+        {"schema": "dbo", "extend_existing": True}  # Use 'dbo' schema in SQL Server
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     symbol = Column(String(10), nullable=False)

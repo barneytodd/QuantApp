@@ -1,19 +1,22 @@
 import numpy as np
 from scipy.stats import skew, kurtosis
 
-import numpy as np
+# === Global Heuristic Tests Engine ===
 
-def bid_ask_test(data, short_start, long_start, threshold=0.005):
+def bid_ask_test(data, short_start, long_start, threshold=0.005) -> bool:
     """
-    Checks if the average bid-ask spread (high-low)/close
-    is below a threshold for both long and short periods.
+    Check if the average bid-ask spread is below a threshold.
 
-    data: list of dicts with keys ['date', 'high', 'low', 'close']
-    short_start, long_start: datetime thresholds
-    threshold: max acceptable average spread (e.g., 0.005 = 0.5%)
+    Args:
+        data: list of dicts with keys ['date', 'high', 'low', 'close']
+        short_start: datetime, start date for short-term period
+        long_start: datetime, start date for long-term period
+        threshold: float, max acceptable average spread (e.g., 0.005 = 0.5%)
+
+    Returns:
+        bool: True if short-term or long-term average spread <= threshold
     """
-    short_spreads = []
-    long_spreads = []
+    short_spreads, long_spreads = [], []
 
     for row in data:
         date = row["date"]
@@ -24,10 +27,10 @@ def bid_ask_test(data, short_start, long_start, threshold=0.005):
         if close is None or close == 0 or np.isnan(close):
             continue
 
-        if date >= long_start:
-            spread = (high - low) / close
-            long_spreads.append(spread)
+        spread = (high - low) / close
 
+        if date >= long_start:
+            long_spreads.append(spread)
             if date >= short_start:
                 short_spreads.append(spread)
 
@@ -37,24 +40,23 @@ def bid_ask_test(data, short_start, long_start, threshold=0.005):
     short_mean = safe_mean(short_spreads)
     long_mean = safe_mean(long_spreads)
 
-    return (
-        (not np.isnan(short_mean) and short_mean <= threshold)
-        or (not np.isnan(long_mean) and long_mean <= threshold)
-    )
+    return (not np.isnan(short_mean) and short_mean <= threshold) or \
+           (not np.isnan(long_mean) and long_mean <= threshold)
 
 
-
-def max_drawdown_test(data, long_start, threshold=0.3):
+def max_drawdown_test(data, long_start, threshold=0.3) -> bool:
     """
-    Computes the maximum drawdown (as a fraction, e.g. 0.2 = 20%)
-    over the period since `long_start`.
+    Compute maximum drawdown and check if it is within acceptable limits.
 
-    data: list of dicts with keys ['date', 'close']
-    long_start: datetime threshold for period start
-    threshold: max acceptable drawdown
+    Args:
+        data: list of dicts with keys ['date', 'close']
+        long_start: datetime, period start date
+        threshold: float, maximum acceptable drawdown (fraction, e.g., 0.2 = 20%)
+
+    Returns:
+        bool: True if max drawdown <= threshold
     """
-    peak = None
-    max_dd = 0.0
+    peak, max_dd = None, 0.0
 
     for row in data:
         date = row["date"]
@@ -62,10 +64,7 @@ def max_drawdown_test(data, long_start, threshold=0.3):
             continue
 
         close = row["close"]
-        if peak is None:
-            peak = close
-        else:
-            peak = max(peak, close)
+        peak = close if peak is None else max(peak, close)
 
         if peak > 0:
             drawdown = (peak - close) / peak
@@ -73,15 +72,17 @@ def max_drawdown_test(data, long_start, threshold=0.3):
 
     return max_dd <= threshold
 
-		
 
-
-def skewness_test(short_returns, long_returns, threshold=0):
+def skewness_test(short_returns, long_returns, threshold=0) -> bool:
     """
-    Tests skewness (asymmetry of return distribution).
+    Check skewness of return distributions.
 
-    short_returns, long_returns: lists or arrays of returns
-    threshold: minimum acceptable skewness (e.g., 0 for symmetric, >0 for right-skewed)
+    Args:
+        short_returns, long_returns: lists or arrays of returns
+        threshold: minimum acceptable skewness (0 = symmetric)
+
+    Returns:
+        bool: True if skewness >= threshold for short or long period
     """
     def safe_skew(x):
         return float(skew(x, bias=False)) if len(x) > 2 else np.nan
@@ -89,21 +90,20 @@ def skewness_test(short_returns, long_returns, threshold=0):
     short_skew = safe_skew(short_returns)
     long_skew = safe_skew(long_returns)
 
-    return (
-        (not np.isnan(short_skew) and short_skew >= threshold)
-        or (not np.isnan(long_skew) and long_skew >= threshold)
-    )
+    return (not np.isnan(short_skew) and short_skew >= threshold) or \
+           (not np.isnan(long_skew) and long_skew >= threshold)
 
 
-
-def kurtosis_test(short_returns, long_returns, threshold=3):
+def kurtosis_test(short_returns, long_returns, threshold=3) -> bool:
     """
-    Tests kurtosis (tail heaviness) of return distributions.
-    
-    short_returns, long_returns: lists or arrays of returns
-    threshold: maximum acceptable kurtosis
-       - For Fisher=False (normal=3): use threshold=3-4
-       - For Fisher=True (normal=0): use threshold=0-1
+    Check kurtosis (tail heaviness) of return distributions.
+
+    Args:
+        short_returns, long_returns: lists or arrays of returns
+        threshold: max acceptable kurtosis (Fisher=False, normal=3)
+
+    Returns:
+        bool: True if kurtosis <= threshold for short or long period
     """
     def safe_kurt(x):
         return float(kurtosis(x, fisher=False, bias=False)) if len(x) > 3 else np.nan
@@ -111,17 +111,19 @@ def kurtosis_test(short_returns, long_returns, threshold=3):
     short_kurt = safe_kurt(short_returns)
     long_kurt = safe_kurt(long_returns)
 
-    return (
-        (not np.isnan(short_kurt) and short_kurt <= threshold)
-        or (not np.isnan(long_kurt) and long_kurt <= threshold)
-    )
+    return (not np.isnan(short_kurt) and short_kurt <= threshold) or \
+           (not np.isnan(long_kurt) and long_kurt <= threshold)
 
 
-def max_volatility_test(short_vol, long_vol, threshold):
+def max_volatility_test(short_vol, long_vol, threshold) -> bool:
     """
-    Passes if either short or long period volatility is below the threshold.
+    Check if annualized volatility is below a threshold.
 
-    short_vol, long_vol: annualized volatilities 
-    threshold: max acceptable volatility 
+    Args:
+        short_vol, long_vol: float, annualized volatilities
+        threshold: float, max acceptable volatility
+
+    Returns:
+        bool: True if short or long period volatility <= threshold
     """
     return short_vol <= threshold or long_vol <= threshold

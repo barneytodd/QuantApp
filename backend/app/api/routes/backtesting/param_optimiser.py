@@ -8,37 +8,66 @@ from app.schemas import ParamOptimisationRequest
 from app.services.backtesting.engines.param_optimiser import optimise_parameters
 from app.stores.task_stores import param_optimisation_tasks_store as tasks_store
 
-
 router = APIRouter()
 
+
+# === Run parameter optimisation for one or multiple strategies ===
 @router.post("/optimise")
 def optimise_strategy_parameters(payload: ParamOptimisationRequest):
+    """
+    Start a parameter optimisation for given strategies.
+
+    Steps:
+    1. Extract strategy-specific and global parameters from payload.
+    2. Use default scoring weights if none are provided.
+    3. Call `optimise_parameters` to run optimisation for all strategies.
+    4. Return the results dictionary containing best parameters and scores per strategy.
+
+    Scoring weights (if not provided) default to:
+        - sharpe: 0.5
+        - cagr: 0.3
+        - max_drawdown: 0.2
+        - win_rate: 0.1
+    """
     strategies_config = payload.strategies
     global_params = payload.globalParams
     optimisation_params = payload.optimParams
-    if payload.scoringParams is not None:
-        scoring_params = payload.scoringParams
-    else:
-        scoring_params = {
-            "sharpe": 0.5,
-            "cagr": 0.3,
-            "max_drawdown": 0.2,
-            "win_rate": 0.1
-        }
+    scoring_params = payload.scoringParams or {
+        "sharpe": 0.5,
+        "cagr": 0.3,
+        "max_drawdown": 0.2,
+        "win_rate": 0.1
+    }
+
     results = optimise_parameters(strategies_config, global_params, optimisation_params, scoring_params)
     return results
 
 
+# === Stream real-time progress of parameter optimisation via SSE ===
 @router.get("/optimisation/stream")
 async def stream_all_param_optimisation_progress():
+    """
+    Stream live progress updates for all ongoing parameter optimisation tasks.
+
+    Returns a JSON object per strategy containing:
+        - completed_trials: number of trials finished
+        - total_trials: total trials scheduled
+        - status: current task status ("running", "done", etc.)
+        - best_score: best scoring value so far
+        - best_params: parameter combination achieving best score
+
+    When all strategies are finished, yields {"done": True} and closes the stream.
+    """
     async def event_generator():
         last_state = {}
 
         while True:
-            # collect all strategies
-            if tasks_store == {}:
+            if not tasks_store:
+                # Wait if no tasks have started yet
                 await asyncio.sleep(5)
                 continue
+
+            # Gather progress per strategy
             all_strategies_progress = {
                 strategy_name: {
                     "completed_trials": task["completed_trials"],
@@ -50,12 +79,12 @@ async def stream_all_param_optimisation_progress():
                 for strategy_name, task in tasks_store.items()
             }
 
-            # only yield if there�s an update
+            # Only send update if there is a change
             if all_strategies_progress != last_state:
                 last_state = all_strategies_progress.copy()
                 yield f"data: {json.dumps(all_strategies_progress)}\n\n"
 
-            # exit if all strategies done
+            # Stop streaming once all strategies are done
             if all(task["status"] == "done" for task in tasks_store.values()):
                 yield f"data: {json.dumps({'done': True})}\n\n"
                 break

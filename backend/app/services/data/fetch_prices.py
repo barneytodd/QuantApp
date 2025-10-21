@@ -1,28 +1,56 @@
 from concurrent.futures import ThreadPoolExecutor
-
-import pandas as pd
-import yfinance as yf
-
 from app.crud import upsert_prices
 from app.database import SessionLocal
 from app.schemas import PriceIn
 from app.utils.data_helpers import chunk_symbols, get_missing_periods, get_symbol_date_ranges
+import pandas as pd
+import yfinance as yf
 
-
-
-# Fetch historical price data from Yahoo Finance
+# === Historical Data Fetch & Ingestion Engine ===
 def fetch_historical(symbols, period="1y", start=None, end=None, interval="1d"):
+    """
+    Fetch OHLCV (Open, High, Low, Close, Volume) historical price data for one or more symbols
+    using Yahoo Finance. Returns a list of dictionary records suitable for DB insertion.
+
+    Args:
+        symbols: single symbol or list of symbols
+        period: string like '1y', ignored if start/end are provided
+        start, end: optional date range (YYYY-MM-DD) for historical data
+        interval: data granularity ('1d', '1h', etc.)
+    Returns:
+        List of dicts containing symbol, date, open, high, low, close, volume
+    """
     all_records = []
+
+    # --- Download data from Yahoo Finance ---
     if start and end:
         try:
-            df = yf.download(symbols, start=start, end=end, interval=interval, progress=False, threads=True, group_by='ticker', auto_adjust=True)
+            df = yf.download(
+                symbols,
+                start=start,
+                end=end,
+                interval=interval,
+                progress=False,
+                threads=True,
+                group_by='ticker',
+                auto_adjust=True
+            )
             if df.empty:
                 return None
-        except Exception as e:
+        except Exception:
             return None
     else:
-        df = yf.download(symbols, period=period, interval=interval, progress=False, threads=True, group_by='ticker', auto_adjust=True)
+        df = yf.download(
+            symbols,
+            period=period,
+            interval=interval,
+            progress=False,
+            threads=True,
+            group_by='ticker',
+            auto_adjust=True
+        )
 
+    # --- Handle multiple symbols (MultiIndex columns) ---
     if isinstance(df.columns, pd.MultiIndex):
         for symbol in df.columns.levels[0]:
             sub_df = df[symbol].copy().reset_index()
@@ -35,7 +63,7 @@ def fetch_historical(symbols, period="1y", start=None, end=None, interval="1d"):
             sub_df['close'] = sub_df['Close'].astype(float)
             all_records.extend(sub_df[['symbol','date','open','high','low','close','volume']].to_dict('records'))
     else:
-        # single symbol
+        # --- Handle single symbol ---
         df = df.reset_index()
         symbol = symbols[0] if isinstance(symbols, list) else symbols
         df['symbol'] = symbol
@@ -52,23 +80,29 @@ def fetch_historical(symbols, period="1y", start=None, end=None, interval="1d"):
 
 def ingest_missing_data_parallel(db, symbols, start, end, chunk_size=50, max_workers=5):
     """
-    Fetch missing OHLCV data for a list of symbols and insert into the DB in parallel.
-    
+    Fetch missing OHLCV data for multiple symbols and insert into the DB in parallel.
+    Uses ThreadPoolExecutor to process symbols concurrently.
+
     Args:
         db: SQLAlchemy Session
-        symbols: list of symbols
-        start, end: datetime.date objects for the full range to ingest
-        chunk_size: number of symbols per thread batch
+        symbols: list of stock symbols
+        start, end: datetime.date objects for the range to ingest
+        chunk_size: number of symbols processed per thread batch
         max_workers: number of parallel threads
+    Returns:
+        True if ingestion completes successfully
     """
-    # Get existing date ranges for symbols
+
+    # --- Get existing date ranges for each symbol from DB ---
     ranges = get_symbol_date_ranges(db, symbols)
-    
-    # Compute missing periods per symbol
+
+    # --- Compute missing periods for each symbol ---
     missing_periods = get_missing_periods(symbols, ranges, start, end)
 
     def fetch_and_insert(symbol):
-        """Fetch missing periods for a symbol and insert into DB."""
+        """
+        Fetch missing periods for a single symbol and upsert into DB in chunks.
+        """
         all_records = []
         with SessionLocal() as db_thread:
             for period_start, period_end in missing_periods.get(symbol, []):
@@ -81,10 +115,10 @@ def ingest_missing_data_parallel(db, symbols, start, end, chunk_size=50, max_wor
                 db_thread.commit()
                 print(f"Inserted/Updated {len(all_records)} records for {symbol}")
 
-    # Chunk symbols and run in parallel
+    # --- Split symbols into chunks and process in parallel threads ---
     for chunk in chunk_symbols(list(missing_periods.keys()), chunk_size):
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             executor.map(fetch_and_insert, chunk)
+
     print("Data ingestion complete")
     return True
-

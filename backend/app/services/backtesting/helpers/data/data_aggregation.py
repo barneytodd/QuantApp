@@ -1,5 +1,4 @@
 from collections import defaultdict
-
 import numpy as np
 import pandas as pd
 
@@ -9,26 +8,41 @@ from ..backtest.metrics import compute_metrics, compute_trade_stats
 def compute_walkforward_results(results, window_length):
     """
     Compute walkforward results from individual segment results.
-    Aggregates metrics like total return, CAGR, volatility, Sharpe ratio, and max drawdown.
+    Aggregates equity curves, trades, and metrics across rolling windows.
+
+    Args:
+        results (list): list of backtest results per segment
+        window_length (int): number of segments to include in each walkforward window
+
+    Returns:
+        list: aggregated segment results per window
     """
     if not results: 
         return None
 
     start = 0
     walkforward_results = []
+
+    # Loop over rolling windows
     while start + window_length <= len(results):
-        initial_capitals = {}
-        equity_curves = {}
-        strategies = {}
-        trades = {}
-        wins = 0
-        total_trades = 0
+        # Initialize tracking dictionaries for this window
+        initial_capitals = {}  # stores capital per symbol
+        equity_curves = {}     # stores equity curves per symbol
+        strategies = {}        # symbol -> strategy mapping
+        trades = {}            # trades per symbol
+        wins = 0               # track winning trades
+        total_trades = 0       # track total trades
+
+        # Aggregate segments within the window
         for i in range(start, start+window_length):
             for idx, strat_result in enumerate(results[i]):
                 symbol = strat_result.get("symbol")
                 strategy = strat_result.get("strategy")
                 strategies[symbol] = strategy
+
                 assumed_initial_capital = strat_result.get("initialCapital")
+
+                # Scale equity curve based on prior final capital
                 equity_curve = [
                     {
                         "date": item["date"], 
@@ -37,15 +51,21 @@ def compute_walkforward_results(results, window_length):
                     for item in strat_result.get("equityCurve") if item["value"] is not None
                 ]
                 equity_curves.setdefault(symbol, []).extend(equity_curve)
+
+                # Update capital for next segment
                 if strat_result["finalCapital"] is not None:
                     initial_capitals[symbol] = strat_result["finalCapital"]
+
+                # Aggregate trades
                 trades.setdefault(symbol, []).extend(strat_result.get("trades", []))
+
+                # Count wins for computing win rate
                 trade_stats = strat_result["tradeStats"]
                 if trade_stats:
                     wins += strat_result["tradeStats"]["winRate"] * strat_result["tradeStats"]["numTrades"] / 100
                     total_trades += strat_result["tradeStats"]["numTrades"]
 
-        
+        # Compute metrics and trade stats for each symbol in the window
         segment_result = []
         for symbol, strategy in strategies.items():
             metrics = compute_metrics(equity_curves[symbol])
@@ -68,7 +88,14 @@ def aggregate_walkforward_results(segment_results):
     """
     Aggregate performance metrics per (symbol, strategy),
     ignoring segments with no trades.
+
+    Args:
+        segment_results (list): walkforward segment results
+
+    Returns:
+        list: aggregated results per symbol-strategy pair
     """
+    # Prepare dictionary to accumulate metrics
     metrics_per_pair = defaultdict(lambda: {
         "sharpe": [],
         "cagr": [],
@@ -78,6 +105,7 @@ def aggregate_walkforward_results(segment_results):
         "complete_equity_curve": []
     })
 
+    # Iterate through each walkforward segment
     for segment in segment_results:
         for strat_result in segment:
             symbol = strat_result.get("symbol")
@@ -87,12 +115,12 @@ def aggregate_walkforward_results(segment_results):
             metrics = strat_result.get("metrics") or {}
             trade_stats = strat_result.get("tradeStats") or {}
 
-            # if no trades, count it and skip from averages
+            # Skip segments with no trades, increment no_trade counter
             if strat_result.get("tradeStats") is None or not strat_result.get("trades"):
                 metrics_per_pair[pair_key]["no_trade_segments"] += 1
                 continue
 
-            # Only aggregate if trades exist
+            # Aggregate available metrics
             if "sharpe_ratio" in metrics and metrics["sharpe_ratio"] is not None:
                 metrics_per_pair[pair_key]["sharpe"].append(metrics["sharpe_ratio"])
             if "cagr" in metrics and metrics["cagr"] is not None:
@@ -104,9 +132,11 @@ def aggregate_walkforward_results(segment_results):
             if "equity_curve" in strat_result and strat_result["equity_curve"] is not None:
                 metrics_per_pair[pair_key]["complete_equity_curve"].extend(strat_result["equity_curve"])
 
+    # Helper function to safely compute mean
     def safe_mean(values):
         return float(np.mean(values)) if values else None
 
+    # Helper function to compute daily returns from combined equity curve
     def compute_returns(equity_curve):
         if not equity_curve:
             return None
@@ -116,6 +146,7 @@ def aggregate_walkforward_results(segment_results):
         df = df.dropna(subset=["return"])
         return df.to_dict(orient="records")
 
+    # Build final aggregated results per symbol-strategy
     aggregated = []
     for (symbol, strategy), vals in metrics_per_pair.items():
         active_segments = len(segment_results) - vals["no_trade_segments"]
@@ -133,6 +164,3 @@ def aggregate_walkforward_results(segment_results):
         })
         
     return aggregated
-
-
-

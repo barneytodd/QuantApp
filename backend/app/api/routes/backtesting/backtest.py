@@ -24,6 +24,15 @@ router = APIRouter()
 # === Standard full-period backtest ===
 @router.post("/backtest")
 def run_standard_backtest(payload: StrategyRequest, db: Session = Depends(get_db)):
+    """
+    Run a standard backtest over the full period specified in the payload.
+    
+    Steps:
+    1. Prepare input data (symbols, parameters, lookback) using shared helper.
+    2. Fetch OHLCV price data from the database.
+    3. Run backtest engine on the prepared data.
+    4. Return results per symbol.
+    """
     try:
         all_symbols, strategy_symbols, params, lookback = prepare_backtest_inputs(payload)
     except ValueError as e:
@@ -41,14 +50,23 @@ def run_standard_backtest(payload: StrategyRequest, db: Session = Depends(get_db
     return results
 
 
-
-# === Launch walkforward task ===
+# === Launch asynchronous walk-forward backtest task ===
 @router.post("/backtest/walkforward/start")
 async def start_walkforward_backtest(
     payload: StrategyRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
+    """
+    Start a walk-forward backtest asynchronously.
+    
+    Steps:
+    1. Prepare input data (symbols, parameters, lookback).
+    2. Create rolling windows for walk-forward testing.
+    3. Register a new task in the walkforward task store with initial progress.
+    4. Launch the async backtest in the background.
+    5. Return task_id for tracking progress.
+    """
     print("Received walkforward start payload")
     try:
         all_symbols, strategy_symbols, params, lookback = prepare_backtest_inputs(payload)
@@ -64,10 +82,10 @@ async def start_walkforward_backtest(
     window_length = 3
     task_id = str(uuid.uuid4())
     tasks_store[task_id] = {
-        "progress": {},
-        "results": {},
-        "status": "pending",
-        "overall_progress": 0.0,
+        "progress": {},             # Track progress per segment
+        "results": {},              # Store individual segment results
+        "status": "pending",        # Task status: pending, running, done
+        "overall_progress": 0.0,    # Overall progress 0.0–1.0
         "total_segments": len(windows),
         "window_length": window_length
     }
@@ -78,9 +96,19 @@ async def start_walkforward_backtest(
     return {"task_id": task_id}
 
 
-# === Stream progress via SSE ===
+# === Stream walk-forward task progress via Server-Sent Events (SSE) ===
 @router.get("/backtest/walkforward/stream/{task_id}")
 async def stream_walkforward_progress(task_id: str):
+    """
+    Stream real-time progress updates of a walk-forward backtest task.
+    
+    Returns:
+        SSE stream of JSON objects with:
+        - segments progress
+        - overall_progress (0–1)
+        - status (pending/running/done)
+        - done=True when finished
+    """
     async def event_generator():
         last_state = {}
 
@@ -96,6 +124,7 @@ async def stream_walkforward_progress(task_id: str):
                 "status": task.get("status", "unknown")
             }
 
+            # Yield update only if there is a change
             if progress_snapshot != last_state:
                 last_state = progress_snapshot.copy()
                 yield f"data: {json.dumps(progress_snapshot)}\n\n"
@@ -109,22 +138,30 @@ async def stream_walkforward_progress(task_id: str):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-# === Retrieve final aggregated results ===
+# === Retrieve aggregated walk-forward results ===
 @router.get("/backtest/walkforward/results/{task_id}")
 def get_walkforward_aggregated_results(task_id: str):
+    """
+    Retrieve final aggregated results of a completed walk-forward backtest task.
+    
+    Steps:
+    1. Validate task exists and is completed.
+    2. Flatten results from all segments.
+    3. Compute walk-forward metrics per symbol and overall.
+    4. Return aggregated results.
+    """
     task = tasks_store.get(task_id)
     if not task or task["status"] != "done":
         return JSONResponse({"detail": "Task not found or not completed"}, status_code=404)
 
-    # flatten all segment results
+    # Flatten all segment results
     segments = [task["results"][seg_id] for seg_id in sorted(task["results"].keys())]
 
-    # compute walk-forward results
+    # Compute walk-forward results
     window_length = task.get("window_length", 3)
-
     walkforward_results = compute_walkforward_results(segments, window_length)
-
     aggregated = aggregate_walkforward_results(walkforward_results)
+
     symbol_results = [r for r in aggregated if r["symbol"] != "overall"]
     return {
         "task_id": task_id,

@@ -1,12 +1,16 @@
+# =============================================
+# Async Stock Screening Engine
+# =============================================
+
 # Standard library imports
 import asyncio
 import itertools
 import time
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 import numpy as np
-from dateutil.relativedelta import relativedelta
 
 from app.database import get_connection, release_connection
 from app.stores.task_stores import prescreen_tasks_store as tasks_store
@@ -17,13 +21,19 @@ from .tests.run_tests import (
     run_momentum_tests,
 )
 
+# ---------------------------------------------
+# Symbol Test Function
+# ---------------------------------------------
 def test_symbol(symbol, symbol_data, end, filters):
+    """
+    Run global, momentum, mean-reversion, and breakout tests on a single symbol.
+    Returns per-test pass/fail results, any failed test names, and timestamps.
+    """
     start_time = datetime.now().isoformat()
+    symbol_results = {"global": True, "momentum": True, "mean_reversion": True, "breakout": True}
+    fails = {"global": [], "momentum": [], "mean_reversion": [], "breakout": []}
 
     try:
-        symbol_results = {"global": True, "momentum": True, "mean_reversion": True, "breakout": True}
-        fails = {"global": [], "momentum": [], "mean_reversion": [], "breakout": []}
-
         short_start = end - relativedelta(months=6)
         long_start = end - relativedelta(years=3)
 
@@ -34,18 +44,18 @@ def test_symbol(symbol, symbol_data, end, filters):
         long_volatility = np.std([d["close"] for d in long_data], ddof=1) if long_data else 0
 
         def prices_to_returns(data):
-            closes = [row["close"] for row in data if "close" in row and row["close"] is not None]
+            closes = [row["close"] for row in data if row.get("close") is not None]
             return np.diff(closes) / closes[:-1] if len(closes) > 1 else np.array([])
 
         short_returns = prices_to_returns(short_data)
         long_returns = prices_to_returns(long_data)
 
+        # Run all tests sequentially
         global_result = run_global_tests(short_start, long_start, short_data, long_data, short_volatility, long_volatility, short_returns, long_returns, filters)
         if not global_result["result"]:
             symbol_results["global"] = False
             fails["global"].append(global_result["test"])
-            end_time = datetime.now().isoformat()
-            return symbol, symbol_results, fails, start_time, end_time
+            return symbol, symbol_results, fails, start_time, datetime.now().isoformat()
 
         momentum_result = run_momentum_tests(short_start, long_start, short_data, long_data, short_volatility, long_volatility, short_returns, long_returns, filters)
         if not momentum_result["result"]:
@@ -66,13 +76,17 @@ def test_symbol(symbol, symbol_data, end, filters):
         symbol_results = {"error": str(e)}
         fails = {"global": [str(e)], "momentum": [], "mean_reversion": [], "breakout": []}
 
-
-    end_time = datetime.now().isoformat()
-    return symbol, symbol_results, fails, start_time, end_time
+    return symbol, symbol_results, fails, start_time, datetime.now().isoformat()
 
 
+# ---------------------------------------------
+# Async Price Fetcher
+# ---------------------------------------------
 async def fetch_prices(symbols, start, end, queue: asyncio.Queue, stop_signal, lock, completed_count, testing_count, progress_callback, batch_size=25, task_id=None):
-    """Stream batches of prices into the queue."""
+    """
+    Fetch price data from SQL Server in batches and stream into an asyncio queue.
+    Dynamically adjusts batch size based on fetch speed.
+    """
     symbols_iter = iter(symbols)
     consecutive_fast = consecutive_slow = 0
 
@@ -102,7 +116,7 @@ async def fetch_prices(symbols, start, end, queue: asyncio.Queue, stop_signal, l
             returned_symbols = set(r[0] for r in rows)
             missing_symbols = batch_symbols - returned_symbols
 
-            # Update tasks_store and completed count for missing symbols
+            # Update missing symbol results in tasks_store
             if task_id is not None and missing_symbols:
                 async with lock:
                     for sym in missing_symbols:
@@ -125,8 +139,8 @@ async def fetch_prices(symbols, start, end, queue: asyncio.Queue, stop_signal, l
 
             await queue.put(rows)
 
+            # Adjust batch size dynamically
             elapsed = t1 - t0
-            # Dynamic batch size adaptation
             if elapsed < 0.5 and batch_size < 100:
                 consecutive_fast += 1
                 consecutive_slow = 0
@@ -150,13 +164,17 @@ async def fetch_prices(symbols, start, end, queue: asyncio.Queue, stop_signal, l
     await queue.put(stop_signal)
 
 
+# ---------------------------------------------
+# Async Test Runner
+# ---------------------------------------------
 async def run_tests_async(symbols, start, end, filters, max_workers=5, progress_callback=None, task_id=None):
-    """Run tests while streaming price data from SQL."""
-
+    """
+    Orchestrates streaming price fetches and parallel execution of symbol tests using ProcessPoolExecutor.
+    Updates progress and results in tasks_store if task_id is provided.
+    """
     queue = asyncio.Queue(maxsize=50)
     stop_signal = object()
     results = {}
-    failed_count = {}
     testing_count = {"value": 0}
     completed_count = {"value": 0}
     lock = asyncio.Lock()
@@ -169,8 +187,7 @@ async def run_tests_async(symbols, start, end, filters, max_workers=5, progress_
                 "total": len(symbols),
             })
 
-
-    fetch_task = asyncio.create_task(fetch_prices(symbols, start, end, queue, stop_signal, lock, completed_count, testing_count, progress_callback, batch_size = 25, task_id=task_id))
+    fetch_task = asyncio.create_task(fetch_prices(symbols, start, end, queue, stop_signal, lock, completed_count, testing_count, progress_callback, batch_size=25, task_id=task_id))
 
     loop = asyncio.get_running_loop()
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -192,7 +209,7 @@ async def run_tests_async(symbols, start, end, filters, max_workers=5, progress_
                     testing_count["value"] -= 1
                     completed_count["value"] += 1
                     results[sym] = res
-                    if task_id is not None:
+                    if task_id:
                         tasks_store[task_id]["results"][sym] = res
                         for group_name, fail_list in fails.items():
                             for fail in fail_list:
@@ -215,10 +232,8 @@ async def run_tests_async(symbols, start, end, filters, max_workers=5, progress_
                     "high": r[3],
                     "low": r[4],
                 })
-            
 
             for sym, data in grouped.items():
-                # throttle submission
                 while len(in_flight) >= max_workers * 2:
                     await asyncio.sleep(0.1)
                     await check_done()
@@ -231,39 +246,18 @@ async def run_tests_async(symbols, start, end, filters, max_workers=5, progress_
 
             await check_done()
 
-        # Wait for any remaining tasks
+        # Wait for remaining tasks
         while in_flight:
-            # Copy keys to avoid mutation issues
-            futures_snapshot = list(in_flight.keys())
-
-            for f in futures_snapshot:
-                if f.done():
-                    sym = in_flight.pop(f)
-                    try:
-                        sym, res, fails, _, _ = f.result()
-                    except Exception as e:
-                        res = {"error": str(e)}
-                        fails = {"global": [str(e)], "momentum": [], "mean_reversion": [], "breakout": []}
-
-                    async with lock:
-                        testing_count["value"] -= 1
-                        completed_count["value"] += 1
-                        results[sym] = res
-                        if task_id is not None:
-                            tasks_store[task_id]["results"][sym] = res
-                            for group_name, fail_list in fails.items():
-                                for fail in fail_list:
-                                    d = tasks_store[task_id]["fails"][group_name]
-                                    d[fail] = d.get(fail, 0) + 1
-                        await update_progress()
-
-            # small sleep to avoid busy loop
+            await check_done()
             await asyncio.sleep(0.05)
+
     print("All tasks completed.")
-    await fetch_task  # ensure fetcher finishes cleanly
+    await fetch_task
+    return results, None
 
-    return results, failed_count
 
-
+# ---------------------------------------------
+# Public API
+# ---------------------------------------------
 async def run_tests(symbols, start, end, filters, max_workers=5, progress_callback=None, task_id=None):
     return await run_tests_async(symbols, start, end, filters, max_workers, progress_callback, task_id)

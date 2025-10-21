@@ -7,63 +7,71 @@ from ..helpers.pairs import align_series
 
 def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
     """
-    Run a backtest for single-stock and pairs strategies.
+    Run a backtest for single-stock and pairs trading strategies.
 
     Args:
-        data (dict): { symbol: [ { "date": ..., "close": ... }, ... ] }
-        symbols (dict): { key: { "symbol": "AAPL", "strategy": "momentum", "weight": 1 } }
-        params (dict): global and strategy-specific parameters
-        lookback (int): initial bars to skip
+        data (dict): 
+            Mapping of symbol -> list of OHLC data dictionaries
+            Example: { "AAPL": [ {"date":..., "close":...}, ... ] }
+        symbols (dict): 
+            Mapping of strategy_key -> symbol/strategy info
+            Example: { "s1": { "symbol": "AAPL", "strategy": "momentum", "weight": 1 } }
+        params (dict): 
+            Backtest parameters (initialCapital, slippage, transaction costs, etc.)
+        lookback (int): 
+            Number of initial bars to skip (warm-up)
+        progress_callback (callable): 
+            Optional callback to report progress per date index
 
     Returns:
-        list of dicts with equity curves, trades, and metrics per symbol-strategy key
+        list of dicts: equity curves, trades, and metrics per strategy_key
     """
 
+    # --- 0. Extract common parameters ---
     slippage_pct = params["slippage"] / 100
     transaction_pct = params["transactionCostPct"] / 100
-    transaction_fixed = params["fixedTransactionCost"] 
+    transaction_fixed = params["fixedTransactionCost"]
     initial_capital = params["initialCapital"]
 
-    # --- initialize structures ---
-    # capital and tracking per strategy_key
-    capital = {strategy_key: info["weight"] * initial_capital for strategy_key, info in symbols.items()}
-    equity_curves = {strategy_key: [] for strategy_key in symbols.keys()}
-    equity_curves["overall"] = []
-    trades = {strategy_key: [] for strategy_key in symbols.keys()}
-    entry_dates = {strategy_key: {"idx": None, "date": None} for strategy_key in symbols.keys()}
+    # --- 1. Initialize tracking structures ---
+    capital = {key: info["weight"] * initial_capital for key, info in symbols.items()}  # per-strategy capital
+    equity_curves = {key: [] for key in symbols.keys()}                                 # per-strategy equity curve
+    equity_curves["overall"] = []                                                      # overall portfolio curve
+    trades = {key: [] for key in symbols.keys()}                                       # list of trades per strategy
+    entry_dates = {key: {"idx": None, "date": None} for key in symbols.keys()}         # track entry points
 
-    # positions and entry_prices per stock per strategy
-    positions = {stock: {k:0 for k,s in symbols.items() if stock in s["symbol"].split("-")} for stock in data.keys()}
-    entry_prices = {stock: {k:None for k,s in symbols.items() if stock in s["symbol"].split("-")} for stock in data.keys()}
+    # Initialize positions and entry prices
+    positions = {stock: {k: 0 for k, s in symbols.items() if stock in s["symbol"].split("-")} for stock in data.keys()}
+    entry_prices = {stock: {k: None for k, s in symbols.items() if stock in s["symbol"].split("-")} for stock in data.keys()}
 
-    # track last/current prices per stock
-    last_prices = {stock: None for stock in data.keys()}
-    current_prices = {stock: None for stock in data.keys()}
+    last_prices = {stock: None for stock in data.keys()}       # last known prices per stock
+    current_prices = {stock: None for stock in data.keys()}    # current prices per stock
 
+    # Get all dates across all symbols
     all_dates = sorted({row["date"] for d in data.values() for row in d})
 
+    # --- 2. Loop through all dates ---
     for idx, date in enumerate(all_dates):
-        print("Completed:", idx+1, "of", len(all_dates), "dates", end="\r")
-        # Report progress
-        if progress_callback is not None:
+        # Progress reporting
+        if progress_callback:
             try:
                 progress_callback(idx + 1, len(all_dates))
             except Exception:
-                pass  # don't fail backtest if callback fails
+                pass
 
         signals = {}
-        # --- 1. Generate signals per strategy ---
+
+        # --- 2a. Generate signals ---
         for strategy_key, info in symbols.items():
             strategy = info["strategy"]
             if strategy == "pairs_trading":
                 stocks = info["symbol"].split("-")
-                prices_dict = {stock: data[stock] for stock in stocks}
-                strategy_data = align_series(prices_dict, stocks[0], stocks[1])
+                strategy_data = align_series({s: data[s] for s in stocks}, stocks[0], stocks[1])
             else:
                 stocks = [info["symbol"]]
                 strategy_data = data[stocks[0]]
 
-            # update current prices and check for missing data
+            # Update current prices and check for missing data
             data_ok = True
             for stock in stocks:
                 price = next((d["close"] for d in data[stock] if d["date"] == date), None)
@@ -74,16 +82,14 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
                     last_prices[stock] = price
 
             if data_ok:
-                signal = check_signal(
+                signals[strategy_key] = check_signal(
                     positions[stocks[0]][strategy_key], idx, date,
                     entry_dates[strategy_key], strategy_data, params, strategy, lookback
                 )
-                signals[strategy_key] = signal
             else:
                 signals[strategy_key] = "hold"
 
-
-        # --- 2. Apply exits ---
+        # --- 2b. Apply exits ---
         for strategy_key, signal in signals.items():
             if signal in ["sell", "exit"]:
                 info = symbols[strategy_key]
@@ -112,8 +118,7 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
                     entry_prices[stock][strategy_key] = None
                 entry_dates[strategy_key]["idx"] = entry_dates[strategy_key]["date"] = None
 
-
-        # --- 3. Apply entries ---
+        # --- 2c. Apply entries ---
         for strategy_key, signal in signals.items():
             if signal in ["buy", "short", "long"]:
                 info = symbols[strategy_key]
@@ -131,15 +136,7 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
 
                 entry_dates[strategy_key]["idx"], entry_dates[strategy_key]["date"] = idx, date
 
-        
-        # --- 4. Apply rebalancing ---
-        #freq = params["rebalanceFrequency"]
-        #lookback = params["volLookback"]
-        #if freq not in [0, "onSignal"] and idx%int(freq) == 0 and lookback <= idx:
-        #    pass
-            #positions = rebalance(equity_curves, positions, current_prices, float(params["volTarget"])/100, lookback)
-
-        # --- 5. Mark portfolio value ---
+        # --- 2d. Track portfolio value ---
         if idx >= lookback:
             for strategy_key, info in symbols.items():
                 stocks = info["symbol"].split("-") if info["strategy"] == "pairs_trading" else [info["symbol"]]
@@ -153,12 +150,11 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
                         break
                 if value is not None:
                     equity_curves[strategy_key].append({"date": date, "value": value})
-                    
 
+            # Compute overall portfolio value
             all_stocks = list(data.keys())
             overall_positions = [sum(positions[stock].values()) for stock in all_stocks]
-            overall_entry_prices = [sum(filter(None, entry_prices[stock].values())) for stock in all_stocks]  # sum only non-None
-
+            overall_entry_prices = [sum(filter(None, entry_prices[stock].values())) for stock in all_stocks]
             portfolio_value = close_position(
                 all_stocks,
                 [last_prices[s] for s in all_stocks],
@@ -173,11 +169,10 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
             )[0]
             equity_curves["overall"].append({"date": date, "value": portfolio_value})
 
-    # --- 6. close out remaining positions at end ---
+    # --- 3. Close out remaining positions at end ---
     for strategy_key, info in symbols.items():
         if len(equity_curves[strategy_key]) > 0:
             stocks = info["symbol"].split("-") if info["strategy"] == "pairs_trading" else [info["symbol"]]
-
             pos_list = [positions[stock][strategy_key] for stock in stocks]
             entry_list = [entry_prices[stock][strategy_key] for stock in stocks]
             price_list = [last_prices[stock] for stock in stocks]
@@ -194,13 +189,9 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
                 transaction_pct,
                 transaction_fixed
             )
-
             trades[strategy_key].extend(new_trades)
-            for stock in stocks:
-                positions[stock][strategy_key] = 0
-                entry_prices[stock][strategy_key] = None
-            entry_dates[strategy_key]["idx"] = entry_dates[strategy_key]["date"] = None
 
+    # --- 4. Build results ---
     results = []
     for strategy_key, curve in equity_curves.items():
         initial = initial_capital * symbols[strategy_key]["weight"] if strategy_key != "overall" else initial_capital

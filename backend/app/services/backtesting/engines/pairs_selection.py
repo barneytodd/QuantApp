@@ -10,11 +10,24 @@ from statsmodels.tsa.stattools import adfuller
 from app.services.backtesting.helpers.pairs import compute_pair_score
 
 
-
-# === 1. Engle-Granger test ===
+# === 1. Engle-Granger cointegration test ===
 def engle_granger_test(y, x):
-    """Run Engle-Granger cointegration test."""
-    x = sm.add_constant(x)
+    """
+    Run Engle-Granger two-step cointegration test.
+    
+    Args:
+        y (pd.Series): Dependent variable series
+        x (pd.Series): Independent variable series
+
+    Returns:
+        dict: {
+            alpha: intercept,
+            beta: slope,
+            p_value: ADF p-value on residuals,
+            cointegrated: True if p < 0.05
+        }
+    """
+    x = sm.add_constant(x)  # add intercept
     model = sm.OLS(y, x).fit()
     residuals = model.resid
     adf_result = adfuller(residuals)
@@ -30,18 +43,28 @@ def engle_granger_test(y, x):
     }
 
 
-# === 2. Single pair processing ===
+# === 2. Process a single pair ===
 def process_pair(pair, df, w_corr, w_coint):
-    """Compute correlation, cointegration and score for one pair."""
+    """
+    Compute correlation, Engle-Granger cointegration, and score for a single pair.
+
+    Args:
+        pair (tuple): (symbol1, symbol2)
+        df (pd.DataFrame): DataFrame with columns = symbols, index = dates
+        w_corr (float): weight for correlation
+        w_coint (float): weight for cointegration
+
+    Returns:
+        dict | None: metrics for the pair or None if insufficient data
+    """
     s1, s2 = pair
     x, y = df[s1].dropna(), df[s2].dropna()
-    x, y = x.align(y, join="inner")
+    x, y = x.align(y, join="inner")  # keep only overlapping dates
 
     if len(x) < 2:
         return None
 
     corr = np.corrcoef(x, y)[0, 1]
-
     result = engle_granger_test(y, x)
     score = compute_pair_score(corr, result["p_value"], result["beta"], w_corr, w_coint)
 
@@ -55,7 +78,7 @@ def process_pair(pair, df, w_corr, w_coint):
     }
 
 
-# === 3. Main parallel engine ===
+# === 3. Main engine for parallel pair analysis ===
 def analyze_pairs(
     symbols,
     prices_dict,
@@ -65,9 +88,20 @@ def analyze_pairs(
     progress_callback=None,
 ):
     """
-    Compute correlation, cointegration & scores for all symbol pairs (parallel).
-    Supports optional progress_callback(done, total).
+    Compute correlation, cointegration, and scores for all symbol pairs in parallel.
+
+    Args:
+        symbols (list[str]): list of symbols
+        prices_dict (dict): symbol -> list of OHLCV dicts
+        w_corr (float): correlation weight
+        w_coint (float): cointegration weight
+        max_workers (int): number of parallel workers
+        progress_callback (callable): function(done, total)
+
+    Returns:
+        list[dict]: analysis results for all pairs
     """
+    # Convert price dicts into DataFrame
     df = pd.DataFrame({
         sym: pd.Series({p["date"]: p["close"] for p in prices_dict[sym]})
         for sym in symbols
@@ -87,6 +121,7 @@ def analyze_pairs(
 
     done = 0
 
+    # Parallel processing of all pairs
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = [
             executor.submit(process_pair, pair, df, w_corr, w_coint)
@@ -99,14 +134,13 @@ def analyze_pairs(
             if res:
                 results.append(res)
 
-            # Update progress via callback
             if progress_callback:
                 try:
                     progress_callback(done, total_pairs)
                 except Exception:
-                    pass  # avoid crashing if callback breaks
+                    pass
 
-    # Final completion callback
+    # Final callback indicating completion
     if progress_callback:
         try:
             progress_callback(total_pairs, total_pairs)

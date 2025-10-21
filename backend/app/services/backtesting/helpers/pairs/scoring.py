@@ -1,22 +1,32 @@
 def compute_pair_score(corr, pval, beta=None, w_corr=0.5, w_coint=0.5):
     """
-    Composite score balancing correlation & cointegration.
+    Compute a composite score for a pair of stocks, balancing correlation and cointegration.
 
     Args:
-        corr: correlation coefficient (-1..1)
-        pval: cointegration test p-value (0..1)
-        beta: optional hedge ratio slope
-        w_corr: correlation weight
-        w_coint: cointegration weight
+        corr (float): Pearson correlation coefficient between the two stocks (-1 to 1).
+        pval (float): P-value from cointegration test (0 to 1). Lower is better.
+        beta (float, optional): Hedge ratio slope from regression. Extreme values may be penalized.
+        w_corr (float): Weight for correlation in composite score (0-1).
+        w_coint (float): Weight for cointegration in composite score (0-1).
 
     Returns:
-        score (float)
+        float: Composite pair score; higher values indicate better pairs.
     """
-    corr_score = abs(corr)        # closer to 1 is better
-    coint_score = 1 - pval        # smaller p-value is better
 
+    # --- Correlation score ---
+    # Absolute correlation: closer to 1 indicates stronger linear relationship
+    corr_score = abs(corr)
+
+    # --- Cointegration score ---
+    # Smaller p-value indicates stronger cointegration
+    coint_score = 1 - pval
+
+    # --- Optional beta penalty ---
+    # Penalize hedge ratios that are too extreme (too small or too large)
     beta_penalty = 1.0
     if beta is not None and (beta < 0.2 or beta > 5):
-        beta_penalty = 0.5  # penalize extreme hedge ratios
+        beta_penalty = 0.5
 
-    return (w_corr * corr_score + w_coint * coint_score) * beta_penalty
+    # --- Weighted composite score ---
+    score = (w_corr * corr_score + w_coint * coint_score) * beta_penalty
+    return score

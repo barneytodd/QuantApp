@@ -1,34 +1,55 @@
 from ..mean_reversion_tests import autocorrelation_test, zscore_reversion_test
 
-def run_mean_reversion_tests(short_start, long_start, long_data, short_returns, long_returns, filters):
+# === Mean-Reversion Heuristic Test Engine ===
+
+def run_mean_reversion_tests(
+    short_start,
+    long_start,
+    long_data,
+    short_returns,
+    long_returns,
+    filters
+) -> dict:
     """
-    Runs a series of mean-reversion heuristic tests on a stock to assess suitability for
-    mean-reverting strategies.
+    Run heuristic mean-reversion tests on a stock to assess suitability for
+    mean-reverting trading strategies.
 
-    The function checks:
-      1. Lag-1 autocorrelation - ensures returns exhibit negative autocorrelation (mean-reverting behavior).
-      2. Z-score reversion - checks how often prices revert toward their moving average
-         after deviating beyond a specified Z-score threshold.
+    The function checks the following:
+        1. Lag-1 autocorrelation   - ensures returns exhibit negative autocorrelation
+                                     (mean-reverting behavior)
+        2. Z-score reversion       - measures how often prices revert toward their moving
+                                     average after deviating beyond a Z-score threshold
 
-    Parameters:
-        short_start (datetime): Start date for short-term analysis window.
-        long_start (datetime): Start date for long-term analysis window.
-        long_data (list[dict]): Historical price data (e.g., last 3-5 years), each with 'date' and 'close'.
-        short_returns (list[float]): Daily returns in the short-term window.
-        long_returns (list[float]): Daily returns in the long-term window.
-        filters (dict): Dictionary containing thresholds for each mean-reversion test, including:
-            - "autocorrelation": Maximum acceptable lag-1 autocorrelation
+    Args:
+        short_start: datetime, start date for short-term analysis window
+        long_start: datetime, start date for long-term analysis window
+        long_data: list[dict], historical price data with 'date' and 'close'
+        short_returns: list[float], daily returns in short-term window
+        long_returns: list[float], daily returns in long-term window
+        filters: dict, thresholds for each mean-reversion test, e.g.,
+            - "autocorrelation": maximum acceptable lag-1 autocorrelation
             - "zscoreThreshold": Z-score deviation to define extreme price movements
-            - "zscoreReversion": Minimum proportion of reversions required to pass
+            - "zscoreReversion": minimum proportion of reversions required to pass
 
     Returns:
-        bool: True if the stock passes all mean-reversion heuristic tests, False otherwise.
+        dict:
+            result: bool, True if all tests pass, False otherwise
+            test: optional string, name of failed test if any
     """
 
+    # --- Test 1: Lag-1 autocorrelation ---
     if not autocorrelation_test(short_returns, long_returns, filters["autocorrelation"]):
         return {"result": False, "test": "autocorrelationTestFailed"}
-    
-    if not zscore_reversion_test(long_data, short_start, long_start, z_threshold=filters["zscoreThreshold"], threshold=filters["zscoreReversion"]):
+
+    # --- Test 2: Z-score reversion ---
+    if not zscore_reversion_test(
+        long_data,
+        short_start,
+        long_start,
+        z_threshold=filters["zscoreThreshold"],
+        threshold=filters["zscoreReversion"]
+    ):
         return {"result": False, "test": "zscoreReversionTestFailed"}
-    
+
+    # --- All tests passed ---
     return {"result": True}
