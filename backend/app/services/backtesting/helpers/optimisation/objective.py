@@ -1,7 +1,9 @@
-from .scoring import composite_score
-import copy, asyncio
+import asyncio
+
 from .backtest import run_strategy_backtest
-from app.tasks import param_optimisation_tasks_store as tasks_store
+from .scoring import composite_score
+from app.stores.task_stores import param_optimisation_tasks_store as tasks_store
+
 
 def make_single_strategy_objective(strategy_name, cfg, global_params, scoring_params, window_length=3):
     async def async_objective(trial):

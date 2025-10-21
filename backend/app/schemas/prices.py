@@ -1,6 +1,8 @@
-from pydantic import BaseModel
 from datetime import date
 from typing import Union, List, Optional
+
+from pydantic import BaseModel
+
 
 # Input model for historical price data
 class PriceIn(BaseModel):
@@ -16,8 +18,9 @@ class PriceIn(BaseModel):
 class PriceOut(PriceIn):
     id: int
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 # Input model for symbol payloads
 class SymbolPayload(BaseModel):

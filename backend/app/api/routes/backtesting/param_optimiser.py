@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends
-from app.services.backtesting.engines.param_optimiser import optimise_parameters
-from app.schemas import ParamOptimisationRequest
-
-from fastapi.responses import StreamingResponse
-from app.tasks import param_optimisation_tasks_store as tasks_store
-import json
 import asyncio
+import json
+
+from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
+
+from app.schemas import ParamOptimisationRequest
+from app.services.backtesting.engines.param_optimiser import optimise_parameters
+from app.stores.task_stores import param_optimisation_tasks_store as tasks_store
+
 
 router = APIRouter()
 
@@ -48,7 +50,7 @@ async def stream_all_param_optimisation_progress():
                 for strategy_name, task in tasks_store.items()
             }
 
-            # only yield if there’s an update
+            # only yield if thereï¿½s an update
             if all_strategies_progress != last_state:
                 last_state = all_strategies_progress.copy()
                 yield f"data: {json.dumps(all_strategies_progress)}\n\n"

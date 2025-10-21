@@ -1,5 +1,7 @@
-from pydantic import BaseModel
 from datetime import date
+
+from pydantic import BaseModel
+
 
 # Response model for statistical metrics of a trading symbol
 class StatsOut(BaseModel):

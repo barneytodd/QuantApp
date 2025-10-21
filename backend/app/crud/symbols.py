@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+
 from app.models import Price
 
 # Retrieve all distinct symbols from the Price table

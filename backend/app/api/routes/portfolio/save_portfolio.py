@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, Depends  
-from app.schemas import SavePortfolioPayload, PortfolioOut
-from typing import List
 from datetime import datetime
-from app.database import get_db
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
+from app.database import get_db
 from app.models import Portfolio
+from app.schemas import PortfolioOut, SavePortfolioPayload
 
 
 router = APIRouter()

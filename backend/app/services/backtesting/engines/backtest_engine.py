@@ -1,7 +1,9 @@
-from ..helpers.backtest.positions import check_signal, open_position, close_position
-from ..helpers.backtest.metrics import compute_metrics, compute_trade_stats
-from ..helpers.pairs.align_series import align_series
-from ..helpers.backtest.advanced_params import rebalance
+from ..helpers.backtest import (
+    check_signal, open_position, close_position,
+    compute_metrics, compute_trade_stats,
+    rebalance
+)
+from ..helpers.pairs import align_series
 
 def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
     """

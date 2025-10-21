@@ -1,13 +1,14 @@
-import pandas as pd
-import numpy as np
-from itertools import combinations
-from statsmodels.tsa.stattools import adfuller
-import statsmodels.api as sm
-from concurrent.futures import ProcessPoolExecutor, as_completed
 import os
+from itertools import combinations
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from ..helpers.pairs.align_series import align_series
-from app.utils.scoring import compute_pair_score
+import numpy as np
+import pandas as pd
+import statsmodels.api as sm
+from statsmodels.tsa.stattools import adfuller
+
+from app.services.backtesting.helpers.pairs import compute_pair_score
+
 
 
 # === 1. Engle-Granger test ===

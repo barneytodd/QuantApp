@@ -1,14 +1,17 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import text
-from app.database import SessionLocal
-from sqlalchemy import tuple_
+from datetime import date
 from typing import List, Optional
+
+from fastapi import Depends
+from sqlalchemy import text, tuple_
+from sqlalchemy.orm import Session
+
+from app.database import get_db
 from app.models.prices import Price
 from app.schemas.prices import PriceIn
-from datetime import date
+
 
 # Get historical OHLCV data for a symbol, optionally filtered by date range
-def get_prices(db: Session, symbols: List[str], start: Optional[date] = None, end: Optional[date] = None, lookback: Optional[int] = 0) -> List[Price]:
+def get_prices(symbols: List[str], start: Optional[date] = None, end: Optional[date] = None, lookback: Optional[int] = 0, db: Session = Depends(get_db)) -> List[Price]:
     query = db.query(Price).filter(Price.symbol.in_(symbols))
 
     if start and lookback and lookback > 0:

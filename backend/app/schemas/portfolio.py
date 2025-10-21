@@ -1,6 +1,8 @@
-from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
 from datetime import datetime, date
+from typing import List, Dict, Any, Optional
+
+from pydantic import BaseModel
+
 
 class PreScreenPayload(BaseModel):
     symbols: List[str]                      
@@ -34,5 +36,6 @@ class PortfolioOut(BaseModel):
     meta: Optional[dict] = None
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }

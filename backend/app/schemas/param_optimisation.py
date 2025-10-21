@@ -1,5 +1,7 @@
+from typing import Dict, Any, Optional, Union
+
 from pydantic import BaseModel
-from typing import List, Dict, Any, Optional, Union
+
 
 class ParamOptimisationRequest(BaseModel):
     strategies: Dict[str, Any]                     

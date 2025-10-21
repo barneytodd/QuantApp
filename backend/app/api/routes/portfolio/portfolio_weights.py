@@ -1,16 +1,15 @@
-from fastapi import APIRouter, HTTPException    
 import pandas as pd
+from fastapi import APIRouter, HTTPException
 
-
-from app.services.portfolio.helpers.input_calcs import compute_expected_returns, compute_risk_matrix
-from app.services.portfolio.helpers.hrp_calcs import hrp_allocation
-from app.services.portfolio.helpers.optimisation_calcs import optimise_portfolio
-from app.schemas import PortfolioInputsPayload, HrpPayload, OptimisePayload
+from app.schemas import HrpPayload, OptimisePayload, PortfolioInputsPayload
+from app.services.portfolio.stages.portfolio_weight_allocation.helpers import (
+    hrp_allocation,
+    compute_expected_returns, compute_risk_matrix,
+    optimise_portfolio
+)
 
 
 router = APIRouter()
-
-
 
 @router.post("/inputs")
 async def compute_portfolio_inputs(payload: PortfolioInputsPayload):

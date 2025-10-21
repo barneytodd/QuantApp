@@ -1,8 +1,6 @@
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
-import numpy as np
-from collections import defaultdict
 
+from dateutil.relativedelta import relativedelta
 
 
 def prepare_backtest_inputs(payload):

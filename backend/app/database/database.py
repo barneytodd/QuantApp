@@ -1,6 +1,9 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base, Session
 import logging
+from typing import Generator
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
+
 
 logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
 
@@ -24,7 +27,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 # Dependency for FastAPI routes
-def get_db() -> Session:
+def get_db() -> Generator[Session, None, None]:
     """
     Provide a database session to FastAPI endpoints.
     Usage: db: Session = Depends(get_db)

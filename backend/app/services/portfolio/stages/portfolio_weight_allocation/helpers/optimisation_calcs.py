@@ -1,6 +1,6 @@
-import pandas as pd
-import numpy as np
 import cvxpy as cp
+import numpy as np
+import pandas as pd
 
 def optimise_portfolio(mu_dict, cov_dict, w_baseline_dict, risk_aversion=0.5, baseline_reg=0.1, min_weight=0.0, max_weight=0.1, cleanup_threshold=1e-4):
     symbols = cov_dict["symbols"]

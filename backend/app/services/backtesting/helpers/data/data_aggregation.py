@@ -1,7 +1,10 @@
-from ..backtest.metrics import compute_metrics, compute_trade_stats
 from collections import defaultdict
+
 import numpy as np
 import pandas as pd
+
+from ..backtest.metrics import compute_metrics, compute_trade_stats
+
 
 def compute_walkforward_results(results, window_length):
     """

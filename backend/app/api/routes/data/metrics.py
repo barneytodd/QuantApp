@@ -1,9 +1,11 @@
+import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-import pandas as pd
+
 from app.crud import get_prices
 from app.database import get_db
 from app.schemas import StatsOut
+
 
 router = APIRouter()
 

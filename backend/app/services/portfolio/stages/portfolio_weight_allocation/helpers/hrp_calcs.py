@@ -1,6 +1,6 @@
-import pandas as pd
 import numpy as np
-from scipy.cluster.hierarchy import linkage, dendrogram
+import pandas as pd
+from scipy.cluster.hierarchy import dendrogram, linkage
 
 
 def correl_dist(corr: pd.DataFrame) -> pd.DataFrame:

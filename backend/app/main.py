@@ -1,18 +1,13 @@
-# Main FastAPI application for Q-PATS Phase 1
-
-from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
-from sqlalchemy.orm import Session
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.models import Price, Base
-from app.schemas import PriceIn, PriceOut, SymbolPayload, StatsOut
-from app.crud import get_prices, upsert_prices, get_all_symbols
-from .database import SessionLocal, engine
-from .database_async import init_db_pool, close_db_pool
-from .services.data import fetcher
-import pandas as pd
-from datetime import date
-from typing import List
-from app.api.routes import data, metrics, backtest, symbols, pairs, param_optimiser, prescreen, portfolio_weights, save_portfolio
+
+from app.api import (
+    backtest, pairs, param_optimiser,
+    data, symbols, metrics, 
+    portfolio_weights, save_portfolio, prescreen
+)
+from app.models import Base
+from app.database import SessionLocal, engine, init_db_pool, close_db_pool
 
 
 # Create database tables

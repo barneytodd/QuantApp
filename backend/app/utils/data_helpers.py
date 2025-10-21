@@ -1,11 +1,12 @@
-from sqlalchemy.orm import Session
-from app.crud import get_prices as get_prices, get_prices_light
-from typing import Optional, List
+from datetime import datetime, timedelta
+from typing import List, Optional
+
 import numpy as np
 from sqlalchemy import func
-from datetime import datetime, date, timedelta
-from app.models.prices import Price
+from sqlalchemy.orm import Session
 
+from app.crud import get_prices, get_prices_light
+from app.models.prices import Price
 
 
 def fetch_price_data(db: Session, symbols: list[str], start: Optional[str] = None, end: Optional[str] = None, lookback: Optional[int] = 0):

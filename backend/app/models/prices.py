@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, Float, Integer, Date, UniqueConstraint
+
 from app.database import Base
 
 # ORM model for historical OHLCV price data

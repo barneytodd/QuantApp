@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime
+
 from app.database import Base
 
 # ORM model for storing backtest results of trading strategies

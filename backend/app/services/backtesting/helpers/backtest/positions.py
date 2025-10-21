@@ -1,7 +1,6 @@
-from app.strategies.signal_registry import generators
-from .pricing import calc_effective_price, commission
 from .advanced_params import check_holding_period
-from datetime import datetime
+from .pricing import calc_effective_price, commission
+from app.strategies.signal_registry import generators
 
 def check_signal(position, date_idx, date, entry_date, data, params, strategy, lookback):
 	"""

@@ -1,16 +1,15 @@
-import yfinance as yf
-import pandas as pd
-from datetime import datetime, timedelta
-from yahooquery import Screener
-from yfinance import EquityQuery, screen
 import time
-from typing import List
-from app.utils.data_helpers import get_symbol_date_ranges, get_missing_periods, chunk_symbols
 from concurrent.futures import ThreadPoolExecutor
-from app.schemas import PriceIn
+
+import pandas as pd
+import yfinance as yf
+from yfinance import EquityQuery, screen
+
 from app.crud import upsert_prices
-from sqlalchemy.orm import Session
-from app.database import get_db, SessionLocal
+from app.database import SessionLocal
+from app.schemas import PriceIn
+from app.utils.data_helpers import chunk_symbols, get_missing_periods, get_symbol_date_ranges
+
 
 
 # Fetch historical price data from Yahoo Finance

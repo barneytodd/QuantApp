@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
-from typing import List
+
 from app.models.strategies import BacktestResult
 from app.schemas.strategies import BacktestResultIn
+
 
 # Save a backtest result to the database
 def save_backtest_result(db: Session, result: BacktestResultIn):

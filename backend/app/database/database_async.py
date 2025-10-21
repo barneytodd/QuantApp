@@ -1,4 +1,3 @@
-# app/database_async.py
 import aioodbc
 import asyncio
 

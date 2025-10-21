@@ -1,16 +1,20 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from fastapi.responses import StreamingResponse, JSONResponse
-from sqlalchemy.orm import Session
+import asyncio
+import json
+import uuid
+from datetime import date, timedelta
 from multiprocessing import Manager, Process
-import asyncio, json, uuid, os
 
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse, StreamingResponse
+from sqlalchemy.orm import Session
+
+from app.crud import get_prices_light
 from app.database import get_db
 from app.schemas import PairSelectionRequest
 from app.services.backtesting.engines.pairs_selection import analyze_pairs
-from app.utils.pair_selection import select_pairs_max_weight
-from app.crud import get_prices_light
-from app.tasks import pairs_tasks_store as tasks_store 
-from datetime import date, timedelta
+from app.stores.task_stores import pairs_tasks_store as tasks_store
+from app.services.backtesting.helpers.pairs.pair_selection import select_pairs_max_weight
+
 
 router = APIRouter()
 

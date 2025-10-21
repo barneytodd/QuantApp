@@ -1,5 +1,7 @@
-from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
+
+from pydantic import BaseModel
+
 
 # Request model for running a strategy backtest
 class StrategyRequest(BaseModel):
@@ -17,8 +19,9 @@ class StrategyResponse(BaseModel):
     metrics: Dict[str, Any]        
     tradeStats: Dict[str, Any]     
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 # Internal model for backtest results used within the application
 class BacktestResultIn(BaseModel):
@@ -30,5 +33,6 @@ class BacktestResultIn(BaseModel):
     equity_curve: list
     trades: list
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }

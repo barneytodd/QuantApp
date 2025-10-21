@@ -1,9 +1,11 @@
+import asyncio
+
+import nest_asyncio
 import optuna
-import asyncio, nest_asyncio, uuid
-from concurrent.futures import ProcessPoolExecutor
-from functools import partial
-from app.services.backtesting.helpers.optimisation.objective import make_single_strategy_objective
-from app.tasks import param_optimisation_tasks_store as tasks_store
+
+from app.services.backtesting.helpers.optimisation import make_single_strategy_objective
+from app.stores.task_stores import param_optimisation_tasks_store as tasks_store
+
 
 
 

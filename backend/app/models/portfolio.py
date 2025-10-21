@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, DateTime, JSON
+
 from app.database import Base
 
 class Portfolio(Base):

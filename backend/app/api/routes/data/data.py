@@ -1,10 +1,13 @@
+from typing import List
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
-from app.schemas import SymbolPayload, PriceOut, PriceIn, GetDataPayload
-from app.database import get_db
-from app.services.data import fetcher
+
 from app import crud
+from app.database import get_db
+from app.schemas import GetDataPayload, PriceIn, PriceOut, SymbolPayload
+from app.services.data import fetcher
+
 
 router = APIRouter()
 
