@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app import crud
 from app.database import get_db
 from app.schemas import GetDataPayload, PriceIn, PriceOut, SymbolPayload
-from app.services.data import fetcher
+from app.services.data import fetch_prices
 
 
 router = APIRouter()
@@ -36,7 +36,7 @@ def ingest_prices(payload: SymbolPayload, background: BackgroundTasks, db: Sessi
 
 # Background task to fetch and store data
 def _ingest_task(symbols: List[str], period: str, db: Session):
-    records = fetcher.fetch_historical(symbols, period)
+    records = fetch_prices.fetch_historical(symbols, period)
     if not records:
         raise HTTPException(status_code=404, detail="No data fetched")
     crud.upsert_prices(db, [PriceIn(**r) for r in records])
@@ -48,7 +48,7 @@ def ingest_prices_synchronously(payload: SymbolPayload, db: Session = Depends(ge
         symbols = [symbols]
 
     # Fetch and insert immediately
-    result = fetcher.ingest_missing_data_parallel(db, symbols, payload.start, payload.end)
+    result = fetch_prices.ingest_missing_data_parallel(db, symbols, payload.start, payload.end)
 
     if result:
         return {"status": "ingestion complete", "symbols": symbols}
