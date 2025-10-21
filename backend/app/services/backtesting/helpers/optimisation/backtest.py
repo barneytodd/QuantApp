@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.schemas import StrategyRequest
-from app.api.routes.backtesting.backtest import run_walkforward_async
+from app.services.backtesting.tasks.walkforward_manager import run_walkforward_async
 from app.services.backtesting.helpers.data import (
     aggregate_walkforward_results,
     compute_walkforward_results,
