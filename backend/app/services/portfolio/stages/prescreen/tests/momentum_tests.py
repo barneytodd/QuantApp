@@ -33,7 +33,7 @@ def above_MA_test(data, MA, short_start, long_start, threshold: float = 0.7) -> 
                 short_results[result] += 1
 
     def safe_pct(a, b):
-        return a / b if b != 0 else 0
+        return a / b * 100 if b != 0 else 0
 
     short_pct = safe_pct(short_results["above"], short_results["above"] + short_results["below"])
     long_pct = safe_pct(long_results["above"], long_results["above"] + long_results["below"])
@@ -96,7 +96,7 @@ def pos_returns_test(short_returns, long_returns, threshold: float) -> bool:
     """
     def pct_positive(returns):
         pos = sum(1 for r in returns if r > 0)
-        return (pos / len(returns) * 100) if returns else 0
+        return (pos / len(returns) * 100) if len(returns) > 0 else 0
 
     return pct_positive(short_returns) >= threshold or pct_positive(long_returns) >= threshold
 
