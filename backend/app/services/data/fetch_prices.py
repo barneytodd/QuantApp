@@ -44,7 +44,7 @@ def fetch_historical(symbols, period="1y", start=None, end=None, interval="1d", 
             group_by='ticker',
             auto_adjust=True
         )
-        
+        print(f"Fetched data for symbols: {symbols} from {start} to {end} with {len(df)} entries")
         if df.empty:
             return None
         

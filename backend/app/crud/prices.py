@@ -2,7 +2,7 @@ from datetime import date
 from typing import List, Optional
 
 from fastapi import Depends
-from sqlalchemy import text, tuple_
+from sqlalchemy import text, or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -122,7 +122,9 @@ def upsert_prices(db: Session, price_list: List[PriceIn], chunk_size: int = 500)
 
         # Collect keys (symbol, date) for existing lookup
         keys = [(p.symbol, p.date) for p in batch]
-        existing_rows = db.query(Price).filter(tuple_(Price.symbol, Price.date).in_(keys)).all()
+        conditions = [((Price.symbol == sym) & (Price.date == dt)) for sym, dt in keys]
+        
+        existing_rows = db.query(Price).filter(or_(*conditions)).all()
         existing_dict = {(r.symbol, r.date): r for r in existing_rows}
 
         to_insert = []
@@ -140,7 +142,7 @@ def upsert_prices(db: Session, price_list: List[PriceIn], chunk_size: int = 500)
             else:
                 # Collect for bulk insert
                 to_insert.append(Price(**price.dict()))
-
+        print(to_insert[:2])  # Debug: print first 2 inserts)
         if to_insert:
             db.bulk_save_objects(to_insert)
 
