@@ -10,7 +10,9 @@ export function usePairs() {
   
   const selectPairs = useCallback(async (symbols, weights = { w_corr: 0.5, w_coint: 0.5 }) => {
     if (!symbols || symbols.length < 2) {
-      throw new Error("Select at least two symbols to generate pairs.");
+      setSelectedPairs([]);
+      alert("Select at least two symbols to generate pairs.");
+      return;
     }
 
     setIsLoading(true);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { filters } from "../params/prelimBacktestFilters"
 import { strategies } from "../../Backtesting/parameters/strategyRegistry";
 import { useStrategyParams } from "../../Backtesting/hooks/useStrategyParams";
@@ -9,14 +9,14 @@ export function usePrelimBacktest(preScreenResults, endDate, setVisible) {
     const [filterResults, setFilterResults] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [startSelect, setStartSelect] = useState(false);
+    const runningSelectRef = useRef(0);
 
     const [allSymbols, setAllSymbols] = useState([]);
-    const [momentumSymbols, setMomentumSymbols] = useState([])
+    const [momentumSymbols, setMomentumSymbols] = useState([]);
+   
     
     const { 
         selectedPairs, 
-        setSelectedPairs,
         selectPairs, 
         progress: pairsProgress,
         isLoading: pairsLoading, 
@@ -45,33 +45,33 @@ export function usePrelimBacktest(preScreenResults, endDate, setVisible) {
         setFilterResults(null);
         setVisible(false);
         setMomentumSymbols([])
-        if (preScreenResults) {
+        if (preScreenResults && runningSelectRef.current === 0) {
+            runningSelectRef.current += 1;
+
             const symbols = Object.keys(preScreenResults);
             setAllSymbols(symbols);
             
             const momentumSyms = Object.entries(preScreenResults)
-            .filter(([symbol, strategies]) => strategies.includes("mean_reversion"))
-            .map(([symbol]) => symbol);
-            setMomentumSymbols(momentumSyms)
-
-            if (momentumSyms.length >= 2) {
-                setStartSelect(true);
-            }
-            else setSelectedPairs([]);
+            .filter(([_, strategies]) => strategies.includes("mean_reversion"))
+            .map(([symbol, _]) => symbol);
+            
+            setMomentumSymbols(momentumSyms);            
         }
-        else {
-            setStartSelect(false);
-        }
-    }, [preScreenResults, setVisible, setSelectedPairs])
+        
+    }, [preScreenResults, setVisible])
 
+    
     // set pairs and symbols
     useEffect(() => {
-        if (!startSelect || !momentumSymbols) return;
+        if (momentumSymbols.length === 0) return;
 
-        (async () => await selectPairs(momentumSymbols))();
-       
-        setStartSelect(false);
-    }, [startSelect, momentumSymbols, selectPairs]);
+        const run = async () => {
+            await selectPairs(momentumSymbols); // wait for async function
+            runningSelectRef.current -= 1;
+        };
+
+        run();
+    }, [momentumSymbols, selectPairs]);
 
 
     useEffect(() => {
