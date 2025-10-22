@@ -66,8 +66,8 @@ export function usePrelimBacktest(preScreenResults, endDate, setVisible) {
         if (momentumSymbols.length === 0) return;
 
         const run = async () => {
-            await selectPairs(momentumSymbols); // wait for async function
-            runningSelectRef.current -= 1;
+            await selectPairs(momentumSymbols); 
+            runningSelectRef.current = 0;
         };
 
         run();
@@ -91,8 +91,8 @@ export function usePrelimBacktest(preScreenResults, endDate, setVisible) {
                     // for each type, find all strategies that match that type
                     types.flatMap(type =>
                         Object.entries(strategies)
-                            .filter(([strategyName, strategyObj]) => strategyObj.type === type)
-                            .map(([strategyName, strategyObj]) => ({
+                            .filter(([_, strategyObj]) => strategyObj.type === type)
+                            .map(([strategyName, _]) => ({
                                 symbols: [symbol],
                                 strategy: strategyName,
                                 weight: 1

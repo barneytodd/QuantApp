@@ -100,5 +100,5 @@ def zscore_reversion_test(
     # Compute reversion rates
     long_rate = long_revert / long_extreme * 100 if long_extreme > 0 else 0
     short_rate = short_revert / short_extreme * 100 if short_extreme > 0 else 0
-    print(long_rate, short_rate, threshold)
+
     return long_rate >= threshold or short_rate >= threshold
