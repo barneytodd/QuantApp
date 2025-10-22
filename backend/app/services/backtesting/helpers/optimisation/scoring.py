@@ -1,4 +1,4 @@
-def composite_score(aggregated_results, scoring_params, weights=None):
+def composite_score(aggregated_results, scoring_params, metric_ranges, weights=None):
     """
     Compute a single composite score for a strategy or portfolio based on multiple metrics.
 
@@ -31,13 +31,19 @@ def composite_score(aggregated_results, scoring_params, weights=None):
     # --- Assign weights per symbol/strategy if not provided ---
     weights = weights or [1.0 / len(metrics_list)] * len(metrics_list)
 
+    def normalise_score(score, key):
+        if metric_ranges[key]["max"] == metric_ranges[key]["min"]:
+            return 0.5
+        normalised = (score - metric_ranges[key]["min"]) / (metric_ranges[key]["max"] - metric_ranges[key]["min"])
+        return normalised
+
     scores = []
     for w, metrics in zip(weights, metrics_list):
         # --- Normalize each metric to a comparable scale ---
-        sharpe = metrics["sharpe"] / 3           # assume target Sharpe ~3
-        cagr = metrics["cagr"] / 50              # assume target CAGR ~50%
-        max_dd = 1 - (metrics["max_drawdown"] / 50)  # lower drawdown increases score
-        win_rate = metrics["win_rate"] / 100     # convert % to 0-1
+        sharpe = normalise_score(metrics["sharpe"], "sharpe")           
+        cagr = normalise_score(metrics["cagr"], "cagr")              
+        max_dd = 1 - normalise_score(metrics["max_drawdown"], "maxDrawdown")  
+        win_rate = normalise_score(metrics["win_rate"], "winRate")
 
         # --- Weighted sum of metrics based on scoring_params ---
         score = (

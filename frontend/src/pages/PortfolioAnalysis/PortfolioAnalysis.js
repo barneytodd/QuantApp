@@ -64,6 +64,7 @@ export default function PortfolioBuilder() {
     paramValues: strategySelectParamValues,
     setParamValues: setStrategySelectParamValues,
     filterResults: strategySelectResults,
+    metricRanges: strategySelectMetricRanges,
     runStrategySelect,
     isLoading: strategySelectLoading,
     error: strategySelectError,
@@ -80,7 +81,7 @@ export default function PortfolioBuilder() {
     optimLoading: paramOptimisationLoading,
     optimError: paramOptimisationError,
     progress: paramOptimisationProgress
-  } = useParamOptimisation(strategySelectResults, startDate, endDate, setShowParamOptimisation)
+  } = useParamOptimisation(strategySelectResults, strategySelectMetricRanges, startDate, endDate, setShowParamOptimisation)
 
   const {
     portfolioWeightsParams,

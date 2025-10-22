@@ -5,6 +5,7 @@ import { useStrategyParams } from "../../Backtesting/hooks/useStrategyParams";
 export function useStrategySelect(prelimBacktestResults, startDate, endDate, setVisible) {
     const [paramValues, setParamValues] = useState({});
     const [filterResults, setFilterResults] = useState(null);
+    const [metricRanges, setMetricRanges] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [uploadComplete, setUploadComplete] = useState(true);
@@ -74,7 +75,7 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
             const max = Math.max(...values);
             ranges[m] = { min, max };
         });
-
+        setMetricRanges(ranges);
         return ranges;
     };
 
@@ -116,7 +117,11 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
             });
             bestBySymbol[symbol] = bestStrategy;
         })
-        return bestBySymbol
+        
+        const bestResults = Object.fromEntries(
+            Object.entries(bestBySymbol).filter(([_, strategy]) => strategy.score >= paramValues?.scoringThreshold)
+        )
+        return bestResults
     }
 
     const chooseSingleOrPair = (bestResults) => {
@@ -246,7 +251,7 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
                     }
                     acc[item.symbol][item.strategy] = {
                             sharpe: item.avgSharpe,
-                            cagr: item.avgCagr,
+                            cagr: item.avgCAGR,
                             maxDrawdown: item.avgMaxDrawdown,
                             winRate: item.avgWinRate
                         }
@@ -271,6 +276,7 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
         paramValues,
         setParamValues,
         filterResults,
+        metricRanges,
         runStrategySelect,
         isLoading,
         error,

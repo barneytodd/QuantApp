@@ -60,7 +60,7 @@ export function useOptimisation(startDate=null, endDate=null) {
   }, [endDate?.value, startDate?.value])
   
 
-  const optimiseParameters = async ({ strategyTypesWithSymbols, optimParams, scoringParams }) => {
+  const optimiseParameters = async ({ strategyTypesWithSymbols, optimParams, scoringParams, metricRanges=null }) => {
     setIsLoading(true);
     setError(null);
     setOptimisationResult(null);
@@ -87,7 +87,8 @@ export function useOptimisation(startDate=null, endDate=null) {
       strategies: strats,
       globalParams: globParams,
       optimParams: optimisationParams,
-      scoringParams: scoringParams
+      scoringParams: scoringParams,
+      metricRanges: metricRanges,
     };
 
     console.log(payload)

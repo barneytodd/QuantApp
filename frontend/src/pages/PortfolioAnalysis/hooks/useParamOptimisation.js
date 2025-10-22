@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useOptimisation } from "../../Backtesting/hooks/useOptimisation";
 import { params } from "../params/paramOptimisationParams"
 
-export function useParamOptimisation(strategySelectResults, startDate, endDate, setVisible) {
+export function useParamOptimisation(strategySelectResults, metricRanges, startDate, endDate, setVisible) {
     const [optimisationParams, setOptimisationParams] = useState({});
     const [progress, setProgress] = useState({});
     const evtSourceRef = useRef(null);
@@ -95,7 +95,7 @@ export function useParamOptimisation(strategySelectResults, startDate, endDate, 
         };
 
         try {
-            await optimiseParameters({ strategyTypesWithSymbols, optimParams: optimisationParams, scoringParams: scoringParamValues })
+            await optimiseParameters({ strategyTypesWithSymbols, optimParams: optimisationParams, scoringParams: scoringParamValues, metricRanges })
         }
         catch {
             setProgress({});
