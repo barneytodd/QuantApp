@@ -2,7 +2,6 @@ import uuid
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from app.database import get_db
 from app.schemas import StrategyRequest
 from app.services.backtesting.tasks.walkforward_manager import run_walkforward_async
 from app.services.backtesting.helpers.data import (
@@ -14,7 +13,7 @@ from app.services.backtesting.helpers.data import (
 from app.stores.task_stores import walkforward_tasks_store as tasks_store
 
 
-async def run_strategy_backtest(cfg, global_params, window_length=3, db: Session = Depends(get_db)):
+async def run_strategy_backtest(db: Session, cfg, global_params, window_length=3):
     """
     Run a full strategy backtest using a walk-forward approach.
 

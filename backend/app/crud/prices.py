@@ -56,7 +56,7 @@ def get_prices(
 
 
 # === Lightweight price fetch using raw SQL ===
-def get_prices_light(db, symbols, start, end, lookback):
+def get_prices_light(db: Session, symbols, start, end, lookback):
     """
     Fetch price data for multiple symbols efficiently using raw SQL.
     Supports lookback for start date adjustment.
@@ -142,7 +142,7 @@ def upsert_prices(db: Session, price_list: List[PriceIn], chunk_size: int = 500)
             else:
                 # Collect for bulk insert
                 to_insert.append(Price(**price.dict()))
-        print(to_insert[:2])  # Debug: print first 2 inserts)
+
         if to_insert:
             db.bulk_save_objects(to_insert)
 

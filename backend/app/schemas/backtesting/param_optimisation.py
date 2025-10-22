@@ -14,6 +14,9 @@ class ParamOptimisationRequest(BaseModel):
     # Optional scoring weights for evaluating strategies (values between 0 and 1)
     scoringParams: Optional[Dict[str, Union[int, float]]] = None
 
+    # Optional metric ranges for computing trial scores
+    metricRanges: Optional[Dict[str, Any]]
+
     # Extra JSON schema for API documentation (FastAPI/OpenAPI)
     model_config = {
         "json_schema_extra": {

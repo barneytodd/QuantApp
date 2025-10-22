@@ -1,9 +1,11 @@
 import asyncio
 import json
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
 
+from app.database import get_db
 from app.schemas import ParamOptimisationRequest
 from app.services.backtesting.engines.param_optimiser import optimise_parameters
 from app.stores.task_stores import param_optimisation_tasks_store as tasks_store
@@ -13,7 +15,7 @@ router = APIRouter()
 
 # === Run parameter optimisation for one or multiple strategies ===
 @router.post("/optimise")
-def optimise_strategy_parameters(payload: ParamOptimisationRequest):
+def optimise_strategy_parameters(payload: ParamOptimisationRequest, db: Session = Depends(get_db)):
     """
     Start a parameter optimisation for given strategies.
 
@@ -38,8 +40,14 @@ def optimise_strategy_parameters(payload: ParamOptimisationRequest):
         "max_drawdown": 0.2,
         "win_rate": 0.1
     }
+    metric_ranges = payload.MetricRanges or {
+        "sharpe": {"min": -1.0, "max": 3.0},         
+        "cagr": {"min": -20.0, "max": 20.0},            
+        "maxDrawdown": {"min": 10, "max": 60},     
+        "winRate": {"min": 25, "max": 75}          
+    }
 
-    results = optimise_parameters(strategies_config, global_params, optimisation_params, scoring_params)
+    results = optimise_parameters(db, strategies_config, global_params, optimisation_params, scoring_params, metric_ranges)
     return results
 
 
