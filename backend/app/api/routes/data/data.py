@@ -78,7 +78,7 @@ def _ingest_task(symbols: List[str], period: str, db: Session):
 
     Raises HTTPException if no data is fetched.
     """
-    records = fetch_prices.fetch_historical(symbols, period)
+    records = fetch_prices.fetch_historical(symbols, period, db=db)
     if not records:
         raise HTTPException(status_code=404, detail="No data fetched")
 

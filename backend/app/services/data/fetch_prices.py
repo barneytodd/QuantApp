@@ -1,13 +1,22 @@
+import contextlib
+import io
+import re
 from concurrent.futures import ThreadPoolExecutor
-from app.crud import upsert_prices
-from app.database import SessionLocal
-from app.schemas import PriceIn
-from app.utils.data_helpers import chunk_symbols, get_missing_periods, get_symbol_date_ranges
+from datetime import datetime
+
 import pandas as pd
 import yfinance as yf
 
+from app.crud import upsert_prices, insert_missing_data
+from app.database import SessionLocal
+from app.schemas import PriceIn
+from app.utils.data_helpers import chunk_symbols, get_missing_periods, get_symbol_date_ranges
+from app.utils.yfinance_errors import safe_download
+
+
+
 # === Historical Data Fetch & Ingestion Engine ===
-def fetch_historical(symbols, period="1y", start=None, end=None, interval="1d"):
+def fetch_historical(symbols, period="1y", start=None, end=None, interval="1d", db=None):
     """
     Fetch OHLCV (Open, High, Low, Close, Volume) historical price data for one or more symbols
     using Yahoo Finance. Returns a list of dictionary records suitable for DB insertion.
@@ -24,24 +33,25 @@ def fetch_historical(symbols, period="1y", start=None, end=None, interval="1d"):
 
     # --- Download data from Yahoo Finance ---
     if start and end:
-        try:
-            df = yf.download(
-                symbols,
-                start=start,
-                end=end,
-                interval=interval,
-                progress=False,
-                threads=True,
-                group_by='ticker',
-                auto_adjust=True
-            )
-            if df.empty:
-                return None
-        except Exception:
-            return None
-    else:
-        df = yf.download(
+        df = safe_download(
             symbols,
+            db=db,
+            start=start,
+            end=end,
+            interval=interval,
+            progress=False,
+            threads=True,
+            group_by='ticker',
+            auto_adjust=True
+        )
+        
+        if df.empty:
+            return None
+        
+    else:
+        df = safe_download(
+            symbols,
+            db=db,
             period=period,
             interval=interval,
             progress=False,
@@ -106,7 +116,7 @@ def ingest_missing_data_parallel(db, symbols, start, end, chunk_size=50, max_wor
         all_records = []
         with SessionLocal() as db_thread:
             for period_start, period_end in missing_periods.get(symbol, []):
-                records = fetch_historical([symbol], start=str(period_start), end=str(period_end))
+                records = fetch_historical([symbol], start=str(period_start), end=str(period_end), db=db_thread)
                 if records:
                     all_records.extend([PriceIn(**r) for r in records])
 

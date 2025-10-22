@@ -6,7 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.crud import get_prices, get_prices_light
-from app.models.prices import Price
+from app.models import Price, MissingPriceRange
 
 
 def fetch_price_data(db: Session, symbols: list[str], start: Optional[str] = None, end: Optional[str] = None, lookback: Optional[int] = 0):
@@ -117,7 +117,8 @@ def get_symbol_date_ranges(db, symbols: List[str]):
               Symbols not in DB are omitted
     """
     ranges = {}
-    results = (
+
+    db_results = (
         db.query(
             Price.symbol,
             func.min(Price.date),
@@ -127,8 +128,30 @@ def get_symbol_date_ranges(db, symbols: List[str]):
         .group_by(Price.symbol)
         .all()
     )
-    for symbol, min_date, max_date in results:
+
+    missing_results = (
+        db.query(
+            MissingPriceRange.symbol,
+            func.min(MissingPriceRange.start_date),
+            func.max(MissingPriceRange.end_date)
+        )
+        .filter(MissingPriceRange.symbol.in_(symbols))
+        .group_by(MissingPriceRange.symbol)
+        .all()
+    )
+
+    for symbol, min_date, max_date in db_results:
         ranges[symbol] = (min_date, max_date)
+
+    for symbol, missing_min, missing_max in missing_results:
+        if symbol in ranges:
+            current_min, current_max = ranges[symbol]
+            overall_min = min(current_min, missing_min)
+            overall_max = max(current_max, missing_max)
+            ranges[symbol] = (overall_min, overall_max)
+        else:
+            ranges[symbol] = (missing_min, missing_max)
+
     return ranges
 
 
