@@ -22,7 +22,7 @@ def check_signal(position, date_idx, date, entry_date, data, params, strategy, l
     """
     if strategy == "pairs_trading" and (data.empty or data is None):
         return "hold"
-    elif not data or len(data) == 0:
+    elif strategy!= "pairs_trading" and (not data or len(data) == 0):
         return "hold"
 
     if date_idx < lookback:
