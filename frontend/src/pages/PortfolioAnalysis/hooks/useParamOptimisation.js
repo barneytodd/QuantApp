@@ -41,6 +41,13 @@ export function useParamOptimisation(strategySelectResults, metricRanges, startD
 
 
     const runParamOptimisation = async () => {
+        if (evtSourceRef.current) {
+            console.warn("Optimisation already running.");
+            evtSourceRef.current.close();
+            evtSourceRef.current = null
+            return;
+        }
+
         if (!strategySelectResults || Object.keys(strategySelectResults).length === 0) {
             console.warn("No strategy selection results provided");
             return;
@@ -99,6 +106,12 @@ export function useParamOptimisation(strategySelectResults, metricRanges, startD
         }
         catch {
             setProgress({});
+        }
+        finally {
+            if (evtSourceRef.current) {
+                evtSourceRef.current.close();
+                evtSourceRef.current = null;
+            }
         }
         setProgress({});
     }
