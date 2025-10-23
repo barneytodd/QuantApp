@@ -150,7 +150,7 @@ export default function Backtesting() {
 
 
   const handleSelectPairs = async () => {
-    await selectPairs(selectedSymbols.map((s) => s.value));
+    await selectPairs(selectedSymbols.map((s) => s.value), advancedParams.startDate.value, advancedParams.endDate.value);
     setShowPairs(true);
   };
 

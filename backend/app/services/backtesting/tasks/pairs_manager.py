@@ -47,6 +47,7 @@ def run_pair_selection_task(task_id, symbols, prices_dict, w_corr, w_coint, prog
         })
     except Exception as e:
         # Mark failure and store error message
+        print(e)
         progress_state.update({"status": "failed", "error": str(e)})
 
 

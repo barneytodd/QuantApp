@@ -1,4 +1,5 @@
-from typing import List
+from datetime import date
+from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 class PairSelectionRequest(BaseModel):
@@ -7,6 +8,12 @@ class PairSelectionRequest(BaseModel):
         ...,  # required field
         description="List of symbols to select pairs from (at least 2 required)"
     )
+
+    # Optional start date
+    start: Optional[date] = None
+
+    # Optional end date
+    end: Optional[date] = None
     
     # Weight for correlation in pair selection
     w_corr: float = Field(

@@ -103,10 +103,10 @@ def analyze_pairs(
     """
     # Convert price dicts into DataFrame
     df = pd.DataFrame({
-        sym: pd.Series({p["date"]: p["close"] for p in prices_dict[sym]})
+        sym: pd.Series({p["date"]: p["close"] for p in prices_dict[sym] if sym in prices_dict.keys()})
         for sym in symbols
     }).sort_index()
-
+   
     pairs_list = list(combinations(symbols, 2))
     total_pairs = len(pairs_list)
     results = []
@@ -115,7 +115,7 @@ def analyze_pairs(
         return results
 
     if max_workers is None:
-        max_workers = min(32, os.cpu_count() or 4)
+        max_workers = min(32, os.cpu_count() - 1 or 3)
 
     print(f"Analyzing {total_pairs} pairs with {max_workers} workers...")
 

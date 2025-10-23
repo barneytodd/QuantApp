@@ -58,7 +58,7 @@ export default function PortfolioBuilder() {
     strategyType: backtestStrategyType,
     pairsLoading: BacktestPairsLoading,
     pairsProgress: BacktestPairsProgress
-  } = usePrelimBacktest(preScreenFilterResults, endDate, setShowPrelimBacktest);
+  } = usePrelimBacktest(preScreenFilterResults, startDate, endDate, setShowPrelimBacktest);
 
   const {
     paramValues: strategySelectParamValues,

@@ -34,8 +34,8 @@ async def start_pair_selection(req: PairSelectionRequest, db: Session = Depends(
     7. Register the task in the tasks_store for tracking.
     """
     # Define date range for 1-year historical data
-    end = date.today()
-    start = end - timedelta(days=365)
+    end = req.end or date.today()
+    start = req.start or end - timedelta(days=365)
     lookback = 0
 
     # Fetch lightweight price data from DB
@@ -57,15 +57,15 @@ async def start_pair_selection(req: PairSelectionRequest, db: Session = Depends(
     manager = Manager()
     progress_state = manager.dict(done=0, total=0, status="starting", results=None)
 
+    # Launch asynchronous progress monitor
+    asyncio.create_task(monitor_pair_selection_progress(task_id, progress_state))
+
     # Start pair selection in a separate process
     p = Process(
         target=run_pair_selection_task,
         args=(task_id, req.symbols, prices_dict, req.w_corr, req.w_coint, progress_state)
     )
     p.start()
-
-    # Launch asynchronous progress monitor
-    asyncio.create_task(monitor_pair_selection_progress(task_id, progress_state))
 
     # Register task in store
     tasks_store[task_id] = {"status": "starting", "done": 0, "total": 0}

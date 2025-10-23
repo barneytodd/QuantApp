@@ -8,7 +8,7 @@ export function usePairs() {
   const [error, setError] = useState(null);
 
   
-  const selectPairs = useCallback(async (symbols, weights = { w_corr: 0.5, w_coint: 0.5 }) => {
+  const selectPairs = useCallback(async (symbols, start=null, end=null, weights = { w_corr: 0.5, w_coint: 0.5 }) => {
     if (!symbols || symbols.length < 2) {
       setSelectedPairs([]);
       alert("Select at least two symbols to generate pairs.");
@@ -24,7 +24,7 @@ export function usePairs() {
       const startRes = await fetch("http://localhost:8000/api/pairs/select/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbols, ...weights }),
+        body: JSON.stringify({ symbols, start, end, ...weights }),
       });
 
       if (!startRes.ok) throw new Error("Failed to start pair selection task");
