@@ -21,6 +21,7 @@ def _run_single_study(db, strategy_name, cfg, global_params, scoring_params, met
     Returns:
         dict: Best params, best score, and aggregated results
     """
+
     # Needed to allow nested event loops (e.g., when running in Jupyter / FastAPI background task)
     nest_asyncio.apply()
 
@@ -82,6 +83,7 @@ async def optimise_multiple_strategies_async(db, strategies_config, global_param
     Returns:
         dict: {strategy_name: {best_params, aggregated_results}}
     """
+
     results = {}
     for strategy_name, cfg in strategies_config.items():
         result = _run_single_study(
@@ -133,5 +135,5 @@ def optimise_parameters(db, strategies_config, global_params, optimisation_param
 
     # Run the async optimisation loop synchronously
     return asyncio.run(
-        optimise_multiple_strategies_async(db, strategies_config, global_params, scoring_params, n_trials, window_length, metric_ranges)
+        optimise_multiple_strategies_async(db, strategies_config, global_params, scoring_params, metric_ranges, n_trials, window_length)
     )

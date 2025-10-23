@@ -40,7 +40,7 @@ def optimise_strategy_parameters(payload: ParamOptimisationRequest, db: Session 
         "max_drawdown": 0.2,
         "win_rate": 0.1
     }
-    metric_ranges = payload.MetricRanges or {
+    metric_ranges = payload.metricRanges or {
         "sharpe": {"min": -1.0, "max": 3.0},         
         "cagr": {"min": -20.0, "max": 20.0},            
         "maxDrawdown": {"min": 10, "max": 60},     

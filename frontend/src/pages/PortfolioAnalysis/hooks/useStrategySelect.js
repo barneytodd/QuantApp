@@ -117,10 +117,11 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
             });
             bestBySymbol[symbol] = bestStrategy;
         })
-        
+
         const bestResults = Object.fromEntries(
-            Object.entries(bestBySymbol).filter(([_, strategy]) => strategy.score >= paramValues?.scoringThreshold)
+            Object.entries(bestBySymbol).filter(([_, strat]) => strat.score >= paramValues?.scoreThreshold?.value)
         )
+
         return bestResults
     }
 
@@ -177,6 +178,7 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
             setUploadComplete(true);
         } catch (err) {
             console.error(err);
+            return;
         }
 
         try {
@@ -267,6 +269,7 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
         } catch (err) {
             setError(err);
             alert("Backtest failed");
+            return;
         } finally {
             setIsLoading(false);
         }
