@@ -4,7 +4,7 @@ import { strategies } from "../../Backtesting/parameters/strategyRegistry";
 import { useStrategyParams } from "../../Backtesting/hooks/useStrategyParams";
 import { usePairs } from "../../Backtesting/hooks/usePairs"
 
-export function usePrelimBacktest(preScreenResults, endDate, setVisible) {
+export function usePrelimBacktest(preScreenResults, startDate, endDate, setVisible) {
     const [filterValues, setFilterValues] = useState({});
     const [filterResults, setFilterResults] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -13,6 +13,9 @@ export function usePrelimBacktest(preScreenResults, endDate, setVisible) {
 
     const [allSymbols, setAllSymbols] = useState([]);
     const [momentumSymbols, setMomentumSymbols] = useState([]);
+    const [start, setStart] = useState(null);
+    const [selectStart, setSelectStart] = useState(null);
+    const [end, setEnd] = useState(null);
    
     
     const { 
@@ -41,10 +44,29 @@ export function usePrelimBacktest(preScreenResults, endDate, setVisible) {
         setFilterValues(filterDefaults);
     }, [])
 
+    //set date range
+    useEffect(() => {
+        if (endDate.value && startDate.value) {
+            setMomentumSymbols([]);
+            const end_ = new Date(endDate.value);
+            const start_ = new Date(end_);
+            const selectStart = new Date(startDate.value)
+            start_.setFullYear(end_.getFullYear() - 1);
+
+            const startStr = start_.toISOString().split("T")[0].replace(/-/g, "-");
+            const selectStartStr = selectStart.toISOString().split("T")[0].replace(/-/g, "-");
+            const endStr = end_.toISOString().split("T")[0].replace(/-/g, "-");
+            setStart(startStr);
+            setSelectStart(selectStartStr);
+            setEnd(endStr);
+        }
+    }, [endDate, startDate])
+
     useEffect(() => {
         setFilterResults(null);
         setVisible(false);
-        setMomentumSymbols([])
+        setMomentumSymbols([]);
+        setError(null);
         if (preScreenResults && runningSelectRef.current === 0) {
             runningSelectRef.current += 1;
 
@@ -66,12 +88,12 @@ export function usePrelimBacktest(preScreenResults, endDate, setVisible) {
         if (momentumSymbols.length === 0) return;
 
         const run = async () => {
-            await selectPairs(momentumSymbols); 
+            await selectPairs(momentumSymbols, selectStart, end); 
             runningSelectRef.current = 0;
         };
 
         run();
-    }, [momentumSymbols, selectPairs]);
+    }, [momentumSymbols, selectPairs, selectStart, end]);
 
 
     useEffect(() => {
@@ -108,19 +130,13 @@ export function usePrelimBacktest(preScreenResults, endDate, setVisible) {
                 ),
             ];
 
-            const end = new Date(endDate.value);
-            const start = new Date(end);
-            start.setFullYear(end.getFullYear() - 1);
-
-            const startStr = start.toISOString().split("T")[0].replace(/-/g, "-");
-
             const params = Object.fromEntries(
             Object.entries(advancedParams)
                 .filter(([key, _]) => !key.endsWith("_weight"))
                 .map(([k, v]) => [
                     k, 
                     { 
-                        value: k === "startDate" ? startStr : k === "endDate" ? endDate.value : v.value, 
+                        value: k === "startDate" ? start : k === "endDate" ? end : v.value, 
                         lookback: v.lookback ?? false 
                     }
                 ])
