@@ -194,7 +194,7 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
     # --- 4. Build results ---
     results = []
     for strategy_key, curve in equity_curves.items():
-        initial = initial_capital * symbols[strategy_key]["weight"] if strategy_key != "overall" else initial_capital
+        initial = initial_capital * symbols[strategy_key]["weight"] if strategy_key != "overall" else sum([initial_capital * symbols[strategy_key]["weight"] for strategy_key in symbols])
         strategy_trades = trades[strategy_key] if strategy_key != "overall" else [trade for trade_list in trades.values() for trade in trade_list]
         results.append({
             "symbol": symbols[strategy_key]["symbol"] if strategy_key != "overall" else "overall",

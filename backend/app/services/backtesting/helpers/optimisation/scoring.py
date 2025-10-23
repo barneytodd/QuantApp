@@ -31,18 +31,21 @@ def composite_score(aggregated_results, scoring_params, metric_ranges, weights=N
     # --- Assign weights per symbol/strategy if not provided ---
     weights = weights or [1.0 / len(metrics_list)] * len(metrics_list)
 
-    def normalise_score(score, key):
+    def normalise_score(score, key, invert=False):
         if metric_ranges[key]["max"] == metric_ranges[key]["min"]:
             return 0.5
         normalised = (score - metric_ranges[key]["min"]) / (metric_ranges[key]["max"] - metric_ranges[key]["min"])
+        if invert:
+            normalised = 1 - normalised
         return normalised
+
 
     scores = []
     for w, metrics in zip(weights, metrics_list):
         # --- Normalize each metric to a comparable scale ---
         sharpe = normalise_score(metrics["sharpe"], "sharpe")           
         cagr = normalise_score(metrics["cagr"], "cagr")              
-        max_dd = 1 - normalise_score(metrics["max_drawdown"], "maxDrawdown")  
+        max_dd = normalise_score(metrics["max_drawdown"], "maxDrawdown", invert=True)  
         win_rate = normalise_score(metrics["win_rate"], "winRate")
 
         # --- Weighted sum of metrics based on scoring_params ---

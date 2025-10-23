@@ -46,7 +46,7 @@ def compute_walkforward_results(results, window_length):
                 equity_curve = [
                     {
                         "date": item["date"], 
-                        "value": item["value"] * initial_capitals.get(symbol, 10000) / assumed_initial_capital
+                        "value": item["value"] * initial_capitals.get(symbol, assumed_initial_capital) / assumed_initial_capital
                     }
                     for item in strat_result.get("equityCurve") if item["value"] is not None
                 ]
@@ -64,7 +64,7 @@ def compute_walkforward_results(results, window_length):
                 if trade_stats:
                     wins += strat_result["tradeStats"]["winRate"] * strat_result["tradeStats"]["numTrades"] / 100
                     total_trades += strat_result["tradeStats"]["numTrades"]
-
+        
         # Compute metrics and trade stats for each symbol in the window
         segment_result = []
         for symbol, strategy in strategies.items():
