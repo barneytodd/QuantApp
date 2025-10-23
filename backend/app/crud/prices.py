@@ -1,11 +1,11 @@
+import threading
 from datetime import date
 from typing import List, Optional
 
-from fastapi import Depends
-from sqlalchemy import text, or_
+from sqlalchemy import text
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
-from app.database import get_db
 from app.models.prices import Price
 from app.schemas.data.prices import PriceIn
 
@@ -108,42 +108,73 @@ def get_prices_light(db: Session, symbols, start, end, lookback):
 
 
 # === Upsert prices in bulk ===
-def upsert_prices(db: Session, price_list: List[PriceIn], chunk_size: int = 500):
+def upsert_prices(db: Session, price_list: list[PriceIn], chunk_size: int = 5000):
     """
-    Efficiently upsert a batch of PriceIn objects into the Price table.
+    Efficient, atomic bulk upsert into dbo.prices using SQL Server MERGE.
 
-    Args:
-        db: SQLAlchemy session
-        price_list: List of PriceIn objects
-        chunk_size: Number of rows per batch commit
+    - Uses a single raw connection and transaction.
+    - Creates a temporary table once, inserts all batches.
+    - Performs one MERGE at the end for consistency.
+    - Safe for multi-threaded use (thread-local temp table name).
     """
-    for i in range(0, len(price_list), chunk_size):
-        batch = price_list[i:i + chunk_size]
+    if not price_list:
+        return
 
-        # Collect keys (symbol, date) for existing lookup
-        keys = [(p.symbol, p.date) for p in batch]
-        conditions = [((Price.symbol == sym) & (Price.date == dt)) for sym, dt in keys]
-        
-        existing_rows = db.query(Price).filter(or_(*conditions)).all()
-        existing_dict = {(r.symbol, r.date): r for r in existing_rows}
+    # Get raw connection from SQLAlchemy engine � stays consistent for transaction
+    engine: Engine = db.get_bind()
+    with engine.begin() as connection:  # ensures commit/rollback automatically
+        raw_conn = connection.connection
+        cursor = raw_conn.cursor()
 
-        to_insert = []
+        temp_table = f"#TempPrices_{threading.get_ident()}"
 
-        for price in batch:
-            key = (price.symbol, price.date)
-            if key in existing_dict:
-                # Update existing row
-                db_price = existing_dict[key]
-                db_price.open = price.open
-                db_price.high = price.high
-                db_price.low = price.low
-                db_price.close = price.close
-                db_price.volume = price.volume
-            else:
-                # Collect for bulk insert
-                to_insert.append(Price(**price.dict()))
+        # Recreate temp table only once
+        cursor.execute(f"""
+            IF OBJECT_ID('tempdb..{temp_table}') IS NOT NULL DROP TABLE {temp_table};
+            CREATE TABLE {temp_table} (
+                symbol NVARCHAR(32) NOT NULL,
+                [date] DATE NOT NULL,
+                [open] FLOAT,
+                [high] FLOAT,
+                [low] FLOAT,
+                [close] FLOAT,
+                volume INT
+            );
+        """)
 
-        if to_insert:
-            db.bulk_save_objects(to_insert)
+        # Enable fast executemany for performance
+        cursor.fast_executemany = True
+        insert_sql = f"""
+            INSERT INTO {temp_table} (symbol, [date], [open], [high], [low], [close], volume)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """
 
-        db.commit()
+        # Insert in chunks
+        for i in range(0, len(price_list), chunk_size):
+            batch = price_list[i:i + chunk_size]
+            rows = [
+                (p.symbol, p.date, p.open, p.high, p.low, p.close, p.volume)
+                for p in batch
+            ]
+            cursor.executemany(insert_sql, rows)
+
+        # Perform one MERGE operation
+        merge_sql = f"""
+            MERGE dbo.prices AS target
+            USING {temp_table} AS source
+                ON target.symbol = source.symbol AND target.[date] = source.[date]
+            WHEN MATCHED THEN
+                UPDATE SET
+                    target.[open] = source.[open],
+                    target.[high] = source.[high],
+                    target.[low] = source.[low],
+                    target.[close] = source.[close],
+                    target.volume = source.volume
+            WHEN NOT MATCHED THEN
+                INSERT ([symbol], [date], [open], [high], [low], [close], [volume])
+                VALUES (source.symbol, source.[date], source.[open],
+                        source.[high], source.[low], source.[close], source.volume);
+        """
+        cursor.execute(merge_sql)
+        # commit handled by `with engine.begin()`
+        cursor.close()
