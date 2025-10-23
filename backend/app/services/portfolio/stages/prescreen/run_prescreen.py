@@ -95,9 +95,13 @@ async def fetch_prices(symbols, start, end, queue: asyncio.Queue, stop_signal, l
         if not batch:
             break
 
-        conn = await get_connection()
-        cursor = await conn.cursor()
+        conn = None
+        cursor = None
+        
         try:
+            conn = await get_connection()
+            cursor = await conn.cursor()
+
             placeholders = ", ".join(["?"] * len(batch))
             sql = f"""
                 SELECT symbol, [date], [close], [high], [low]
@@ -157,8 +161,11 @@ async def fetch_prices(symbols, start, end, queue: asyncio.Queue, stop_signal, l
         except Exception as e:
             print(f"[fetch_prices] Error fetching batch: {e}")
         finally:
-            await cursor.close()
-            await release_connection(conn)
+            if cursor:
+                await cursor.close()
+            if conn:
+                await release_connection(conn)
+                
 
     # Signal the consumer to stop
     await queue.put(stop_signal)
