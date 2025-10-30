@@ -12,7 +12,6 @@ export function usePrelimBacktest(preScreenResults, startDate, endDate, setVisib
     const runningSelectRef = useRef(0);
 
     const [allSymbols, setAllSymbols] = useState([]);
-    const [momentumSymbols, setMomentumSymbols] = useState([]);
     const [start, setStart] = useState(null);
     const [selectStart, setSelectStart] = useState(null);
     const [end, setEnd] = useState(null);
@@ -47,7 +46,6 @@ export function usePrelimBacktest(preScreenResults, startDate, endDate, setVisib
     //set date range
     useEffect(() => {
         if (endDate.value && startDate.value) {
-            setMomentumSymbols([]);
             const end_ = new Date(endDate.value);
             const start_ = new Date(end_);
             const selectStart = new Date(startDate.value)
@@ -65,7 +63,6 @@ export function usePrelimBacktest(preScreenResults, startDate, endDate, setVisib
     useEffect(() => {
         setFilterResults(null);
         setVisible(false);
-        setMomentumSymbols([]);
         setError(null);
         if (preScreenResults && runningSelectRef.current === 0) {
             runningSelectRef.current += 1;
@@ -73,27 +70,25 @@ export function usePrelimBacktest(preScreenResults, startDate, endDate, setVisib
             const symbols = Object.keys(preScreenResults);
             setAllSymbols(symbols);
             
-            const momentumSyms = Object.entries(preScreenResults)
-            .filter(([_, strategies]) => strategies.includes("mean_reversion"))
-            .map(([symbol, _]) => symbol);
-            
-            setMomentumSymbols(momentumSyms);            
+            const meanReversionSyms = Object.entries(preScreenResults)
+                .filter(([_, strategies]) => strategies.includes("mean_reversion"))
+                .map(([symbol, _]) => symbol);
+                
+            const run = async () => {
+                try {
+                    await selectPairs(meanReversionSyms, selectStart, end); 
+                    runningSelectRef.current = 0;
+                }
+                catch(err) {
+                    alert("pair Selection Failed");
+                    setError(err);
+                }
+            };
+
+            run();            
         }
         
-    }, [preScreenResults, setVisible])
-
-    
-    // set pairs and symbols
-    useEffect(() => {
-        if (momentumSymbols.length === 0) return;
-
-        const run = async () => {
-            await selectPairs(momentumSymbols, selectStart, end); 
-            runningSelectRef.current = 0;
-        };
-
-        run();
-    }, [momentumSymbols, selectPairs, selectStart, end]);
+    }, [preScreenResults, setVisible, selectPairs, selectStart, end])
 
 
     useEffect(() => {
