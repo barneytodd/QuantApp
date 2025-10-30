@@ -3,13 +3,14 @@ import os
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Manager
 
+from app.database import SessionLocal
 from app.services.backtesting.tasks.segment_executor import run_segment
 from app.stores.task_stores import walkforward_tasks_store as tasks_store
 from app.utils.data_helpers import fetch_price_data_light
 
 # === Walkforward async engine ===
 async def run_walkforward_async(
-    task_id, windows, all_symbols, strategy_symbols, params, lookback, db, window_length=3
+    task_id, windows, all_symbols, strategy_symbols, params, lookback, window_length=3
 ):
     """
     Run a walk-forward backtest across multiple time windows in parallel.
@@ -22,7 +23,6 @@ async def run_walkforward_async(
         strategy_symbols: dict mapping symbol-strategy keys to configs
         params: global and strategy-specific parameters
         lookback: initial bars to skip
-        db: database session to fetch price data
         window_length: number of years in each window
     """
 
@@ -52,19 +52,17 @@ async def run_walkforward_async(
     asyncio.create_task(sync_progress_state_to_store(task_id, progress_state))
 
     # --- Run backtest segments in parallel using process pool ---
-    with ProcessPoolExecutor(max_workers=os.cpu_count() - 1 or 3) as pool:
+    max_workers = max(1, (os.cpu_count() or 4) - 1)
+    with ProcessPoolExecutor(max_workers=max_workers) as pool:
         loop = asyncio.get_running_loop()
         tasks = []
 
         for seg_id, window in enumerate(windows, start=1):
-            # Fetch only the required price data for this segment
-            data = fetch_price_data_light(db, all_symbols, window["start"], window["end"], lookback)
-
             # Submit segment execution to process pool
             tasks.append(loop.run_in_executor(
                 pool,
-                run_segment,
-                seg_id, data, strategy_symbols, params, lookback, progress_state
+                run_segment_with_data_fetch,
+                seg_id, all_symbols, strategy_symbols, params, lookback, progress_state, window["start"], window["end"]
             ))
 
         # Await completion of all segment backtests
@@ -74,6 +72,17 @@ async def run_walkforward_async(
     progress_state["done_segments"] = len(windows)
     progress_state["overall_progress"] = 100.0
     tasks_store[task_id]["status"] = "done"
+
+def run_segment_with_data_fetch(segment_id, all_symbols, strategy_symbols, params, lookback, progress_state, start, end):
+    """Worker: fetch data and run one segment inside its own process."""
+    db = SessionLocal()
+    try:
+        data = fetch_price_data_light(db, all_symbols, start, end, lookback)
+        result = run_segment(segment_id, data, strategy_symbols, params, lookback, progress_state)
+    except Exception as e:
+        print(e)
+    finally:
+        db.close()
 
 
 async def sync_progress_state_to_store(task_id, progress_state):

@@ -13,7 +13,7 @@ from app.services.backtesting.helpers.data import (
 from app.stores.task_stores import walkforward_tasks_store as tasks_store
 
 
-async def run_strategy_backtest(db: Session, cfg, global_params, window_length=3):
+async def run_strategy_backtest(cfg, global_params, window_length=3):
     """
     Run a full strategy backtest using a walk-forward approach.
 
@@ -61,7 +61,7 @@ async def run_strategy_backtest(db: Session, cfg, global_params, window_length=3
     # --- Run asynchronous walk-forward backtest ---
     # Await the async task directly instead of creating a separate task
     await run_walkforward_async(
-        task_id, windows, all_symbols, strategy_symbols, params, lookback, db, window_length=window_length
+        task_id, windows, all_symbols, strategy_symbols, params, lookback, window_length=window_length
     )
 
     # Retrieve results from the in-memory task store

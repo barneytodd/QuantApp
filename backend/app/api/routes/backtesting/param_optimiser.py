@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.database import get_db
 from app.schemas import ParamOptimisationRequest
 from app.services.backtesting.engines.param_optimiser import optimise_parameters
 from app.stores.task_stores import param_optimisation_tasks_store as tasks_store
@@ -15,7 +14,7 @@ router = APIRouter()
 
 # === Run parameter optimisation for one or multiple strategies ===
 @router.post("/optimise")
-def optimise_strategy_parameters(payload: ParamOptimisationRequest, db: Session = Depends(get_db)):
+def optimise_strategy_parameters(payload: ParamOptimisationRequest):
     """
     Start a parameter optimisation for given strategies.
 
@@ -47,7 +46,7 @@ def optimise_strategy_parameters(payload: ParamOptimisationRequest, db: Session 
         "winRate": {"min": 25, "max": 75}          
     }
 
-    results = optimise_parameters(db, strategies_config, global_params, optimisation_params, scoring_params, metric_ranges)
+    results = optimise_parameters(strategies_config, global_params, optimisation_params, scoring_params, metric_ranges)
     return results
 
 

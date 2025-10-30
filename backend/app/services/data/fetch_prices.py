@@ -121,8 +121,11 @@ def ingest_missing_data_parallel(db, symbols, start, end, chunk_size=50, max_wor
                     all_records.extend([PriceIn(**r) for r in records])
 
             if all_records:
-                upsert_prices(db_thread, all_records, chunk_size=500)
-                db_thread.commit()
+                try:
+                    upsert_prices(db_thread, all_records, chunk_size=500)
+                    db_thread.commit()
+                except Exception as e:
+                    print(e)
                 print(f"Inserted/Updated {len(all_records)} records for {symbol}")
 
     # --- Split symbols into chunks and process in parallel threads ---

@@ -20,7 +20,6 @@ from app.utils.data_helpers import fetch_price_data
 
 router = APIRouter()
 
-
 # === Standard full-period backtest ===
 @router.post("/backtest")
 def run_standard_backtest(payload: StrategyRequest, db: Session = Depends(get_db)):
@@ -46,7 +45,7 @@ def run_standard_backtest(payload: StrategyRequest, db: Session = Depends(get_db
 
     if not results:
         raise HTTPException(status_code=404, detail="No price data found for given symbols")
-
+    
     return results
 
 
@@ -55,7 +54,6 @@ def run_standard_backtest(payload: StrategyRequest, db: Session = Depends(get_db
 async def start_walkforward_backtest(
     payload: StrategyRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
 ):
     """
     Start a walk-forward backtest asynchronously.
@@ -91,7 +89,7 @@ async def start_walkforward_backtest(
     }
 
     # Launch async walkforward execution in background
-    asyncio.create_task(run_walkforward_async(task_id, windows, all_symbols, strategy_symbols, params, lookback, db))
+    asyncio.create_task(run_walkforward_async(task_id, windows, all_symbols, strategy_symbols, params, lookback, window_length))
 
     return {"task_id": task_id}
 
@@ -113,6 +111,11 @@ async def stream_walkforward_progress(task_id: str):
         last_state = {}
 
         while True:
+            if not tasks_store or task_id not in tasks_store:
+                # Yield immediate placeholder event
+                yield f"data: {json.dumps({'status': 'pending', 'overall_progress': 0.0})}\n\n"
+                await asyncio.sleep(0.3)
+                continue
             task = tasks_store.get(task_id)
             if not task:
                 yield f"data: {json.dumps({'error': 'Task not found'})}\n\n"

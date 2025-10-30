@@ -6,7 +6,7 @@ from app.services.backtesting.helpers.optimisation import make_single_strategy_o
 from app.stores.task_stores import param_optimisation_tasks_store as tasks_store
 
 
-def _run_single_study(db, strategy_name, cfg, global_params, scoring_params, metric_ranges, window_length, n_trials):
+def _run_single_study(strategy_name, cfg, global_params, scoring_params, metric_ranges, window_length, n_trials):
     """
     Run a single Optuna study for one strategy.
 
@@ -29,7 +29,7 @@ def _run_single_study(db, strategy_name, cfg, global_params, scoring_params, met
     study = optuna.create_study(direction="maximize")
 
     # Wrap the trial function with your custom objective
-    objective = make_single_strategy_objective(db, strategy_name, cfg, global_params, scoring_params, metric_ranges, window_length)
+    objective = make_single_strategy_objective(strategy_name, cfg, global_params, scoring_params, metric_ranges, window_length)
     
     def trial_callback(study, trial):
         """
@@ -69,7 +69,7 @@ def _run_single_study(db, strategy_name, cfg, global_params, scoring_params, met
     }
 
 
-async def optimise_multiple_strategies_async(db, strategies_config, global_params, scoring_params, metric_ranges, n_trials=50, window_length=3):
+async def optimise_multiple_strategies_async(strategies_config, global_params, scoring_params, metric_ranges, n_trials=50, window_length=3):
     """
     Run multiple strategies sequentially using asyncio.
 
@@ -87,7 +87,6 @@ async def optimise_multiple_strategies_async(db, strategies_config, global_param
     results = {}
     for strategy_name, cfg in strategies_config.items():
         result = _run_single_study(
-            db,
             strategy_name,
             cfg,
             global_params,
@@ -104,7 +103,7 @@ async def optimise_multiple_strategies_async(db, strategies_config, global_param
     return results
 
 
-def optimise_parameters(db, strategies_config, global_params, optimisation_params, scoring_params, metric_ranges):
+def optimise_parameters(strategies_config, global_params, optimisation_params, scoring_params, metric_ranges):
     """
     FastAPI synchronous entrypoint for parameter optimisation.
 
@@ -135,5 +134,5 @@ def optimise_parameters(db, strategies_config, global_params, optimisation_param
 
     # Run the async optimisation loop synchronously
     return asyncio.run(
-        optimise_multiple_strategies_async(db, strategies_config, global_params, scoring_params, metric_ranges, n_trials, window_length)
+        optimise_multiple_strategies_async(strategies_config, global_params, scoring_params, metric_ranges, n_trials, window_length)
     )

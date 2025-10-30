@@ -1,4 +1,5 @@
 import threading
+import uuid
 from datetime import date
 from typing import List, Optional
 
@@ -56,79 +57,77 @@ def get_prices(
 
 
 # === Lightweight price fetch using raw SQL ===
-def get_prices_light(db: Session, symbols, start, end, lookback):
+def get_prices_light(db, symbols, start, end, lookback=0):
     """
-    Fetch price data for multiple symbols efficiently using raw SQL.
-    Supports lookback for start date adjustment.
-
+    Fetch OHLC price data for multiple symbols efficiently without IN clause
+    and with optional lookback, using window functions.
+    
     Args:
-        db: SQLAlchemy session
-        symbols: List of symbols
-        start: Start date
-        end: End date
-        lookback: Optional lookback window in trading days
-
+        db (Session): SQLAlchemy session
+        symbols (list[str]): list of symbols
+        start (date/datetime): start date
+        end (date/datetime): end date
+        lookback (int): optional number of trading days to include before start
+    
     Returns:
-        List[dict]: Each dict contains symbol, date, close, high, low
+        pd.DataFrame: columns=['symbol', 'date', 'close', 'high', 'low']
     """
     if not symbols:
-        return []
+        return None
 
-    if start and lookback and lookback > 0:
-        subquery = (
-            db.query(Price.date)
-            .filter(Price.symbol.in_(symbols), Price.date <= start)
-            .order_by(Price.date.desc())
-            .limit(lookback)
-            .subquery()
-        )
-        cutoff_date = db.query(subquery.c.date).order_by(subquery.c.date.asc()).first()
-        if cutoff_date:
-            start = cutoff_date[0]
+    # --- Use temp table approach to avoid IN ---
+    # 1. Create a table variable with symbols
+    symbols_table = ", ".join(f"('{s}')" for s in symbols)
+    sql = f"""
+    WITH symbol_list(symbol) AS (
+        SELECT * FROM (VALUES {symbols_table}) AS t(symbol)
+    ),
+    ranked AS (
+        SELECT p.symbol, p.[date], p.[close], p.[high], p.[low],
+               ROW_NUMBER() OVER(PARTITION BY p.symbol ORDER BY p.[date]) AS rn
+        FROM dbo.prices p
+        JOIN symbol_list s ON s.symbol = p.symbol
+        WHERE p.[date] <= :end
+    )
+    SELECT symbol, [date], [close], [high], [low]
+    FROM ranked
+    WHERE [date] >= DATEADD(DAY, -:lookback, :start) -- lookback applied
+      AND [date] <= :end
+    ORDER BY symbol, [date]
+    """
 
-    # Build parameterized query
-    placeholders = ", ".join([f":s{i}" for i in range(len(symbols))])
-    params = {f"s{i}": sym for i, sym in enumerate(symbols)}
-    params.update({"start": start, "end": end})
+    params = {"start": start, "end": end, "lookback": lookback}
+    conn = db.connection()
+    result = conn.execution_options(stream_results=True).execute(text(sql), params)
 
-    sql = text(f"""
-        SELECT symbol, [date], [close], [high], [low]
-        FROM dbo.prices WITH (NOLOCK)
-        WHERE symbol IN ({placeholders})
-          AND [date] BETWEEN :start AND :end
-        ORDER BY symbol, [date];
-    """)
-
-    result = db.execute(sql, params)
-
-    return [
-        {"symbol": r.symbol, "date": r.date, "close": r.close, "high": r.high, "low": r.low}
-        for r in result
-    ]
+    for row in result:
+        yield {
+            "symbol": row.symbol,
+            "date": row.date,
+            "close": row.close,
+            "high": row.high,
+            "low": row.low,
+        }
 
 
 # === Upsert prices in bulk ===
-def upsert_prices(db: Session, price_list: list[PriceIn], chunk_size: int = 5000):
+def upsert_prices(db: Session, price_list: list, chunk_size: int = 5000):
     """
     Efficient, atomic bulk upsert into dbo.prices using SQL Server MERGE.
-
-    - Uses a single raw connection and transaction.
-    - Creates a temporary table once, inserts all batches.
-    - Performs one MERGE at the end for consistency.
-    - Safe for multi-threaded use (thread-local temp table name).
+    Handles duplicate (symbol, date) entries gracefully.
     """
     if not price_list:
         return
 
-    # Get raw connection from SQLAlchemy engine � stays consistent for transaction
     engine: Engine = db.get_bind()
-    with engine.begin() as connection:  # ensures commit/rollback automatically
+
+    with engine.begin() as connection:
         raw_conn = connection.connection
         cursor = raw_conn.cursor()
 
-        temp_table = f"#TempPrices_{threading.get_ident()}"
+        temp_table = f"#TempPrices_{uuid.uuid4().hex}"
 
-        # Recreate temp table only once
+        # Drop existing temp table
         cursor.execute(f"""
             IF OBJECT_ID('tempdb..{temp_table}') IS NOT NULL DROP TABLE {temp_table};
             CREATE TABLE {temp_table} (
@@ -142,39 +141,57 @@ def upsert_prices(db: Session, price_list: list[PriceIn], chunk_size: int = 5000
             );
         """)
 
-        # Enable fast executemany for performance
         cursor.fast_executemany = True
         insert_sql = f"""
             INSERT INTO {temp_table} (symbol, [date], [open], [high], [low], [close], volume)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """
 
-        # Insert in chunks
         for i in range(0, len(price_list), chunk_size):
             batch = price_list[i:i + chunk_size]
+            for j, p in enumerate(batch):
+                try:
+                    if abs(p.volume or 0) > 2_000_000_000:
+                        print(f" Volume too large: {p.symbol} {p.date} volume={p.volume}")
+                except Exception as e:
+                    print(f"Bad volume at row {j}: {p} -> {e}")
             rows = [
                 (p.symbol, p.date, p.open, p.high, p.low, p.close, p.volume)
                 for p in batch
             ]
             cursor.executemany(insert_sql, rows)
 
-        # Perform one MERGE operation
+        # Deduplicate and merge inline in one batch
         merge_sql = f"""
-            MERGE dbo.prices AS target
-            USING {temp_table} AS source
+            ;WITH Deduped AS (
+                SELECT
+                    symbol,
+                    [date],
+                    AVG([open])  AS [open],
+                    AVG([high])  AS [high],
+                    AVG([low])   AS [low],
+                    AVG([close]) AS [close],
+                    AVG(volume)  AS volume
+                FROM {temp_table}
+                GROUP BY symbol, [date]
+            )
+            MERGE dbo.prices WITH (HOLDLOCK) AS target
+            USING Deduped AS source
                 ON target.symbol = source.symbol AND target.[date] = source.[date]
             WHEN MATCHED THEN
                 UPDATE SET
-                    target.[open] = source.[open],
-                    target.[high] = source.[high],
-                    target.[low] = source.[low],
+                    target.[open]  = source.[open],
+                    target.[high]  = source.[high],
+                    target.[low]   = source.[low],
                     target.[close] = source.[close],
-                    target.volume = source.volume
+                    target.volume  = source.volume
             WHEN NOT MATCHED THEN
                 INSERT ([symbol], [date], [open], [high], [low], [close], [volume])
                 VALUES (source.symbol, source.[date], source.[open],
                         source.[high], source.[low], source.[close], source.volume);
         """
         cursor.execute(merge_sql)
-        # commit handled by `with engine.begin()`
+
+        # Cleanup
+        cursor.execute(f"DROP TABLE {temp_table};")
         cursor.close()

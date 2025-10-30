@@ -5,7 +5,7 @@ from .scoring import composite_score
 from app.stores.task_stores import param_optimisation_tasks_store as tasks_store
 
 
-def make_single_strategy_objective(db, strategy_name, cfg, global_params, scoring_params, metric_ranges, window_length=3):
+def make_single_strategy_objective(strategy_name, cfg, global_params, scoring_params, metric_ranges, window_length=3):
     """
     Create an Optuna-compatible objective function for a single strategy.
 
@@ -52,7 +52,7 @@ def make_single_strategy_objective(db, strategy_name, cfg, global_params, scorin
         }
 
         # --- Run walk-forward backtest asynchronously ---
-        backtest_result = await run_strategy_backtest(db, backtest_cfg, global_params, window_length)
+        backtest_result = await run_strategy_backtest(backtest_cfg, global_params, window_length)
 
         # Separate overall portfolio results vs individual symbol-strategy results
         overall_results = [r for r in backtest_result if r["symbol"] == "overall"]
