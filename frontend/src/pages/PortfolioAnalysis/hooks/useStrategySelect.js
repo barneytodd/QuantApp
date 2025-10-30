@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { params } from "../params/strategySelectParams"
 import { useStrategyParams } from "../../Backtesting/hooks/useStrategyParams";
+import { strategies } from "../../Backtesting/parameters/strategyRegistry";
 
 export function useStrategySelect(prelimBacktestResults, startDate, endDate, setVisible) {
     const [paramValues, setParamValues] = useState({});
@@ -10,11 +11,12 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
     const [error, setError] = useState(null);
     const [uploadComplete, setUploadComplete] = useState(true);
     const [progress, setProgress] = useState({});
+    const [portfolio, setPortfolio] = useState({});
 
     const allSymbols = useMemo(
         () => [
             ...new Set(
-            Object.keys(prelimBacktestResults ?? {}).flatMap((s) => s.split("-"))
+            Object.keys(prelimBacktestResults ?? {}).flatMap((s) => s.split("_")[0].split("-"))
             )
         ],
         [prelimBacktestResults]
@@ -156,6 +158,41 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
         return finalResults;
     };
 
+    const convertToPortfolio = (results) => {
+        // Count total number of symbols
+        const totalSymbols = Object.keys(results).length;
+        const globalWeight = 1 / totalSymbols;
+
+        // Group by strategy
+        const symbols = Object.entries(results).reduce((acc, [symbol, info]) => {
+            if (!acc[info.strategy]) acc[info.strategy] = [];
+            acc[info.strategy].push({ symbol, weight: globalWeight });
+            return acc;
+        }, {});
+
+        const parameters = Object.fromEntries(
+            Object.entries(strategies)
+            .filter(([strat, info]) => strat !== "custom")
+            .map(([strat, info]) => [
+                strat,
+                Object.fromEntries(
+                    info.params.map((param) => ([
+                        param.name,
+                        param.default
+                    ]))
+                )
+            ])
+        )
+
+        const result = Object.fromEntries(
+            Object.entries(symbols).map(([strat, syms]) => [
+                strat, 
+                {symbols: syms, params: parameters[strat]}
+            ])
+        )
+        return result;
+    }
+
     const runStrategySelect = async () => {
         if (!prelimBacktestResults) return;
         setIsLoading(true);
@@ -244,14 +281,14 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
             const aggRes = await fetch(`http://localhost:8000/api/strategies/backtest/walkforward/results/${task_id}`);
             if (!aggRes.ok) throw new Error("Failed to fetch aggregated results");
             const data = await aggRes.json();
-            console.log(data.aggregated_results)
             const symbolResults = data.aggregated_results
                 .filter(item => item.symbol !== "overall")
                 .reduce((acc, item) => {
-                    if (!acc[item.symbol]) {
-                        acc[item.symbol] = {};
+                    const symbol = item.symbol.split("_")[0]
+                    if (!acc[symbol]) {
+                        acc[symbol] = {};
                     }
-                    acc[item.symbol][item.strategy] = {
+                    acc[symbol][item.strategy] = {
                             sharpe: item.avgSharpe,
                             cagr: item.avgCAGR,
                             maxDrawdown: item.avgMaxDrawdown,
@@ -259,13 +296,17 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
                         }
                     return acc;
                 }, {});
-            console.log(symbolResults)
-            const strategyBySymbol = chooseStrategy(symbolResults)
+            console.log(symbolResults);
+            const strategyBySymbol = chooseStrategy(symbolResults);
             console.log(strategyBySymbol)
-            const finalResults = chooseSingleOrPair(strategyBySymbol)
+            const finalResults = chooseSingleOrPair(strategyBySymbol);
             console.log(finalResults)
             setFilterResults(finalResults);
-            return data;
+            try {
+                setPortfolio(convertToPortfolio(finalResults));
+            } catch (err) {
+                console.log(err)
+            }
         } catch (err) {
             setError(err);
             alert("Backtest failed");
@@ -285,6 +326,7 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
         error,
         strategyType,
         uploadComplete,
-        progress
+        progress,
+        portfolio
     }
 }

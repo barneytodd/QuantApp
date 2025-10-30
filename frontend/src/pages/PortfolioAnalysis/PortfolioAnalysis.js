@@ -70,7 +70,8 @@ export default function PortfolioBuilder() {
     error: strategySelectError,
     strategyType: strategySelectStrategyType,
     uploadComplete: strategySelectUploadComplete,
-    progress: strategySelectProgress
+    progress: strategySelectProgress,
+    portfolio: strategySelectPortfolio
   } = useStrategySelect(backtestFilterResults, startDate, endDate, setShowStrategySelector)
 
   const {
@@ -80,7 +81,8 @@ export default function PortfolioBuilder() {
     runParamOptimisation,
     optimLoading: paramOptimisationLoading,
     optimError: paramOptimisationError,
-    progress: paramOptimisationProgress
+    progress: paramOptimisationProgress,
+    portfolio: paramOptimisationPortfolio
   } = useParamOptimisation(strategySelectResults, strategySelectMetricRanges, startDate, endDate, setShowParamOptimisation)
 
   const {
@@ -122,8 +124,8 @@ export default function PortfolioBuilder() {
     await runPortfolioWeights();
   }
 
-  const handleSavePortfolioToDB = async () => {
-    await savePortfolioToDB(portfolioWeightsResult);
+  const handleSavePortfolioToDB = async (result) => {
+    await savePortfolioToDB(result);
   }
 
   useEffect(() => {
@@ -205,6 +207,10 @@ export default function PortfolioBuilder() {
         strategyType={strategySelectStrategyType}
         uploadComplete={strategySelectUploadComplete}
         progress={strategySelectProgress}
+        onSavePortfolio={handleSavePortfolioToDB}
+        savingPortfolio={savingPortfolio}
+        savedPortfolio={savedPortfolio}
+        portfolio={strategySelectPortfolio}
       />
       <ParamOptimisation 
         onRunParamOptimisation={handleParamOptimisation}
@@ -217,6 +223,10 @@ export default function PortfolioBuilder() {
         paramOptimisationError={paramOptimisationError}
         strategySelectResults={strategySelectResults}
         progress={paramOptimisationProgress}
+        onSavePortfolio={handleSavePortfolioToDB}
+        savingPortfolio={savingPortfolio}
+        savedPortfolio={savedPortfolio}
+        portfolio={paramOptimisationPortfolio}
       />
       <PortfolioWeights 
         onRunPortfolioWeights={handlePortfolioWeights}

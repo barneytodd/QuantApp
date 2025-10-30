@@ -5,6 +5,7 @@ import { params } from "../params/paramOptimisationParams"
 export function useParamOptimisation(strategySelectResults, metricRanges, startDate, endDate, setVisible) {
     const [optimisationParams, setOptimisationParams] = useState({});
     const [progress, setProgress] = useState({});
+    const [portfolio, setPortfolio] = useState({});
     const evtSourceRef = useRef(null);
     
 
@@ -39,6 +40,26 @@ export function useParamOptimisation(strategySelectResults, metricRanges, startD
         };
     }, [strategySelectResults, setVisible, setOptimisationResult])
 
+    useEffect(() => {
+        if (!optimisationResult || !strategySelectResults) return;
+        const totalSymbols = Object.keys(strategySelectResults).length;
+        const globalWeight = 1 / totalSymbols;
+
+        // Group by strategy
+        const symbols = Object.entries(strategySelectResults).reduce((acc, [symbol, info]) => {
+            if (!acc[info.strategy]) acc[info.strategy] = [];
+            acc[info.strategy].push({ symbol, weight: globalWeight });
+            return acc;
+        }, {});
+
+        const result = Object.fromEntries(
+            Object.entries(symbols).map(([strat, syms]) => [
+                strat, 
+                {symbols: syms, params: optimisationResult[strat].best_params}
+            ])
+        )
+        setPortfolio(result)
+    }, [optimisationResult, strategySelectResults])
 
     const runParamOptimisation = async () => {
         if (evtSourceRef.current) {
@@ -52,7 +73,6 @@ export function useParamOptimisation(strategySelectResults, metricRanges, startD
             console.warn("No strategy selection results provided");
             return;
         }
-        console.log(strategySelectResults)
         setOptimisationResult(null);
         setProgress({});
 
@@ -123,6 +143,7 @@ export function useParamOptimisation(strategySelectResults, metricRanges, startD
         runParamOptimisation,
         optimLoading,
         optimError,
-        progress
+        progress, 
+        portfolio
     }
 }
