@@ -116,8 +116,10 @@ async def fetch_prices(symbols, start, end, queue: asyncio.Queue, stop_signal, l
             rows = await cursor.fetchall()
             t1 = time.perf_counter()
 
+            # Filter out missing and delisted symbols
             batch_symbols = set(batch)
-            returned_symbols = set(r[0] for r in rows)
+            recent_cutoff = end - relativedelta(months=3)
+            returned_symbols = set(r[0] for r in rows if r[1] >= recent_cutoff)
             missing_symbols = batch_symbols - returned_symbols
 
             # Update missing symbol results in tasks_store
