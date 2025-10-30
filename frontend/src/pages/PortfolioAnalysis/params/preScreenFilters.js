@@ -42,21 +42,21 @@ export const filters = {
             name: "percentageAboveMA",
             label: "Min frequency that close > MA (%)",
             type: "number",
-            default: 70,
+            default: 65,
             info: "Minimum frequency that close > 200 day MA to be considered for momentum strategies"
         },
         {
             name: "avSlope",
             label: "Minimum Required Average MA Slope",
             type: "number",
-            default: 0.015,
+            default: 0.01,
             info: "Minimum average slope of 200 day MA"
         },
         {
             name: "posReturns",
             label: "Min Percentage of Daily Returns > 0",
             type: "number",
-            default: 55,
+            default: 53,
             info: "Minimum frequency that daily returns are positive"
         },
         {

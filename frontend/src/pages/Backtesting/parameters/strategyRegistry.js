@@ -21,7 +21,7 @@ export const strategies = {
         label: "Long SMA Period", 
         type: "number", 
         default: 50, 
-        bounds: [20, 200], 
+        bounds: [30, 200], 
         category: "basic", 
         optimise: true, 
         integer: true,
