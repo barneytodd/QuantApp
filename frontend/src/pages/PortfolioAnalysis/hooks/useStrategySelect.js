@@ -94,9 +94,7 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
         const bestBySymbol = {};
         const ranges = computeMetricRanges(results);
 
-
         Object.entries(results).forEach(([symbol, strategyResults]) => {
-
             let bestStrategy = null;
             let bestScore = -Infinity;
             
@@ -296,11 +294,8 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
                         }
                     return acc;
                 }, {});
-            console.log(symbolResults);
             const strategyBySymbol = chooseStrategy(symbolResults);
-            console.log(strategyBySymbol)
             const finalResults = chooseSingleOrPair(strategyBySymbol);
-            console.log(finalResults)
             setFilterResults(finalResults);
             try {
                 setPortfolio(convertToPortfolio(finalResults));
