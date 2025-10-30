@@ -38,7 +38,7 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
     price_matrix = prepare_price_matrix(data)
 
     # --- 2. Generate signals ---
-    signal_matrix = generate_signals(price_matrix, symbols, params)
+    signal_matrix = pd.DataFrame(generate_signals(price_matrix, symbols, params))
     signal_matrix = signal_matrix.ffill()
     signal_matrix = signal_matrix.fillna(0)
 

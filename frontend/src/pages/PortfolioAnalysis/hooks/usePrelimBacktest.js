@@ -153,10 +153,11 @@ export function usePrelimBacktest(preScreenResults, startDate, endDate, setVisib
             const symbolStrategies = data
                 .filter(item => item.metrics?.sharpe_ratio > filterValues?.sharpe?.value && item.symbol !== "overall")
                 .reduce((acc, item) => {
-                    if (!acc[item.symbol]) {
-                        acc[item.symbol] = [];
+                    const symbol = item.symbol.split("_")[0]
+                    if (!acc[symbol]) {
+                        acc[symbol] = [];
                     }
-                    acc[item.symbol].push(item.strategy);
+                    acc[symbol].push(item.strategy);
                     return acc;
                 }, {});
             setFilterResults({...symbolStrategies});
