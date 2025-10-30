@@ -167,8 +167,10 @@ def close_position(
         effective_entry = calc_effective_price(entry_price, slippage_pct, entry_action)
 
         pnl = position * (effective_exit - effective_entry)
-        return_pct = (effective_exit - effective_entry) / effective_entry * 100 if direction == "Long" else (effective_entry - effective_exit) / effective_entry * 100
-
+        if effective_entry != 0:
+            return_pct = (effective_exit - effective_entry) / effective_entry * 100 if direction == "Long" else (effective_entry - effective_exit) / effective_entry * 100
+        else:
+            return_pct = 0
         trades.append({
             "symbol": sym,
             "direction": direction,

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from ..helpers.backtest import (
@@ -42,7 +43,7 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
     signal_matrix = signal_matrix.ffill()
     signal_matrix = signal_matrix.fillna(0)
 
-    trade_indicator = signal_matrix.diff().fillna(signal_matrix.iloc[0])
+    trade_indicator = signal_matrix.diff().fillna(0)
     trade_indicator = trade_indicator.astype(int)
     position_indicator = trade_indicator.cumsum()
 
@@ -68,7 +69,14 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
         for sym in syms:
             all_trades[symbol_key] = []
         for date in trade_indicator.index:
-            trade = trade_indicator.at[date, symbol_key]
+            skip = False
+            for sym in syms:
+                if price_matrix.at[date, sym] == 0:
+                    skip = True
+            if skip:
+                trade = 0
+            else:
+                trade = trade_indicator.at[date, symbol_key]
             pos = position_indicator.at[date, symbol_key]
             if trade == 0:
                 pass
@@ -85,10 +93,11 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
                     date, capital, positions,
                     syms, slippage_pct, transaction_pct, transaction_fixed
                 )
+            
             equity_matrix.loc[date, symbol_key] = capital + sum(
                 position * price_matrix.at[date, sym] for position, sym in zip(positions, syms)
             )
-        
+            
         idx += 1
         print(f"Progress: {idx}/{len(symbols.keys())}", end='\r')
         if progress_callback:

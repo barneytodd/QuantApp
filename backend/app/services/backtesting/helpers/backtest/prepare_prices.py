@@ -17,5 +17,9 @@ def prepare_price_matrix(data: dict):
     })
     price_matrix.index = pd.to_datetime(price_matrix.index)
     numeric_cols = price_matrix.select_dtypes(include='number').columns
-    price_matrix[numeric_cols] = price_matrix[numeric_cols].sort_index().ffill().bfill()
+    
+    non_numeric_cols = price_matrix.select_dtypes(exclude='number').columns
+    price_matrix[non_numeric_cols] = 0
+    
+    price_matrix[numeric_cols] = price_matrix[numeric_cols].sort_index().ffill().bfill().fillna(0)
     return price_matrix

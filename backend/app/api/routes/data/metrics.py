@@ -43,7 +43,7 @@ def get_metrics(symbol: str, start: str = None, end: str = None, db: Session = D
     df = df.set_index("date").sort_index()
 
     # Calculate daily returns
-    df["returns"] = df["close"].pct_change(fill_method=None).dropna()
+    df["returns"] = df["close"].pct_change(fill_method=None).fillna(0)
 
     # Annualisation factor (daily data)
     ann_factor = 252

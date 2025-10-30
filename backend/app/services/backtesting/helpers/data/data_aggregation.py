@@ -121,29 +121,33 @@ def aggregate_walkforward_results(segment_results):
                 continue
 
             # Aggregate available metrics
-            if "sharpe_ratio" in metrics and metrics["sharpe_ratio"] is not None:
-                metrics_per_pair[pair_key]["sharpe"].append(metrics["sharpe_ratio"])
-            if "cagr" in metrics and metrics["cagr"] is not None:
-                metrics_per_pair[pair_key]["cagr"].append(metrics["cagr"])
-            if "max_drawdown" in metrics and metrics["max_drawdown"] is not None:
-                metrics_per_pair[pair_key]["maxDrawdown"].append(metrics["max_drawdown"])
-            if "winRate" in trade_stats and trade_stats["winRate"] is not None:
-                metrics_per_pair[pair_key]["winRate"].append(trade_stats["winRate"])
-            if "equity_curve" in strat_result and strat_result["equity_curve"] is not None:
-                metrics_per_pair[pair_key]["complete_equity_curve"].extend(strat_result["equity_curve"])
+            metrics_map = {
+                "sharpe_ratio": "sharpe", 
+                "cagr": "cagr", 
+                "max_drawdown": "maxDrawdown",
+                "winRate": "winRate",
+                "equity_curve": "complete_equity_curve"
+            }
+
+            for key, value in metrics_map.items():
+                if key in metrics:
+                    if metrics[key] is not None:
+                        metrics_per_pair[pair_key][value].append(metrics[key])
+                    else:
+                        metrics_per_pair[pair_key][value].append(0)
 
     # Helper function to safely compute mean
     def safe_mean(values):
-        return float(np.mean(values)) if values else None
+        return float(np.mean(values)) if values else 0
 
     # Helper function to compute daily returns from combined equity curve
     def compute_returns(equity_curve):
         if not equity_curve:
-            return None
+            return 0
         df = pd.DataFrame(equity_curve).sort_values("date")
         df = df.drop_duplicates(subset="date", keep="first")
         df["return"] = df["value"].pct_change(fill_method=None)
-        df = df.dropna(subset=["return"])
+        df["return"] = df["return"].replace([np.inf, -np.inf], 0).fillna(0)
         return df.to_dict(orient="records")
 
     # Build final aggregated results per symbol-strategy
