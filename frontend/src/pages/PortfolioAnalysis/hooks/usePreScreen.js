@@ -7,6 +7,7 @@ export function usePreScreen(uniFilterResults, endDate, setVisible) {
     const [filterValues, setFilterValues] = useState({});
     const [filterResults, setFilterResults] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
     const [progress, setProgress] = useState({ testing: 0, completed: 0, total: 0 });
     const [fails, setFails] = useState({})
 
@@ -23,6 +24,7 @@ export function usePreScreen(uniFilterResults, endDate, setVisible) {
         );
         setFilterValues(filterDefaults);
     }, []);
+
 
     useEffect(() => {
         setFilterResults(null);
@@ -45,7 +47,6 @@ export function usePreScreen(uniFilterResults, endDate, setVisible) {
         start.setFullYear(end.getFullYear() - 3);
 
         const startStr = start.toISOString().split("T")[0].replace(/-/g, "-");
-        console.log(startStr, endDate.value)
         try {
             // 1️⃣ Sync ingest
             const ingestRes = await fetch("http://localhost:8000/api/data/ohlcv/syncIngest/", {
@@ -57,6 +58,10 @@ export function usePreScreen(uniFilterResults, endDate, setVisible) {
             setUploadComplete(true);
         } catch (err) {
             console.error(err);
+            setError(err);
+            setIsLoading(false);
+            alert("Data ingestion failed");
+            return;
         }
 
         const filterDict = Object.fromEntries(
@@ -114,8 +119,11 @@ export function usePreScreen(uniFilterResults, endDate, setVisible) {
                 }
             };
         } catch (err) {
-            console.error(err);
+            alert("Pre-screen failed");
             setIsLoading(false);
+            setError(err);
+            console.error(err)
+            return;
         }
     };
 
@@ -125,6 +133,7 @@ export function usePreScreen(uniFilterResults, endDate, setVisible) {
         filterResults,
         preScreen,
         isLoading,
+        error,
         uploadComplete,
         testingComplete,
         progress,

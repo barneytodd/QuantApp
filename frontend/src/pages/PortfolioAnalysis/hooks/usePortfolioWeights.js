@@ -70,7 +70,6 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
         let inputData;
         try {
             setLoadingInputs(true);
-            console.log(paramOptimisationResults)
             const returns = Object.fromEntries(
                 Object.entries(paramOptimisationResults).flatMap(([_, strat_results]) => 
                     strat_results.aggregated_results
@@ -156,16 +155,12 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
                 return;
             }
 
-            console.log(optimisationParams);
-
             const payload = {
                 "expected_returns": inputData.expected_returns,
                 "risk_matrix": inputData.risk_matrix,
                 "baseline_weights": hrpData.weights,
                 "params": optimisationParams
             }
-
-            console.log(payload)
 
             const response = await fetch("http://localhost:8000/api/portfolio/optimise", {
                 method: "POST",
@@ -184,7 +179,6 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
             }
 
             const optimisationData = await response.json();
-            console.log(optimisationData)
             portfolio = await buildPortfolio(optimisationData.weights, paramOptimisationResults)
             setPortfolioWeightsResult(portfolio)
 
@@ -224,8 +218,7 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
                 return false;
             }
 
-            const data = await response.json();
-            console.log("Portfolio saved successfully:", data);
+            await response.json();
             return true;
 
         } catch (err) {

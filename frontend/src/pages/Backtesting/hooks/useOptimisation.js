@@ -64,7 +64,6 @@ export function useOptimisation(startDate=null, endDate=null) {
     setIsLoading(true);
     setError(null);
     setOptimisationResult(null);
-    console.log(strategyTypesWithSymbols, optimParams)
 
     const strats = Object.fromEntries(
       Object.entries(strategyTypesWithSymbols).map(([strat, symbolItems]) => [
@@ -90,8 +89,6 @@ export function useOptimisation(startDate=null, endDate=null) {
       scoringParams: scoringParams,
       metricRanges: metricRanges,
     };
-
-    console.log(payload)
 
     try {
       const res = await fetch("http://localhost:8000/api/params/optimise", {

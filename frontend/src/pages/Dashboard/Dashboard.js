@@ -90,8 +90,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ symbols: symbolValues, period: uploadYears.value }),
         });
-        const result = await res.json();
-        console.log(result)
+        await res.json();
         alert(`Data from last ${uploadYears.label} uploaded for ${symbolValues.length} symbols`);
       } catch (err) {
         console.error(err);

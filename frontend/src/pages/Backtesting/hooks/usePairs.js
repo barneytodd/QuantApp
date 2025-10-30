@@ -82,7 +82,7 @@ export function usePairs() {
 
       return data;
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(err);
       console.error("Pair selection failed:", err);
     } finally {
       setIsLoading(false);
