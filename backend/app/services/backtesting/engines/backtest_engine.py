@@ -1,7 +1,9 @@
+import pandas as pd
+
 from ..helpers.backtest import (
-    check_signal, open_position, close_position,
+    generate_signals, open_position, close_position,
     compute_metrics, compute_trade_stats,
-    rebalance
+    rebalance, prepare_price_matrix
 )
 from ..helpers.pairs import align_series
 
@@ -14,8 +16,8 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
             Mapping of symbol -> list of OHLC data dictionaries
             Example: { "AAPL": [ {"date":..., "close":...}, ... ] }
         symbols (dict): 
-            Mapping of strategy_key -> symbol/strategy info
-            Example: { "s1": { "symbol": "AAPL", "strategy": "momentum", "weight": 1 } }
+            Mapping of symbol_strategy_key -> symbol/strategy info
+            Example: { "sym1_strat": { "symbols": ["AAPL"], "strategy": "momentum", "weight": 1 } }
         params (dict): 
             Backtest parameters (initialCapital, slippage, transaction costs, etc.)
         lookback (int): 
@@ -26,178 +28,90 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
     Returns:
         list of dicts: equity curves, trades, and metrics per strategy_key
     """
-
     # --- 0. Extract common parameters ---
     slippage_pct = params["slippage"] / 100
     transaction_pct = params["transactionCostPct"] / 100
     transaction_fixed = params["fixedTransactionCost"]
     initial_capital = params["initialCapital"]
 
-    # --- 1. Initialize tracking structures ---
-    capital = {key: info["weight"] * initial_capital for key, info in symbols.items()}  # per-strategy capital
-    equity_curves = {key: [] for key in symbols.keys()}                                 # per-strategy equity curve
-    equity_curves["overall"] = []                                                      # overall portfolio curve
-    trades = {key: [] for key in symbols.keys()}                                       # list of trades per strategy
-    entry_dates = {key: {"idx": None, "date": None} for key in symbols.keys()}         # track entry points
+    # --- 1. Convert raw OHLC lists to DataFrames for fast lookup ---
+    price_matrix = prepare_price_matrix(data)
 
-    # Initialize positions and entry prices
-    positions = {stock: {k: 0 for k, s in symbols.items() if stock in s["symbol"].split("-")} for stock in data.keys()}
-    entry_prices = {stock: {k: None for k, s in symbols.items() if stock in s["symbol"].split("-")} for stock in data.keys()}
+    # --- 2. Generate signals ---
+    signal_matrix = generate_signals(price_matrix, symbols, params)
+    signal_matrix = signal_matrix.ffill()
+    signal_matrix = signal_matrix.fillna(0)
 
-    last_prices = {stock: None for stock in data.keys()}       # last known prices per stock
-    current_prices = {stock: None for stock in data.keys()}    # current prices per stock
+    trade_indicator = signal_matrix.diff().fillna(signal_matrix.iloc[0])
+    trade_indicator = trade_indicator.astype(int)
+    position_indicator = trade_indicator.cumsum()
 
-    # Get all dates across all symbols
-    all_dates = sorted({row["date"] for d in data.values() for row in d})
+    entry_date_matrix = pd.DataFrame(pd.NaT, index=trade_indicator.index, columns=trade_indicator.columns)
+    date_series = pd.Series(trade_indicator.index, index=trade_indicator.index)
 
-    # --- 2. Loop through all dates ---
-    for idx, date in enumerate(all_dates):
-        # Progress reporting
+    for col in trade_indicator.columns:
+        entry_date_matrix.loc[trade_indicator[col] != 0, col] = date_series[trade_indicator[col] != 0]
+
+    entry_date_matrix = entry_date_matrix.ffill()
+    entry_date_matrix = entry_date_matrix.shift(1)
+
+    all_trades = {}
+    equity_matrix = pd.DataFrame(0.0, index=trade_indicator.index, columns=trade_indicator.columns)
+    
+    # --- 3. Execute trades ---
+    idx = 0
+    for symbol_key, info in symbols.items():
+        syms = info["symbols"]
+        strat = info["strategy"]
+        capital = initial_capital * info["weight"]
+        positions = [0] * len(syms)
+        for sym in syms:
+            all_trades[symbol_key] = []
+        for date in trade_indicator.index:
+            trade = trade_indicator.at[date, symbol_key]
+            pos = position_indicator.at[date, symbol_key]
+            if trade == 0:
+                pass
+            elif pos == 0:
+                capital, positions, trades = close_position(
+                    syms, price_matrix[syms], capital, positions, 
+                    entry_date_matrix.at[date, symbol_key], date,
+                    slippage_pct, transaction_pct, transaction_fixed
+                )
+                all_trades[symbol_key].extend([trade for trade in trades if trade["symbol"] in syms])
+            else:
+                positions, capital = open_position(
+                    strat, trade, price_matrix[syms],
+                    date, capital, positions,
+                    syms, slippage_pct, transaction_pct, transaction_fixed
+                )
+            equity_matrix.loc[date, symbol_key] = capital + sum(
+                position * price_matrix.at[date, sym] for position, sym in zip(positions, syms)
+            )
+        
+        idx += 1
+        print(f"Progress: {idx}/{len(symbols.keys())}", end='\r')
         if progress_callback:
             try:
-                progress_callback(idx + 1, len(all_dates))
-            except Exception:
+                progress_callback(idx, len(symbols.keys()))
+            except Exception as e:
+                print(e)
                 pass
 
-        signals = {}
 
-        # --- 2a. Generate signals ---
-        for strategy_key, info in symbols.items():
-            strategy = info["strategy"]
-            if strategy == "pairs_trading":
-                stocks = info["symbol"].split("-")
-                strategy_data = align_series({s: data[s] for s in stocks}, stocks[0], stocks[1])
-            else:
-                stocks = [info["symbol"]]
-                strategy_data = data[stocks[0]]
-
-            # Update current prices and check for missing data
-            data_ok = True
-            for stock in stocks:
-                price = next((d["close"] for d in data[stock] if d["date"] == date), None)
-                current_prices[stock] = price
-                if price is None:
-                    data_ok = False
-                else:
-                    last_prices[stock] = price
-
-            if data_ok:
-                signals[strategy_key] = check_signal(
-                    positions[stocks[0]][strategy_key], idx, date,
-                    entry_dates[strategy_key], strategy_data, params, strategy, lookback
-                )
-            else:
-                signals[strategy_key] = "hold"
-
-        # --- 2b. Apply exits ---
-        for strategy_key, signal in signals.items():
-            if signal in ["sell", "exit"]:
-                info = symbols[strategy_key]
-                stocks = info["symbol"].split("-") if info["strategy"] == "pairs_trading" else [info["symbol"]]
-
-                pos_list = [positions[stock][strategy_key] for stock in stocks]
-                entry_list = [entry_prices[stock][strategy_key] for stock in stocks]
-                price_list = [current_prices[stock] for stock in stocks]
-
-                capital[strategy_key], new_trades = close_position(
-                    stocks,
-                    price_list,
-                    capital[strategy_key],
-                    entry_list,
-                    pos_list,
-                    date,
-                    entry_dates[strategy_key]["date"],
-                    slippage_pct,
-                    transaction_pct,
-                    transaction_fixed
-                )
-
-                trades[strategy_key].extend(new_trades)
-                for stock in stocks:
-                    positions[stock][strategy_key] = 0
-                    entry_prices[stock][strategy_key] = None
-                entry_dates[strategy_key]["idx"] = entry_dates[strategy_key]["date"] = None
-
-        # --- 2c. Apply entries ---
-        for strategy_key, signal in signals.items():
-            if signal in ["buy", "short", "long"]:
-                info = symbols[strategy_key]
-                stocks = info["symbol"].split("-") if info["strategy"] == "pairs_trading" else [info["symbol"]]
-                price_list = [current_prices[stock] for stock in stocks]
-                cap = capital[strategy_key]
-
-                new_pos, capital[strategy_key], new_entry_prices = open_position(
-                    signal, price_list, cap, slippage_pct, transaction_pct, transaction_fixed
-                )
-
-                for i, stock in enumerate(stocks):
-                    positions[stock][strategy_key] = new_pos[i]
-                    entry_prices[stock][strategy_key] = new_entry_prices[i]
-
-                entry_dates[strategy_key]["idx"], entry_dates[strategy_key]["date"] = idx, date
-
-        # --- 2d. Track portfolio value ---
-        if idx >= lookback:
-            for strategy_key, info in symbols.items():
-                stocks = info["symbol"].split("-") if info["strategy"] == "pairs_trading" else [info["symbol"]]
-                value = capital[strategy_key]
-                for stock in stocks:
-                    price = current_prices[stock]
-                    if price is not None:
-                        value += positions[stock][strategy_key] * price
-                    else:
-                        value = None
-                        break
-                if value is not None:
-                    equity_curves[strategy_key].append({"date": date, "value": value})
-
-            # Compute overall portfolio value
-            all_stocks = list(data.keys())
-            overall_positions = [sum(positions[stock].values()) for stock in all_stocks]
-            overall_entry_prices = [sum(filter(None, entry_prices[stock].values())) for stock in all_stocks]
-            portfolio_value = close_position(
-                all_stocks,
-                [last_prices[s] for s in all_stocks],
-                sum(capital.values()),
-                overall_entry_prices,
-                overall_positions,
-                date,
-                None,
-                0,
-                0,
-                0
-            )[0]
-            equity_curves["overall"].append({"date": date, "value": portfolio_value})
-
-    # --- 3. Close out remaining positions at end ---
-    for strategy_key, info in symbols.items():
-        if len(equity_curves[strategy_key]) > 0:
-            stocks = info["symbol"].split("-") if info["strategy"] == "pairs_trading" else [info["symbol"]]
-            pos_list = [positions[stock][strategy_key] for stock in stocks]
-            entry_list = [entry_prices[stock][strategy_key] for stock in stocks]
-            price_list = [last_prices[stock] for stock in stocks]
-
-            capital[strategy_key], new_trades = close_position(
-                stocks,
-                price_list,
-                capital[strategy_key],
-                entry_list,
-                pos_list,
-                all_dates[-1],
-                entry_dates[strategy_key]["date"],
-                slippage_pct,
-                transaction_pct,
-                transaction_fixed
-            )
-            trades[strategy_key].extend(new_trades)
+    equity_matrix["overall"] = equity_matrix.sum(axis=1)
 
     # --- 4. Build results ---
     results = []
-    for strategy_key, curve in equity_curves.items():
+    for strategy_key in equity_matrix.columns:
+        curve = [
+            {"date": date.strftime("%Y-%m-%d"), "value": float(value)}
+            for date, value in equity_matrix[strategy_key].items()
+        ]
         initial = initial_capital * symbols[strategy_key]["weight"] if strategy_key != "overall" else sum([initial_capital * symbols[strategy_key]["weight"] for strategy_key in symbols])
-        strategy_trades = trades[strategy_key] if strategy_key != "overall" else [trade for trade_list in trades.values() for trade in trade_list]
+        strategy_trades = all_trades[strategy_key] if strategy_key != "overall" else [trade for trade_list in all_trades.values() for trade in trade_list]
         results.append({
-            "symbol": symbols[strategy_key]["symbol"] if strategy_key != "overall" else "overall",
+            "symbol": strategy_key if strategy_key != "overall" else "overall",
             "strategy": symbols[strategy_key]["strategy"] if strategy_key != "overall" else "overall",
             "initialCapital": initial,
             "finalCapital": curve[-1]["value"] if curve else None,

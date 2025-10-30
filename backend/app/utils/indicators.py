@@ -1,8 +1,16 @@
 from math import sqrt
+import pandas as pd
 
 # ================================
 # Simple Moving Average (SMA)
 # ================================
+def compute_sma_matrix(price_matrix: pd.DataFrame, period: int) -> pd.DataFrame:
+    """
+    Vectorized SMA for all symbols.
+    """
+    return price_matrix.rolling(window=period, min_periods=period).mean()
+
+
 def compute_sma(data, period):
     """
     Computes the Simple Moving Average (SMA) for a given period.
@@ -33,118 +41,45 @@ def compute_sma(data, period):
 # ================================
 # Bollinger Bands
 # ================================
-def compute_bollinger_bands(data, period, std_dev):
+def compute_bollinger_bands_matrix(price_matrix: pd.DataFrame, period: int, std_dev: float):
     """
-    Computes Bollinger Bands: upper, middle (SMA), and lower bands.
-
-    Parameters:
-        data (list[dict]): List of dicts with keys 'date' and 'close'.
-        period (int): Lookback period for the moving average.
-        std_dev (float): Number of standard deviations for upper/lower bands.
-
-    Returns:
-        list[dict]: Each element contains:
-            - 'upper': Upper band
-            - 'middle': Middle band (SMA)
-            - 'lower': Lower band
-            Initial periods return None for bands until enough data is available.
+    Vectorized Bollinger Bands for all symbols.
+    
+    Returns a dict of DataFrames: {'upper', 'middle', 'lower'}
     """
-    closes = [d["close"] for d in data]
-    result = []
-
-    for i in range(len(closes)):
-        if i < period - 1:
-            result.append({"upper": None, "middle": None, "lower": None})
-        else:
-            window = closes[i - period + 1:i + 1]
-            mean = sum(window) / period
-            variance = sum((x - mean) ** 2 for x in window) / period
-            sd = sqrt(variance)
-            result.append({
-                "upper": mean + std_dev * sd,
-                "middle": mean,
-                "lower": mean - std_dev * sd
-            })
-    return result
+    middle = compute_sma_matrix(price_matrix, period)
+    rolling_std = price_matrix.rolling(window=period, min_periods=period).std()
+    
+    upper = middle + std_dev * rolling_std
+    lower = middle - std_dev * rolling_std
+    
+    return {"upper": upper, "middle": middle, "lower": lower}
 
 
 # ================================
 # Exponential Moving Average (EMA)
 # ================================
-def compute_ema(values, period):
+def compute_ema_matrix(price_matrix: pd.DataFrame, period: int) -> pd.DataFrame:
     """
-    Computes the Exponential Moving Average (EMA) for a series of values.
-
-    Parameters:
-        values (list[float or None]): Series of numeric values.
-        period (int): Lookback period for EMA calculation.
-
-    Returns:
-        list[dict]: Each element is a dict with key 'value', the EMA.
-                    Initial periods or None values produce 'value': None.
+    Vectorized EMA for all symbols.
     """
-    result = []
-    k = 2 / (period + 1)  # Smoothing factor
-    ema_prev = None
-
-    for i, v in enumerate(values):
-        if v is None:
-            result.append({"value": None})
-            continue
-
-        if ema_prev is None:
-            # Initialize EMA using SMA of first 'period' values
-            if i < period - 1:
-                result.append({"value": None})
-                continue
-            window = [x for x in values[i - period + 1:i + 1] if x is not None]
-            ema_prev = sum(window) / period
-        else:
-            # EMA formula: EMA_today = value * k + EMA_yesterday * (1 - k)
-            ema_prev = v * k + ema_prev * (1 - k)
-
-        result.append({"value": ema_prev})
-    return result
+    return price_matrix.ewm(span=period, adjust=False).mean()
 
 
 # ================================
 # Relative Strength Index (RSI)
 # ================================
-def compute_rsi(data, period):
+def compute_rsi_matrix(price_matrix: pd.DataFrame, period: int) -> pd.DataFrame:
     """
-    Computes the Relative Strength Index (RSI) for a given period.
-
-    Parameters:
-        data (list[dict]): List of dicts with key 'close'.
-        period (int): Lookback period for RSI calculation.
-
-    Returns:
-        list[dict]: Each element is a dict with 'value' (RSI). 
-                    Initial periods where RSI cannot be computed have 'value': None.
-
-    Notes:
-        - RSI measures momentum: values >70 indicate overbought, <30 indicate oversold.
-        - Uses Wilder's smoothing method for average gains/losses.
+    Vectorized RSI using Wilder's smoothing for all symbols.
     """
-    closes = [d["close"] for d in data]
-    deltas = [0] + [closes[i] - closes[i - 1] for i in range(1, len(closes))]
-    rsi_series = [None] * period  # First 'period' values cannot have RSI
+    delta = price_matrix.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
 
-    # Lambda functions to extract gains and losses
-    gain = lambda x: max(x, 0)
-    loss = lambda x: -min(x, 0)
+    avg_gain = gain.ewm(alpha=1/period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1/period, adjust=False).mean()
 
-    # Initial average gain/loss
-    avg_gain = sum(gain(d) for d in deltas[:period]) / period
-    avg_loss = sum(loss(d) for d in deltas[:period]) / period
-
-    for i in range(period, len(deltas)):
-        delta = deltas[i]
-        avg_gain = (avg_gain * (period - 1) + gain(delta)) / period
-        avg_loss = (avg_loss * (period - 1) + loss(delta)) / period
-
-        rs = avg_gain / avg_loss if avg_loss != 0 else 0
-        rsi = 100 - (100 / (1 + rs))
-        rsi_series.append(rsi)
-
-    return [{"value": val} if val is not None else {"value": None} for val in rsi_series]
+    rs = avg_gain / avg_loss.replace(0, pd.NA)
+    rsi = 100 - (100 / (1 + rs))
+    return rsi.fillna(0)

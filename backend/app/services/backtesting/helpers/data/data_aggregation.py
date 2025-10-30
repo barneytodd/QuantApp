@@ -142,7 +142,7 @@ def aggregate_walkforward_results(segment_results):
             return None
         df = pd.DataFrame(equity_curve).sort_values("date")
         df = df.drop_duplicates(subset="date", keep="first")
-        df["return"] = df["value"].pct_change()
+        df["return"] = df["value"].pct_change(fill_method=None)
         df = df.dropna(subset=["return"])
         return df.to_dict(orient="records")
 

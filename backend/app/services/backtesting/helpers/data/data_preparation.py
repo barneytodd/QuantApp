@@ -39,7 +39,7 @@ def prepare_backtest_inputs(payload):
         strategy = item["strategy"]
         key = f"{key_base}_{strategy}"  # unique key for each symbol-strategy combination
         strategy_symbols[key] = {
-            "symbol": key_base,
+            "symbols": item["symbols"],
             "strategy": strategy,
             "weight": item.get("weight", 1),  # default weight is 1
         }

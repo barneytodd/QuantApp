@@ -1,26 +1,37 @@
 import numpy as np
+import pandas as pd
 
-def check_holding_period(min_holding_period: int, position: int, entry_date: dict, date_idx: int, date) -> bool:
+def apply_min_hold(signals: pd.DataFrame, min_holding_period: int) -> pd.DataFrame:
     """
-    Check if a position has been held long enough according to a minimum holding period.
-
-    Args:
-        min_holding_period (int): Minimum number of bars/days to hold a position
-        position (int): Current position size (0 = no position)
-        entry_date (dict): {"idx": int, "date": datetime} of when position was opened
-        date_idx (int): Current index of the date in backtest
-        date (datetime): Current date (for reference)
-    
-    Returns:
-        bool: True if position can be held or acted upon, False if still in minimum holding period
+    Super-fast, rolling-based approximation for minimum holding period.
+    Works only if signals are simple (1=entry, 0=exit).
     """
-    # No restriction if no min period or no open position
-    if min_holding_period == 0 or position == 0:
-        return True
+    out = signals.copy()
+    s = out[col].copy()
+    for col in out.columns: 
+        # Identify entries (either +1 or -1)
+        entry_points = s.isin([1, -1]).astype(int)
 
-    # Calculate how many bars the position has been open
-    diff = date_idx - entry_date["idx"]
-    return diff >= min_holding_period
+        # Track holding window with a counter
+        hold_counter = np.zeros(len(s), dtype=int)
+
+        last_entry_idx = -np.inf  # far in the past
+        for i in range(len(s)):
+            if s.iloc[i] in [1, -1]:
+                last_entry_idx = i  # start new holding window
+            if i - last_entry_idx < min_holding_period:
+                hold_counter[i] = 1
+
+        # Build mask
+        hold_mask = hold_counter.astype(bool)
+
+        # Mask *everything* inside hold window except the entry itself
+        mask = hold_mask & (~entry_points.astype(bool))
+        s[mask] = np.nan
+
+        out[col] = s
+
+    return out
 
 
 def rebalance(equity_curves: dict, positions: dict, prices: dict, target_vol: float, lookback: int) -> dict:

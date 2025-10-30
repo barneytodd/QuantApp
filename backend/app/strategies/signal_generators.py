@@ -1,144 +1,172 @@
-from app.utils.indicators import compute_sma, compute_bollinger_bands, compute_rsi, compute_ema
+import numpy as np
+import pandas as pd
+
+from app.utils.indicators import compute_sma_matrix, compute_bollinger_bands_matrix, compute_rsi_matrix, compute_ema_matrix
 
 # ===============================
 # Simple Moving Average (SMA)
 # ===============================
-def sma_signal_generator(data, i, params):
-    """Generate SMA crossover signals."""
-    short, long = params["shortPeriod"], params["longPeriod"]
-    if i < long:
-        return "hold"
-
-    short_val = compute_sma(data, short)[i]["value"]
-    long_val = compute_sma(data, long)[i]["value"]
-    if short_val is None or long_val is None:
-        return "hold"
-
-    if short_val > long_val:
-        return "buy"
-    if short_val < long_val:
-        return "sell"
-    return "hold"
+def sma_signal_generator(price_matrix: pd.DataFrame, params: dict) -> pd.DataFrame:
+    """
+    Compute SMA crossover signals for all symbols in price_matrix.
+    
+    Returns a DataFrame with:
+    1 = buy, 0 = exit, np.nan = hold
+    """
+    short = params.get("shortPeriod", 20)
+    long = params.get("longPeriod", 50)
+    sma_short = compute_sma_matrix(price_matrix, short)
+    sma_long = compute_sma_matrix(price_matrix, long)
+    
+    signals = pd.DataFrame(np.nan, index=price_matrix.index, columns=price_matrix.columns)
+    signals[sma_short > sma_long] = 1   # buy
+    signals[sma_short < sma_long] = 0  # sell
+    signals.iloc[-1] = 0 # force exit on last date
+    return signals
 
 
 # ===============================
 # Bollinger Bands
 # ===============================
-def bollinger_signal_generator(data, i, params):
-    """Generate signals based on Bollinger Band breakouts."""
-    period, std_dev = params["period"], params["bandMultiplier"]
-    bands = compute_bollinger_bands(data, period, std_dev)
-    price = data[i]["close"]
+def bollinger_signal_generator(price_matrix: pd.DataFrame, params: dict) -> pd.DataFrame:
+    """
+    Compute bollinger band signals for all symbols in price_matrix.
+    
+    Returns a DataFrame with:
+    1 = buy, 0 = exit, np.nan = hold
+    """
+    period = params.get("period", 20)
+    std_dev = params.get("bandMultiplier", 2)
+    bands = compute_bollinger_bands_matrix(price_matrix, period, std_dev)
+    signals = pd.DataFrame(np.nan, index=price_matrix.index, columns=price_matrix.columns)
 
-    if bands[i]["lower"] is None or bands[i]["upper"] is None:
-        return "hold"
-
-    if price < bands[i]["lower"]:
-        return "buy"
-    if price > bands[i]["upper"]:
-        return "sell"
-    return "hold"
+    signals[price_matrix < bands["lower"]] = 1   # buy
+    signals[price_matrix >= bands["lower"]] = 0  # sell
+    signals.iloc[-1] = 0 # force exit on last date
+    return signals
 
 
 # ===============================
 # Relative Strength Index (RSI)
 # ===============================
-def rsi_signal_generator(data, i, params):
-    """Generate RSI overbought/oversold signals with optional smoothing."""
-    period = params["period"]
-    oversold = params["oversold"]
-    overbought = params["overbought"]
+def rsi_signal_generator(price_matrix: pd.DataFrame, params: dict) -> pd.DataFrame:
+    """
+    Compute RSI signals for all symbols in price_matrix.
+    
+    Returns a DataFrame with:
+    1 = buy, 0 = exit, np.nan = hold
+    """
+    period = params.get("period", 14)
+    oversold = params.get("oversold", 30)
+    overbought = params.get("overbought", 70)
     smoothing = params.get("signalSmoothing", 1)
 
-    rsi_series = compute_rsi(data, period)
-    rsi_values = [r["value"] for r in rsi_series]
-
+    rsi = compute_rsi_matrix(price_matrix, period)
+    
     if smoothing > 1:
-        smoothed_rsi_series = compute_ema(rsi_values, smoothing)
-        rsi = smoothed_rsi_series[i]["value"]
-    else:
-        rsi = rsi_values[i]
-
-    if rsi is None:
-        return "hold"
-    if rsi < oversold:
-        return "buy"
-    if rsi > overbought:
-        return "sell"
-    return "hold"
+        rsi = compute_ema_matrix(rsi, smoothing)
+    
+    signals = pd.DataFrame(np.nan, index=price_matrix.index, columns=price_matrix.columns)
+    signals[rsi < oversold] = 1   # buy
+    signals[rsi >= oversold] = 0 # sell
+    signals.iloc[-1] = 0 # force exit on last date
+    return signals
 
 
 # ===============================
 # Momentum
 # ===============================
-def momentum_signal_generator(data, i, params):
-    """Generate momentum signals based on price change over lookback."""
-    lookback = params["lookback"]
-    if i < lookback:
-        return "hold"
+def momentum_signal_generator(price_matrix: pd.DataFrame, params: dict) -> pd.DataFrame:
+    """
+    Compute momentum signals for all symbols in price_matrix.
+    
+    Returns a DataFrame with:
+    1 = buy, 0 = exit, np.nan = hold
+    """
+    lookback = params.get("lookback", 126)
 
-    past, current = data[i - lookback]["close"], data[i]["close"]
-    if current > past:
-        return "buy"
-    if current < past:
-        return "sell"
-    return "hold"
+    shifted = price_matrix.shift(lookback)
+    signals = pd.DataFrame(np.nan, index=price_matrix.index, columns=price_matrix.columns)
+    signals[price_matrix > shifted] = 1
+    signals[price_matrix < shifted] = 0
+    signals.iloc[-1] = 0 # force exit on last date
+    return signals
 
 
 # ===============================
 # Breakout
 # ===============================
-def breakout_signal_generator(data, i, params):
-    """Generate breakout signals based on price range and multiplier."""
-    lookback, multiplier = params["lookback"], params["breakoutMultiplier"]
-    if i < lookback:
-        return "hold"
+def breakout_signal_generator(price_matrix: pd.DataFrame, params: dict) -> pd.DataFrame:
+    """
+    Compute breakout signals for all symbols in price_matrix.
+    
+    Returns a DataFrame with:
+    1 = buy, 0 = exit, np.nan = hold
+    """
+    lookback = params.get("lookback", 20)
+    multiplier = params.get("breakoutMultiplier", 0.0)
 
-    window = data[i - lookback:i]
-    values = [d["close"] for d in window]
-    max_high, min_low = max(values), min(values)
-    price = data[i]["close"]
-    rnge = max_high - min_low
-
-    if price > max_high + multiplier * rnge:
-        return "buy"
-    if price < min_low - multiplier * rnge:
-        return "sell"
-    return "hold"
+    rolling_max = price_matrix.rolling(window=lookback).max()
+    rolling_min = price_matrix.rolling(window=lookback).min()
+    range_ = rolling_max - rolling_min
+    
+    signals = pd.DataFrame(np.nan, index=price_matrix.index, columns=price_matrix.columns)
+    signals[price_matrix > rolling_max + multiplier * range_] = 1
+    signals[price_matrix <= rolling_max + multiplier * range_] = 0
+    signals.iloc[-1] = 0 # force exit on last date
+    return signals
 
 
 # ===============================
 # Pairs Trading
 # ===============================
-def pairs_signal_generator(data, i, params):
+def pairs_signal_generator(price_matrix: pd.DataFrame, stock1: str, stock2: str,
+                            params: dict) -> pd.Series:
     """
-    Generate signals for pairs trading based on z-score of spread.
+    Vectorized pairs trading signal generator for a single stock pair.
+
+    Args:
+        price_matrix (pd.DataFrame): DataFrame with dates as index and symbols as columns.
+        stock1 (str): First stock symbol
+        stock2 (str): Second stock symbol
+        lookback (int): Rolling window for z-score computation
+        entry_z (float): Z-score threshold to enter positions
+        exit_z (float): Z-score threshold to exit positions
 
     Returns:
-        - "long": long first stock, short second
-        - "short": short first stock, long second
-        - "exit": close positions
-        - "hold": no action
+        pd.Series: Signals for all dates
+                   1 = long first, short second
+                   -1 = short first, long second
+                   0 = exit
+                   np.nan = hold
     """
-    lookback, entryZ, exitZ = params["lookback"], params["entryZ"], params["exitZ"]
-    stock1, stock2 = data.columns.tolist()[1:]
+    lookback = params.get("lookback", 20)
+    entry_z = params.get("entryZ", 2.0)
+    exit_z = params.get("exitZ", 0.5)
+    hedge_ratio = params.get("hedgeRatio", 1.0)
 
-    if i < lookback:
-        return "hold"
+    # Compute rolling spread
+    spread = price_matrix[stock1] - price_matrix[stock2]
+    
+    # Rolling mean and std
+    spread_mean = spread.rolling(lookback).mean()
+    spread_std = spread.rolling(lookback).std()
+    
+    # Z-score
+    zscore = (spread - spread_mean) / spread_std
+    
+    # Initialize signals
+    signals = pd.Series(np.nan, index=price_matrix.index, dtype=int)
+    
+    # Entry signals
+    signals[zscore > entry_z] = -1   # short first, long second
+    signals[zscore < -entry_z] = 1   # long first, short second
+    
+    # Exit signals
+    signals[abs(zscore) < exit_z] = 0
+    
+    # First `lookback` days cannot have valid signals
+    signals.iloc[:lookback] = 0
 
-    price1, price2 = data[stock1].iloc[i], data[stock2].iloc[i]
-
-    # Compute rolling spread statistics
-    spread_series = [data[stock1].iloc[j] - data[stock2].iloc[j] for j in range(i - lookback, i)]
-    mean = sum(spread_series) / lookback
-    std = (sum((x - mean) ** 2 for x in spread_series) / lookback) ** 0.5
-
-    z = (price1 - price2 - mean) / std if std != 0 else 0
-
-    if z > entryZ:
-        return "short"
-    if z < -entryZ:
-        return "long"
-    if abs(z) < exitZ:
-        return "exit"
-    return "hold"
+    signals.iloc[-1] = 0 # force exit on last date
+    return signals
