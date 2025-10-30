@@ -20,6 +20,7 @@ export default function TradingSimulatorPage() {
   const [globParams, setGlobParams] = useState({});
   const [basicParams, setBasicParams] = useState({});
   const [advancedParams, setAdvancedParams] = useState({});
+  const [dataLoading, setDataLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState(null);
 
@@ -47,11 +48,9 @@ export default function TradingSimulatorPage() {
 
   useEffect(() => {
     if (portfolio && Object.keys(portfolio).length > 0) {
-      console.log(portfolio.value.data)
       const stratParams = Object.fromEntries(
         Object.entries(portfolio.value.data).flatMap(([strat, stratResult]) => 
           Object.entries(stratResult.params).map(([param, paramValue]) => {
-            console.log(strat, param, strategies[strat].params.find(p => p.name === param))
             const { default: value, name, ...rest } = strategies[strat].params.find(p => p.name === param)
             return [
               name, 
@@ -66,16 +65,22 @@ export default function TradingSimulatorPage() {
         Object.entries(allParams).filter(([_, param]) => param.category === "basic")
       );
       const advanced = Object.fromEntries(
-        Object.entries(allParams).filter(([_, param]) => param.category === "advanced")
+        Object.entries(allParams)
+          .filter(([_, param]) => param.category === "advanced")
+          .map(([k, v]) => [
+              k, 
+              { 
+                  value: k === "startDate" ? startDate.value : k === "endDate" ? endDate.value : v.value, 
+                  lookback: v.lookback ?? false 
+              }
+          ])
       );
-      console.log(basic, advanced, allParams)
       setBasicParams(basic);
       setAdvancedParams(advanced);
     }
-  }, [portfolio, globParams])
+  }, [portfolio, globParams, startDate, endDate])
 
   const handleRunBacktest = async () => {
-    console.log(portfolio.value.data)
     const syms = Object.entries(portfolio.value.data).flatMap(([strat, stratResults]) => 
       stratResults.symbols.map(s => ({
         "symbols": s.symbol.split("-"),
@@ -84,12 +89,23 @@ export default function TradingSimulatorPage() {
       }))
     );
 
-    setAdvancedParams((prev) => ({
-      ...prev,
-      [startDate]: { ...prev[startDate], value: startDate.value },
-      [endDate]: { ...prev[endDate], value: endDate.value },
-    }))
-    console.log(advancedParams, basicParams, syms)
+    const symbols = [...syms.flatMap((sym) => sym.symbols), "SPY"];
+    try {
+        setDataLoading(true);
+        const ingestRes = await fetch("http://localhost:8000/api/data/ohlcv/syncIngest/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ symbols, start: startDate.value, end: endDate.value }),
+        });
+        await ingestRes.json();
+    } catch (err) {
+        console.error(err);
+        alert("Data ingestion failed");
+        return;
+    } finally {
+      setDataLoading(false);
+    }
+
     await runBacktest({symbolItems: syms, basicParams, advancedParams})
   }
   
@@ -123,7 +139,7 @@ export default function TradingSimulatorPage() {
             }
             className={"px-4 py-2 rounded-lg text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"}
           >
-            {backtestLoading ? "Running..." : "Run Backtest"}
+            {backtestLoading ? "Running..." : dataLoading ? "Loading Data ..." : "Run Backtest"}
           </button>
 
         </div>
