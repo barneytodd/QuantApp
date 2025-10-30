@@ -133,4 +133,7 @@ def get_pair_selection_results(task_id: str):
     if task.get("status") != "done" or "results" not in task:
         return JSONResponse({"detail": "Task still running or no results yet"}, status_code=202)
 
+    if task.get("status") == "failed":
+        raise HTTPException(status_code=404, detail="Pairs Selection failed")
+
     return task["results"]

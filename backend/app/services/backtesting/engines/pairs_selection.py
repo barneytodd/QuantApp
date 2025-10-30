@@ -1,5 +1,5 @@
 import os
-from itertools import combinations
+import itertools
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
@@ -27,13 +27,10 @@ def engle_granger_test(y, x):
             cointegrated: True if p < 0.05
         }
     """
-    x = sm.add_constant(x)  # add intercept
-    model = sm.OLS(y, x).fit()
-    residuals = model.resid
+    A = np.vstack([x, np.ones_like(x)]).T
+    beta, alpha = np.linalg.lstsq(A, y, rcond=None)[0]
+    residuals = y - (alpha + beta * x)
     adf_result = adfuller(residuals)
-
-    alpha = float(model.params.iloc[0])
-    beta = float(model.params.iloc[1])
 
     return {
         "alpha": alpha,
@@ -58,8 +55,15 @@ def process_pair(pair, df, w_corr, w_coint):
         dict | None: metrics for the pair or None if insufficient data
     """
     s1, s2 = pair
-    x, y = df[s1].dropna(), df[s2].dropna()
-    x, y = x.align(y, join="inner")  # keep only overlapping dates
+    prices_np = {sym: df[sym].to_numpy() for sym in pair}
+    dates = df.index.to_numpy()
+
+    def get_aligned(s1, s2):
+        x, y = prices_np[s1], prices_np[s2]
+        mask = ~np.isnan(x) & ~np.isnan(y)
+        return x[mask], y[mask]
+
+    x, y = get_aligned(s1, s2)
 
     if len(x) < 2:
         return None
@@ -77,6 +81,13 @@ def process_pair(pair, df, w_corr, w_coint):
         "score": score,
     }
 
+def process_chunk(chunk, df, w_corr, w_coint):
+    chunk_results = []
+    for pair in chunk:
+        res = process_pair(pair, df, w_corr, w_coint)
+        if res:
+            chunk_results.append(res)
+    return chunk_results
 
 # === 3. Main engine for parallel pair analysis ===
 def analyze_pairs(
@@ -86,28 +97,16 @@ def analyze_pairs(
     w_coint=0.5,
     max_workers=None,
     progress_callback=None,
+    chunk_size=100  # number of pairs per process
 ):
-    """
-    Compute correlation, cointegration, and scores for all symbol pairs in parallel.
 
-    Args:
-        symbols (list[str]): list of symbols
-        prices_dict (dict): symbol -> list of OHLCV dicts
-        w_corr (float): correlation weight
-        w_coint (float): cointegration weight
-        max_workers (int): number of parallel workers
-        progress_callback (callable): function(done, total)
-
-    Returns:
-        list[dict]: analysis results for all pairs
-    """
-    # Convert price dicts into DataFrame
+    # Convert price dicts to aligned DataFrame
     df = pd.DataFrame({
-        sym: pd.Series({p["date"]: p["close"] for p in prices_dict[sym] if sym in prices_dict.keys()})
+        sym: pd.Series({p["date"]: p["close"] for p in prices_dict[sym]})
         for sym in symbols
     }).sort_index()
-   
-    pairs_list = list(combinations(symbols, 2))
+
+    pairs_list = list(itertools.combinations(symbols, 2))
     total_pairs = len(pairs_list)
     results = []
 
@@ -117,35 +116,21 @@ def analyze_pairs(
     if max_workers is None:
         max_workers = min(32, os.cpu_count() - 1 or 3)
 
-    print(f"Analyzing {total_pairs} pairs with {max_workers} workers...")
+    # --- Split pairs into chunks ---
+    chunks = [pairs_list[i:i+chunk_size] for i in range(0, total_pairs, chunk_size)]
 
     done = 0
-
-    # Parallel processing of all pairs
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = [
-            executor.submit(process_pair, pair, df, w_corr, w_coint)
-            for pair in pairs_list
-        ]
-
-        for f in as_completed(futures):
-            res = f.result()
-            done += 1
-            if res:
-                results.append(res)
-
+        futures = [executor.submit(process_chunk, chunk, df, w_corr, w_coint) for chunk in chunks]
+        for future in as_completed(futures):
+            chunk_result = future.result()
+            results.extend(chunk_result)
             if progress_callback:
-                try:
-                    progress_callback(done, total_pairs)
-                except Exception:
-                    pass
+                done += len(chunk_result)
+                progress_callback(done, total_pairs)
 
-    # Final callback indicating completion
+    # Final callback
     if progress_callback:
-        try:
-            progress_callback(total_pairs, total_pairs)
-        except Exception:
-            pass
+        progress_callback(total_pairs, total_pairs)
 
-    print("Pair analysis completed.")
     return results
