@@ -10,5 +10,6 @@ class StatsOut(BaseModel):
     sharpe_ratio: float                   # Risk-adjusted return
     max_drawdown: float                   # Maximum drawdown observed
 
-    class Config:
-        orm_mode = True  # Enables compatibility with ORM objects
+    model_config = {
+        "from_attributes": True
+    }
