@@ -19,7 +19,7 @@ export default function ParamCard({param, setParam}) {
                     setParam((prev) => ({ ...prev, value: e.target.value }))
                 }
                 onBlur={(e) =>
-                    setParam((prev) => ({ ...prev, value: Number(e.target.value) || 0 }))
+                    setParam((prev) => ({ ...prev, value: param?.type === "number" ? Number(e.target.value) || 0 : e.target.value}))
                 }
                 className="border p-1 rounded"
                 />
