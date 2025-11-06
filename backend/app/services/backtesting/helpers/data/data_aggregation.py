@@ -41,7 +41,7 @@ def compute_walkforward_results(results, window_length):
                 strategies[symbol] = strategy
 
                 assumed_initial_capital = strat_result.get("initialCapital")
-
+                
                 # Scale equity curve based on prior final capital
                 equity_curve = [
                     {
@@ -54,7 +54,11 @@ def compute_walkforward_results(results, window_length):
 
                 # Update capital for next segment
                 if strat_result["finalCapital"] is not None:
-                    initial_capitals[symbol] = strat_result["finalCapital"]
+                    final_capital = strat_result["finalCapital"] * initial_capitals.get(symbol, assumed_initial_capital) / assumed_initial_capital
+                    initial_capitals[symbol] = final_capital
+                else:
+                    initial_capitals[symbol] = equity_curve[-1]["value"] if equity_curve else assumed_initial_capital
+
 
                 # Aggregate trades
                 trades.setdefault(symbol, []).extend(strat_result.get("trades", []))
@@ -73,7 +77,10 @@ def compute_walkforward_results(results, window_length):
             segment_result.append({
                 "symbol": symbol,
                 "strategy": strategy,
-                "equity_curve": equity_curves[symbol],
+                "initialCapital": equity_curves[symbol][0]["value"] if equity_curves[symbol] else None,
+                "finalCapital": equity_curves[symbol][-1]["value"] if equity_curves[symbol] else None,
+                "returnPct": ((equity_curves[symbol][-1]["value"]/equity_curves[symbol][0]["value"] - 1)*100) if equity_curves[symbol] else None,
+                "equityCurve": equity_curves[symbol],
                 "trades": trades[symbol],
                 "metrics": metrics,
                 "tradeStats": trade_stats
@@ -122,20 +129,23 @@ def aggregate_walkforward_results(segment_results):
 
             # Aggregate available metrics
             metrics_map = {
-                "sharpe_ratio": "sharpe", 
-                "cagr": "cagr", 
-                "max_drawdown": "maxDrawdown",
-                "winRate": "winRate",
-                "equity_curve": "complete_equity_curve"
+                "sharpe": metrics.get("sharpe_ratio", None), 
+                "cagr": metrics.get("cagr", None), 
+                "maxDrawdown": metrics.get("max_drawdown", None),
+                "winRate": trade_stats.get("winRate", None),
             }
 
             for key, value in metrics_map.items():
-                if key in metrics:
-                    if metrics[key] is not None:
-                        metrics_per_pair[pair_key][value].append(metrics[key])
-                    else:
-                        metrics_per_pair[pair_key][value].append(0)
+                if value is not None:
+                    metrics_per_pair[pair_key][key].append(value)
+                else:
+                    metrics_per_pair[pair_key][key].append(None)
 
+            equity_curve = strat_result.get("equityCurve", None)
+            if equity_curve is not None:
+                metrics_per_pair[pair_key]["complete_equity_curve"].extend(equity_curve)
+                    
+            
     # Helper function to safely compute mean
     def safe_mean(values):
         return float(np.mean(values)) if values else 0
@@ -155,7 +165,7 @@ def aggregate_walkforward_results(segment_results):
     for (symbol, strategy), vals in metrics_per_pair.items():
         active_segments = len(segment_results) - vals["no_trade_segments"]
         aggregated.append({
-            "symbol": symbol,
+            "symbol": symbol.split("_")[0],
             "strategy": strategy,
             "segments": len(segment_results),
             "activeSegments": active_segments,
@@ -166,5 +176,5 @@ def aggregate_walkforward_results(segment_results):
             "avgWinRate": safe_mean(vals["winRate"]),
             "returns": compute_returns(vals["complete_equity_curve"])
         })
-        
+
     return aggregated
