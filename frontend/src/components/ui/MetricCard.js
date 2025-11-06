@@ -1,6 +1,6 @@
 export default function MetricCard({ label, value, dp=2, type=null }) {
   // Format percentages if the value is a fraction
-  let displayValue = "-";
+  let displayValue = value;
   if (typeof value === "number") {
     if (type === "currency") {
       displayValue = `$${value.toFixed(dp)}`;

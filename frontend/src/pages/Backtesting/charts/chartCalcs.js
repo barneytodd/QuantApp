@@ -9,12 +9,13 @@ export function computeDrawdowns(equityCurve) {
 }
 
 // map benchmark data to allow for charting
-export function mapBenchmark(ohlcv, initialCapital = 10000) {
+export function mapBenchmark(ohlcv, startDate, initialCapital = 10000) {
   if (!ohlcv || ohlcv.length === 0) return [];
-
-  const firstClose = ohlcv[0].close;
-
-  return ohlcv.map((d) => ({
+  const sorted = [...ohlcv].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const start = new Date(startDate.value);
+  const filtered = sorted.filter(d => new Date(d.date) >= start);
+  const firstClose = filtered[0].close;
+  return filtered.map((d) => ({
     date: d.date, 
     value: (d.close / firstClose) * initialCapital, 
   }));

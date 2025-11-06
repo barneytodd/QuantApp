@@ -10,7 +10,12 @@ export function useLoadPortfolios() {
             setGetPortfoliosLoading(true);
             fetch("http://localhost:8000/api/portfolio/list")
                 .then((res) => res.json())
-                .then((data) => setAvailablePortfolios(data.map(p => ({value: p, label: p.created_at}))));
+                .then((data) => setAvailablePortfolios(
+                    data.map(p => ({
+                        value: p, 
+                        label: `${p.meta?.start}–${p.meta?.end}`
+                    }))
+                ));
         } catch (err) {
             setGetPortfoliosError(err)
             alert("Failed to fetch portfolios from db");

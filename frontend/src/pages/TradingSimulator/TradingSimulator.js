@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useLoadPortfolios } from "./hooks/useLoadPortfolio";
-import { useBacktest } from "../Backtesting/hooks/useBacktest";
-import { useSymbols } from "../Backtesting/hooks/useSymbols";
+import { usePortfolioBacktest } from "./hooks/usePortfolioBacktest";
 import { globalParams } from "../Backtesting/parameters/globalParams";
 import { strategies } from "../Backtesting/parameters/strategyRegistry";
 
 import ParamCard from "../../components/ui/ParamCard";
+import MetricCard from "../../components/ui/MetricCard";
 import SingleSelect from "../../components/ui/SingleSelect";
 
 
@@ -18,20 +18,26 @@ export default function TradingSimulatorPage() {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [globParams, setGlobParams] = useState({});
-  const [basicParams, setBasicParams] = useState({});
-  const [advancedParams, setAdvancedParams] = useState({});
   const [dataLoading, setDataLoading] = useState(false);
+  const [benchmarkData, setBenchmarkData] = useState(null)
 
   const [activeTab, setActiveTab] = useState(null);
 
-  const { benchmarkData } = useSymbols();
+  const [portfolioStage, setPortfolioStage] = useState({value: "portfolioWeights", label: "Weights Applied"})
+  const [filteredPortfolios, setFilteredPortfolios] = useState([]);
+  const [selectedPortfolios, setSelectedPortfolios] = useState([]);
   const { availablePortfolios } = useLoadPortfolios()
 
   const {
     backtestResult, 
     runBacktest, 
     isLoading: backtestLoading, 
-  } = useBacktest();
+  } = usePortfolioBacktest();
+
+  useEffect(() => {
+    const portfolios = availablePortfolios.filter((p) => p.value.meta.savedFrom === portfolioStage.value)
+    setFilteredPortfolios(portfolios)
+  }, [portfolioStage, availablePortfolios])
 
   useEffect(() => {
     const globalDefaults = Object.fromEntries(
@@ -47,77 +53,112 @@ export default function TradingSimulatorPage() {
   }, [])
 
   useEffect(() => {
-    if (portfolio && Object.keys(portfolio).length > 0) {
-      const stratParams = Object.fromEntries(
-        Object.entries(portfolio.value.data).flatMap(([strat, stratResult]) => 
-          Object.entries(stratResult.params).map(([param, paramValue]) => {
-            const { default: value, name, ...rest } = strategies[strat].params.find(p => p.name === param)
-            return [
-              name, 
-              { value: paramValue, ...rest }
-            ]
-          })
-        )
-      );
+    fetch("http://localhost:8000/api/data/ohlcv/SPY?limit=500")
+      .then((res) => res.json())
+      .then((data) => setBenchmarkData(data));
+  }, [backtestResult])
 
-      const allParams = {...stratParams, ...globParams};
-      const basic = Object.fromEntries(
-        Object.entries(allParams).filter(([_, param]) => param.category === "basic")
-      );
-      const advanced = Object.fromEntries(
-        Object.entries(allParams)
-          .filter(([_, param]) => param.category === "advanced")
-          .map(([k, v]) => [
-              k, 
-              { 
-                  value: k === "startDate" ? startDate.value : k === "endDate" ? endDate.value : v.value, 
-                  lookback: v.lookback ?? false 
-              }
-          ])
-      );
-      setBasicParams(basic);
-      setAdvancedParams(advanced);
-    }
-  }, [portfolio, globParams, startDate, endDate])
+  const handleAddPortfolio = () => {
+    if (!portfolio.value) return; // Ensure a portfolio is selected
 
-  const handleRunBacktest = async () => {
-    const syms = Object.entries(portfolio.value.data).flatMap(([strat, stratResults]) => 
-      stratResults.symbols.map(s => ({
-        "symbols": s.symbol.split("-"),
-        "strategy": strat,
-        "weight": s.weight
-      }))
+    
+    const stratParams = Object.fromEntries(
+      Object.entries(portfolio.value.data).flatMap(([strat, stratResult]) => 
+        Object.entries(stratResult.params).map(([param, paramValue]) => {
+          const { default: value, name, ...rest } = strategies[strat].params.find(p => p.name === param)
+          return [
+            name, 
+            { value: paramValue, ...rest }
+          ]
+        })
+      )
     );
 
-    const symbols = [...syms.flatMap((sym) => sym.symbols), "SPY"];
+    const allParams = Object.fromEntries(
+      Object.entries({...stratParams, ...globParams})
+        .map(([k, v]) => [
+            k, 
+            { 
+                value: k === "startDate" ? startDate.value : k === "endDate" ? endDate.value : v.value, 
+                lookback: v.lookback ?? false 
+            }
+        ])
+    );
+
+    const newEntry = {
+      portfolio: portfolio.value,
+      params: allParams,
+      stage: portfolio.value.meta.savedFrom,
+      trainStart: portfolio.value.meta.start,
+      trainEnd: portfolio.value.meta.end,
+      testStart: startDate?.value,
+      testEnd: endDate?.value,
+    };
+
+    setSelectedPortfolios((prev) => [...prev, newEntry]);
+  };
+
+  const handleRemovePortfolio = (index) => {
+    setSelectedPortfolios(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleRunBacktest = async () => {
+    if (selectedPortfolios.length === 0) return;
     try {
-        setDataLoading(true);
+      setDataLoading(true);
+      for (const p of selectedPortfolios) {
+        // Flatten symbols for this portfolio
+        const syms = Object.entries(p.portfolio.data).flatMap(([strat, stratResults]) =>
+          stratResults.symbols.map((s) => ({
+            symbols: s.symbol.split("-"),
+            strategy: strat,
+            weight: s.weight,
+          }))
+        );
+
+        const symbols = [...syms.flatMap((sym) => sym.symbols), "SPY"];
+
+        // Ingest data for this portfolio
         const ingestRes = await fetch("http://localhost:8000/api/data/ohlcv/syncIngest/", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ symbols, start: startDate.value, end: endDate.value }),
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ symbols, start: p.testStart, end: p.testEnd }),
         });
         await ingestRes.json();
+      }
     } catch (err) {
-        console.error(err);
-        alert("Data ingestion failed");
-        return;
+      console.error(err);
+      alert("Data ingestion or backtest failed");
     } finally {
       setDataLoading(false);
     }
 
-    await runBacktest({symbolItems: syms, basicParams, advancedParams})
-  }
-  
+    await runBacktest(selectedPortfolios);
+
+  };
+
+  useEffect(() => console.log(backtestResult), [backtestResult])
 
   return (
       <div className="space-y-6">
         {/* Strategy + Params */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <SingleSelect
+            currentValue={portfolioStage}
+            setCurrentValue={setPortfolioStage}
+            options={[
+              {value: "portfolioWeights", label: "Weights Applied"},
+              {value: "paramOptimisation", label: "Optimised Parameters"},
+              {value: "strategySelect", label: "Best Strategies Selected"}
+            ]}
+            title="Portfolio Stage"
+            placeholder="Filter Portfolios"
+          />
+
           <SingleSelect
             currentValue={portfolio}
             setCurrentValue={setPortfolio}
-            options={availablePortfolios}
+            options={filteredPortfolios}
             title="Portfolio"
             placeholder="Choose a portfolio"
           />
@@ -131,11 +172,74 @@ export default function TradingSimulatorPage() {
             param={endDate}
             setParam={setEndDate}
           />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {portfolio.value && (
+            <>
+              <MetricCard 
+                label="Saved From"
+                value={portfolio.value.meta.savedFrom}
+              />
 
+              <MetricCard 
+                label="Training Start"
+                value={portfolio.value.meta.start}
+              />
+
+              <MetricCard 
+                label="Training End"
+                value={portfolio.value.meta.end}
+              />
+            </>
+          )}
+          <button
+            onClick={handleAddPortfolio}
+            disabled={!portfolio.value}
+            className="px-4 py-2 rounded-lg text-white bg-green-500 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Add to Selected Portfolios
+          </button>
+          <div className="col-span-1 md:col-span-3 mt-4">
+            {selectedPortfolios.length > 0 && (
+              <div className="overflow-x-auto border rounded-lg">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-4 py-2">Stage</th>
+                      <th className="px-4 py-2">Train Start</th>
+                      <th className="px-4 py-2">Train End</th>
+                      <th className="px-4 py-2">Test Start</th>
+                      <th className="px-4 py-2">Test End</th>
+                      <th className="px-4 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedPortfolios.map((p, idx) => (
+                      <tr key={idx} className="border-t">
+                        <td className="px-4 py-2">{p.stage}</td>
+                        <td className="px-4 py-2">{p.trainStart}</td>
+                        <td className="px-4 py-2">{p.trainEnd}</td>
+                        <td className="px-4 py-2">{p.testStart}</td>
+                        <td className="px-4 py-2">{p.testEnd}</td>
+                        <td className="px-4 py-2 text-right">
+                          <button
+                            onClick={() => handleRemovePortfolio(idx)}
+                            className="px-2 py-1 text-white bg-red-500 rounded hover:bg-red-600"
+                          >
+                            X
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
           <button
             onClick={handleRunBacktest}
             disabled={
-              backtestLoading || Object.keys(portfolio).length === 0
+              backtestLoading || selectedPortfolios.length === 0
             }
             className={"px-4 py-2 rounded-lg text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"}
           >
@@ -163,7 +267,7 @@ export default function TradingSimulatorPage() {
             </div>
   
             {activeTab === "Overview" && (
-              <OverviewTab results={backtestResult} benchmark={benchmarkData} showIndividual={false}/>
+              <OverviewTab results={backtestResult} benchmark={benchmarkData} startDate = {startDate} showIndividual={false} extraStats={true}/>
             )}
             {activeTab === "Trade Analytics" && (
               <TradeAnalyticsTab results={backtestResult} />

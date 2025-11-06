@@ -1,6 +1,8 @@
 import asyncio
 import json
 import uuid
+from datetime import datetime
+from typing import List, Dict
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -40,13 +42,48 @@ def run_standard_backtest(payload: StrategyRequest, db: Session = Depends(get_db
     data = fetch_price_data(db, all_symbols, params["startDate"], params["endDate"], lookback)
 
     print("Running standard backtest...")
-    results = run_backtest(data, strategy_symbols, params, lookback)
+    results = run_backtest(data, strategy_symbols, params)
     print("Completed.")
 
     if not results:
         raise HTTPException(status_code=404, detail="No price data found for given symbols")
     
-    return results
+    return results 
+
+# === Run Backtest over multiple portfolios ===
+@router.post("/backtest/portfolios")
+def run_backtest_multiple_portfolios(payload: List[Dict], db: Session = Depends(get_db)):
+    if payload is None or len(payload) == 0:
+        raise HTTPException(status_code=404, detail="No portfolios provided")
+    payload.sort(key=lambda p: datetime.strptime(p["testEnd"], "%Y-%m-%d"))
+    all_results = []
+    for p in payload:
+        symbolItems = []
+        for strat, info in p["portfolio"]["data"].items():
+            for symbol in info["symbols"]:
+                symbolItems.append({
+                    "symbols": symbol["symbol"].split("-"),
+                    "strategy": strat,
+                    "weight": symbol["weight"]
+                })
+        inputs = StrategyRequest(symbolItems=symbolItems, params=p["params"])
+        try:
+            all_symbols, strategy_symbols, params, lookback = prepare_backtest_inputs(inputs)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        data = fetch_price_data(db, all_symbols, params["startDate"], params["endDate"], lookback)
+
+        results = run_backtest(data, strategy_symbols, params)
+
+        if not results:
+            raise HTTPException(status_code=404, detail="No price data found for given symbols")
+        
+        all_results.append(results)
+
+    final_result = compute_walkforward_results(all_results, len(all_results))[0]
+
+    return final_result
 
 
 # === Launch asynchronous walk-forward backtest task ===
