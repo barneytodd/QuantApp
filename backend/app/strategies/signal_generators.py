@@ -170,3 +170,18 @@ def pairs_signal_generator(price_matrix: pd.DataFrame, stock1: str, stock2: str,
 
     signals.iloc[-1] = 0 # force exit on last date
     return signals
+
+
+# ===============================
+# Equal Weight
+# ===============================
+def equal_weight_signal_generator(price_matrix: pd.DataFrame, params: dict) -> pd.DataFrame:
+    """
+    Compute equal weight signals for all symbols in price_matrix.
+    
+    Returns a DataFrame with:
+    1 = buy, 0 = exit, np.nan = hold
+    """
+    signals = pd.DataFrame(1, index=price_matrix.index, columns=price_matrix.columns)
+    signals.iloc[-1] = 0 # force exit on last date
+    return signals

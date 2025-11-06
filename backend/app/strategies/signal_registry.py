@@ -8,4 +8,5 @@ generators = {
     "momentum": sg.momentum_signal_generator,
     "breakout": sg.breakout_signal_generator,
     "pairs_trading": sg.pairs_signal_generator,
+    "equal_weight": sg.equal_weight_signal_generator,
 }

@@ -178,7 +178,7 @@ export default function Backtesting() {
         />
 
         <SymbolSelector
-          symbols={symbols}
+          symbols={[{ label: "SPY", value: "SPY" }, ...symbols]}
           selectedSymbols={selectedSymbols}
           setSelectedSymbols={setSelectedSymbols}
         />
@@ -245,7 +245,7 @@ export default function Backtesting() {
           </div>
 
           {activeTab === "Overview" && (
-            <OverviewTab results={backtestResult} benchmark={benchmarkData} />
+            <OverviewTab results={backtestResult} benchmark={benchmarkData} startDate={advancedParams.startDate}/>
           )}
           {activeTab === "Trade Analytics" && (
             <TradeAnalyticsTab results={backtestResult} />

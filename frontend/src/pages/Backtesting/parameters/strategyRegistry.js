@@ -279,6 +279,11 @@ export const strategies = {
     ],
   },
 
+  equal_weight: {
+    label: "Equal Weight Benchmark",
+    params: []
+  },
+
   custom: {
     label: "Custom",
     params:[],
