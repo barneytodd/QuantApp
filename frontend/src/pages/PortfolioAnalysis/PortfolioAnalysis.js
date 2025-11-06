@@ -124,8 +124,8 @@ export default function PortfolioBuilder() {
     await runPortfolioWeights();
   }
 
-  const handleSavePortfolioToDB = async (result) => {
-    await savePortfolioToDB(result);
+  const handleSavePortfolioToDB = async (result, metadata = {}) => {
+    await savePortfolioToDB(result, metadata);
   }
 
   useEffect(() => {
@@ -207,6 +207,8 @@ export default function PortfolioBuilder() {
         strategyType={strategySelectStrategyType}
         uploadComplete={strategySelectUploadComplete}
         progress={strategySelectProgress}
+        startDate={startDate.value}
+        endDate={endDate.value}
         onSavePortfolio={handleSavePortfolioToDB}
         savingPortfolio={savingPortfolio}
         savedPortfolio={savedPortfolio}
@@ -223,6 +225,8 @@ export default function PortfolioBuilder() {
         paramOptimisationError={paramOptimisationError}
         strategySelectResults={strategySelectResults}
         progress={paramOptimisationProgress}
+        startDate={startDate.value}
+        endDate={endDate.value}
         onSavePortfolio={handleSavePortfolioToDB}
         savingPortfolio={savingPortfolio}
         savedPortfolio={savedPortfolio}
@@ -241,6 +245,8 @@ export default function PortfolioBuilder() {
         optimisationLoading={portfolioWeightsOptimisationLoading}
         portfolioWeightsError={portfolioWeightsError}
         paramOptimisationResults={paramOptimisationResults}
+        startDate={startDate.value}
+        endDate={endDate.value}
         onSavePortfolio={handleSavePortfolioToDB}
         savingPortfolio={savingPortfolio}
         savedPortfolio={savedPortfolio}

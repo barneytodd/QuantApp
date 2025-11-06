@@ -12,6 +12,8 @@ export default function ParamOptimsation({
   paramOptimisationError,
   strategySelectResults,
   progress,
+  startDate,
+  endDate,
   onSavePortfolio,
   savingPortfolio,
   savedPortfolio,
@@ -179,7 +181,7 @@ export default function ParamOptimsation({
           {filterResults && onSavePortfolio && (
             <div className="flex justify-start gap-3 mt-2">
               <button
-                onClick={() => onSavePortfolio(portfolio)}
+                onClick={() => onSavePortfolio(portfolio, {start: startDate, end: endDate, savedFrom: "paramOptimisation"})}
                 className="px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {savingPortfolio ? "Saving ..." : savedPortfolio ? "Saved" : "Save Portfolio"}

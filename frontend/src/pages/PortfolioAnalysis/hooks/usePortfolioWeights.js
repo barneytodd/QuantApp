@@ -207,7 +207,7 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify( {portfolio} )
+                body: JSON.stringify( {portfolio, metadata} )
             });
 
             if (!response.ok) {

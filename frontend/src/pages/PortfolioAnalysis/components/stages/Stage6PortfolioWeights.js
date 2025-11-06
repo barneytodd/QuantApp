@@ -14,6 +14,8 @@ export default function PortfolioWeights({
   optimisationLoading,
   portfolioWeightsError,
   paramOptimisationResults,
+  startDate,
+  endDate,
   onSavePortfolio,
   savingPortfolio,
   savedPortfolio
@@ -158,7 +160,7 @@ export default function PortfolioWeights({
           {filterResults && onSavePortfolio && (
             <div className="flex justify-start gap-3 mt-2">
               <button
-                onClick={() => onSavePortfolio(filterResults)}
+                onClick={() => onSavePortfolio(filterResults, {start: startDate, end: endDate, savedFrom: "portfolioWeights"})}
                 className="px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {savingPortfolio ? "Saving ..." : savedPortfolio ? "Saved" : "Save Portfolio"}
