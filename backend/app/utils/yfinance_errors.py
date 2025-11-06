@@ -4,6 +4,8 @@ import re
 import yfinance as yf
 from contextlib import contextmanager
 
+from app.crud.missing_data import insert_missing_data
+
 # Thread-safe capture of stderr
 @contextmanager
 def capture_stderr_threadsafe():
@@ -46,8 +48,10 @@ def safe_download(symbols, db=None, **kwargs):
                 failed.append((symbol, start, end, reason))
 
                 if db is not None:
-                    from app.crud.missing_data import insert_missing_data
-                    insert_missing_data(db, symbol, start, end, reason)
+                    try:
+                        insert_missing_data(db, symbol, start, end, reason)
+                    except Exception as e:
+                        print(e)
 
     if failed:
         print("=== Captured missing/failed symbols ===")
