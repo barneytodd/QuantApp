@@ -1,10 +1,13 @@
 import threading
+import time
 import uuid
 from datetime import date
 from typing import List, Optional
 
+import pyodbc
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.models.prices import Price
@@ -111,7 +114,7 @@ def get_prices_light(db, symbols, start, end, lookback=0):
 
 
 # === Upsert prices in bulk ===
-def upsert_prices(db: Session, price_list: list, chunk_size: int = 5000):
+def upsert_prices(db: Session, symbol: str, price_list: list, start, end, chunk_size: int = 500):
     """
     Efficient, atomic bulk upsert into dbo.prices using SQL Server MERGE.
     Handles duplicate (symbol, date) entries gracefully.
@@ -147,33 +150,64 @@ def upsert_prices(db: Session, price_list: list, chunk_size: int = 5000):
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """
 
+        MAX_INT = 2_147_483_647
+        MIN_INT = -2_147_483_648
+
+
         for i in range(0, len(price_list), chunk_size):
             batch = price_list[i:i + chunk_size]
+            valid_rows = []
+
             for j, p in enumerate(batch):
-                try:
-                    if abs(p.volume or 0) > 2_000_000_000:
-                        print(f" Volume too large: {p.symbol} {p.date} volume={p.volume}")
-                except Exception as e:
-                    print(f"Bad volume at row {j}: {p} -> {e}")
-            rows = [
-                (p.symbol, p.date, p.open, p.high, p.low, p.close, p.volume)
-                for p in batch
-            ]
-            cursor.executemany(insert_sql, rows)
+                skip_row = False
+
+                # Check numeric limits
+                for col_name, val in [
+                    ("open", p.open),
+                    ("high", p.high),
+                    ("low", p.low),
+                    ("close", p.close)
+                ]:
+                    if val is not None:
+                        if not isinstance(val, (int, float)):
+                            print(f"Row {i} invalid type in {col_name}: {val}")
+                            skip_row = True
+                            break
+                        if abs(val) > 1e308:  # SQL Server FLOAT limit
+                            print(f"Row {i} {col_name} too large: {val}")
+                            skip_row = True
+                            break
+
+                # Check volume explicitly
+                vol = p.volume
+                if vol is not None:
+                    if not isinstance(vol, int):
+                        print(f"Row {i} volume invalid type: {vol}")
+                        skip_row = True
+                    elif vol < MIN_INT or vol > MAX_INT:
+                        print(f"Row {i} volume out of range: {vol}")
+                        skip_row = True
+
+                if not skip_row:
+                    valid_rows.append(
+                        (p.symbol, p.date, p.open, p.high, p.low, p.close, p.volume)
+                    )
+                else:
+                    print(f"Skipping row {i} for symbol {p.symbol} on date {p.date} with values {p}")
+
+            if valid_rows:
+                cursor.executemany(insert_sql, valid_rows)
 
         # Deduplicate and merge inline in one batch
         merge_sql = f"""
             ;WITH Deduped AS (
-                SELECT
-                    symbol,
-                    [date],
-                    AVG([open])  AS [open],
-                    AVG([high])  AS [high],
-                    AVG([low])   AS [low],
-                    AVG([close]) AS [close],
-                    AVG(volume)  AS volume
-                FROM {temp_table}
-                GROUP BY symbol, [date]
+                SELECT *
+                FROM (
+                    SELECT *,
+                           ROW_NUMBER() OVER(PARTITION BY symbol, [date] ORDER BY [date] DESC) AS rn
+                    FROM {temp_table}
+                ) t
+                WHERE rn = 1
             )
             MERGE dbo.prices WITH (HOLDLOCK) AS target
             USING Deduped AS source
@@ -191,7 +225,28 @@ def upsert_prices(db: Session, price_list: list, chunk_size: int = 5000):
                         source.[high], source.[low], source.[close], source.volume);
         """
         cursor.execute(merge_sql)
-
+        
         # Cleanup
         cursor.execute(f"DROP TABLE {temp_table};")
         cursor.close()
+
+
+def upsert_prices_with_retry(db, symbol, price_list, start, end, chunk_size=500, retries=5, delay=2):
+    for attempt in range(retries):
+        try:
+            upsert_prices(db, symbol, price_list, start, end, chunk_size)
+            symbol_count = sum(1 for _ in price_list)
+            db_records = get_prices_light(db, [symbol], start, end)
+            db_count = sum(1 for _ in db_records)
+            if db_count < symbol_count:
+                print(f"Discrepancy for {symbol}: Fetched {symbol_count}, In DB {db_count}, retrying {attempt+1}/{retries}...")
+                time.sleep(delay)
+                continue
+            break
+        except (pyodbc.Error, OperationalError) as e:
+            if "1205" in str(e):  # Deadlock victim
+                if attempt < retries - 1:
+                    print(f"Deadlock detected, retrying {attempt+1}/{retries}...")
+                    time.sleep(delay)
+                    continue
+            raise  # re-raise if not a deadlock or out of retries

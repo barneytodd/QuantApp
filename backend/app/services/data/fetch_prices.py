@@ -1,13 +1,14 @@
 import contextlib
 import io
 import re
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import pandas as pd
 import yfinance as yf
 
-from app.crud import upsert_prices, insert_missing_data
+from app.crud import upsert_prices_with_retry, insert_missing_data, get_prices_light
 from app.database import SessionLocal
 from app.schemas import PriceIn
 from app.utils.data_helpers import chunk_symbols, get_missing_periods, get_symbol_date_ranges
@@ -109,25 +110,38 @@ def ingest_missing_data_parallel(db, symbols, start, end, chunk_size=50, max_wor
     # --- Compute missing periods for each symbol ---
     missing_periods = get_missing_periods(symbols, ranges, start, end)
 
+    # Inverted dict: (date1, date2) -> list of symbols
+    range_to_symbols = defaultdict(list)
+    for symbol, periods in missing_periods.items():
+        for date_range in periods:
+            range_to_symbols[date_range].append(symbol)
+
+    all_records = defaultdict(list)
+    for period, symbols in range_to_symbols.items():
+        records = fetch_historical(symbols, start=str(period[0]), end=str(period[1]), db=db)
+        if records:
+            for symbol in symbols: 
+                all_records[symbol].extend([PriceIn(**r) for r in records if r["symbol"] == symbol])
+
     def fetch_and_insert(symbol):
         """
         Fetch missing periods for a single symbol and upsert into DB in chunks.
         """
-        all_records = []
         with SessionLocal() as db_thread:
-            for period_start, period_end in missing_periods.get(symbol, []):
-                records = fetch_historical([symbol], start=str(period_start), end=str(period_end), db=db_thread)
-                if records:
-                    all_records.extend([PriceIn(**r) for r in records])
-
-            if all_records:
+            if all_records[symbol]:
+                unique_prices = {}
+                for p in all_records[symbol]:
+                    key = (p.symbol, p.date)
+                    unique_prices[key] = p  # last one wins
+                symbol_records = list(unique_prices.values())
                 try:
-                    upsert_prices(db_thread, all_records, chunk_size=500)
-                    db_thread.commit()
+                    upsert_prices_with_retry(db_thread, symbol, symbol_records, min([p.date for p in symbol_records]), max([p.date for p in symbol_records]), chunk_size=500)
+                    print(f"Inserted/Updated {len(symbol_records)} records for {symbol}")
                 except Exception as e:
                     print(e)
-                print(f"Inserted/Updated {len(all_records)} records for {symbol}")
+                
 
+    
     # --- Split symbols into chunks and process in parallel threads ---
     for chunk in chunk_symbols(list(missing_periods.keys()), chunk_size):
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
