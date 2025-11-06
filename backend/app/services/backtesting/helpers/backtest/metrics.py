@@ -21,7 +21,7 @@ def compute_daily_returns(equity_curve):
 
 
 # --- 2. Compute financial metrics ---
-def compute_metrics(equity_curve, risk_free_rate=0.01):
+def compute_metrics(equity_curve, risk_free_rate=0.02):
     """
     Compute key performance metrics for an equity curve.
 
