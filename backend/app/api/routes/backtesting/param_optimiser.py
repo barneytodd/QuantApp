@@ -45,7 +45,7 @@ def optimise_strategy_parameters(payload: ParamOptimisationRequest):
         "maxDrawdown": {"min": 10, "max": 60},     
         "winRate": {"min": 25, "max": 75}          
     }
-
+    tasks_store.clear()
     results = optimise_parameters(strategies_config, global_params, optimisation_params, scoring_params, metric_ranges)
     return results
 
@@ -94,6 +94,7 @@ async def stream_all_param_optimisation_progress():
             # Stop streaming once all strategies are done
             if all(task["status"] == "done" for task in tasks_store.values()):
                 yield f"data: {json.dumps({'done': True})}\n\n"
+                tasks_store.clear()
                 break
 
             await asyncio.sleep(0.3)
