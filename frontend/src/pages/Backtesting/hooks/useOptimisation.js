@@ -107,7 +107,9 @@ export function useOptimisation(startDate=null, endDate=null) {
       return data;
     } catch (err) {
       setError(err);
+      console.log(err);
       setIsLoading(false);
+      setOptimisationResult(null);
       alert("Optimisation failed");
     } finally {
       setIsLoading(false);
