@@ -87,7 +87,7 @@ export function usePreScreen(uniFilterResults, endDate, setVisible) {
             evtSource.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 setProgress(data);
-                if (data.completed === data.total) {
+                if (data.completed >= data.total) {
                     // 4️⃣ Fetch final results
                     fetch(`http://localhost:8000/api/portfolio/getPreScreenResults/${task_id}`)
                         .then(res => res.json())
