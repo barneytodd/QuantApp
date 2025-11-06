@@ -78,7 +78,7 @@ def run_segment_with_data_fetch(segment_id, all_symbols, strategy_symbols, param
     db = SessionLocal()
     try:
         data = fetch_price_data_light(db, all_symbols, start, end, lookback)
-        result = run_segment(segment_id, data, strategy_symbols, params, lookback, progress_state)
+        result = run_segment(segment_id, data, strategy_symbols, params, progress_state)
     except Exception as e:
         print(e)
     finally:

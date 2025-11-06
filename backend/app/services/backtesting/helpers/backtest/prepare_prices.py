@@ -1,6 +1,6 @@
 import pandas as pd
 
-def prepare_price_matrix(data: dict):
+def prepare_price_matrix(data: dict, symbols: dict):
     """
     Converts dict of OHLC lists into a single DataFrame of close prices
     with dates as index and symbols as columns.
@@ -15,6 +15,13 @@ def prepare_price_matrix(data: dict):
         symbol: pd.Series({row['date']: row['close'] for row in rows})
         for symbol, rows in data.items()
     })
+
+    for sym_info in symbols.values():
+        syms = sym_info["symbols"]
+        for sym in syms:
+            if sym not in price_matrix.columns:
+                price_matrix[sym] = 0
+
     price_matrix.index = pd.to_datetime(price_matrix.index)
     numeric_cols = price_matrix.select_dtypes(include='number').columns
     

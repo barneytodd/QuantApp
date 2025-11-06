@@ -1,6 +1,6 @@
 from app.services.backtesting.engines.backtest_engine import run_backtest
 
-def run_segment(segment_id, data, strategy_symbols, params, lookback, progress_state):
+def run_segment(segment_id, data, strategy_symbols, params, progress_state):
     """
     Run a single backtest segment and update a shared progress state.
 
@@ -28,7 +28,6 @@ def run_segment(segment_id, data, strategy_symbols, params, lookback, progress_s
         data,
         strategy_symbols,
         params,
-        lookback,
         progress_callback  # Pass callback to track progress per date
     )
 

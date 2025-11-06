@@ -8,7 +8,7 @@ from ..helpers.backtest import (
 )
 from ..helpers.pairs import align_series
 
-def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
+def run_backtest(data, symbols, params, progress_callback=None):
     """
     Run a backtest for single-stock and pairs trading strategies.
 
@@ -21,8 +21,6 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
             Example: { "sym1_strat": { "symbols": ["AAPL"], "strategy": "momentum", "weight": 1 } }
         params (dict): 
             Backtest parameters (initialCapital, slippage, transaction costs, etc.)
-        lookback (int): 
-            Number of initial bars to skip (warm-up)
         progress_callback (callable): 
             Optional callback to report progress per date index
 
@@ -36,14 +34,16 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
     initial_capital = params["initialCapital"]
 
     # --- 1. Convert raw OHLC lists to DataFrames for fast lookup ---
-    price_matrix = prepare_price_matrix(data)
+    price_matrix = prepare_price_matrix(data, symbols)
 
     # --- 2. Generate signals ---
+    start_date = pd.Timestamp(params["startDate"])
     signal_matrix = pd.DataFrame(generate_signals(price_matrix, symbols, params))
     signal_matrix = signal_matrix.ffill()
     signal_matrix = signal_matrix.fillna(0)
+    signal_matrix = signal_matrix.loc[signal_matrix.index >= start_date]
 
-    trade_indicator = signal_matrix.diff().fillna(0)
+    trade_indicator = signal_matrix.diff().fillna(signal_matrix)
     trade_indicator = trade_indicator.astype(int)
     position_indicator = trade_indicator.cumsum()
 
@@ -61,22 +61,20 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
     
     # --- 3. Execute trades ---
     idx = 0
+    
     for symbol_key, info in symbols.items():
         syms = info["symbols"]
         strat = info["strategy"]
         capital = initial_capital * info["weight"]
         positions = [0] * len(syms)
-        for sym in syms:
-            all_trades[symbol_key] = []
+        all_trades[symbol_key] = []
         for date in trade_indicator.index:
-            skip = False
             for sym in syms:
                 if price_matrix.at[date, sym] == 0:
-                    skip = True
-            if skip:
-                trade = 0
-            else:
-                trade = trade_indicator.at[date, symbol_key]
+                    trade = 0
+                    break
+                else:
+                    trade = trade_indicator.at[date, symbol_key]
             pos = position_indicator.at[date, symbol_key]
             if trade == 0:
                 pass
@@ -130,5 +128,5 @@ def run_backtest(data, symbols, params, lookback=0, progress_callback=None):
             "metrics": compute_metrics(curve),
             "tradeStats": compute_trade_stats(strategy_trades)
         })
-
+        
     return results
