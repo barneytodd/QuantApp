@@ -282,7 +282,7 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
             const symbolResults = data.aggregated_results
                 .filter(item => item.symbol !== "overall")
                 .reduce((acc, item) => {
-                    const symbol = item.symbol.split("_")[0]
+                    const symbol = item.symbol
                     if (!acc[symbol]) {
                         acc[symbol] = {};
                     }
