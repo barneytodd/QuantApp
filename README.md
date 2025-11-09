@@ -1,4 +1,5 @@
-# Machine Learning and Transformer Networks in Stock Market Prediction
+# Quantative Trading Platform
 ## Barney Todd
-### March 2024
-For full project details, see Report.pdf
+### Nov 2025
+For full project details, see ProjectWriteup.pdf
+
