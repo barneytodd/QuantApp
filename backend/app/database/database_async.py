@@ -1,10 +1,13 @@
+import os
+
 import aioodbc
 import asyncio
 
 # === Database connection string ===
-dsn = (
-    "Driver=ODBC Driver 17 for SQL Server;"
-    "Server=localhost\\SQLEXPRESS;"
+dsn = os.getenv(
+    "ODBC_DSN",
+    "Driver=ODBC Driver 18 for SQL Server;"
+    "Server=host.docker.internal\\SQLEXPRESS;"
     "Database=QuantDB;"
     "UID=quant_user;"
     "PWD=QuantProject!25;"

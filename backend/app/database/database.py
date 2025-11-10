@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Generator
 
 from sqlalchemy import create_engine
@@ -8,9 +9,11 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
 
 # Connection string for MS SQL Server
-SQLALCHEMY_DATABASE_URL = (
-    "mssql+pyodbc://quant_user:QuantProject!25@localhost\\SQLEXPRESS/QuantDB?driver=ODBC+Driver+17+for+SQL+Server"
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "DB_CONNECTION",
+    "mssql+pyodbc://quant_user:QuantProject!25@host.docker.internal\\SQLEXPRESS/QuantDB?driver=ODBC+Driver+18+for+SQL+Server"
 )
+
 
 # Create SQLAlchemy engine
 engine = create_engine(
