@@ -1,7 +1,9 @@
 import logging
 import os
+import pyodbc
 from typing import Generator
 
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
@@ -9,9 +11,22 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
 
 # Connection string for MS SQL Server
-SQLALCHEMY_DATABASE_URL = os.getenv(
-    "DB_CONNECTION",
-    "mssql+pyodbc://quant_user:QuantProject!25@host.docker.internal\\SQLEXPRESS/QuantDB?driver=ODBC+Driver+18+for+SQL+Server"
+load_dotenv()  # load .env file
+
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT", "1433")
+DB_NAME = os.getenv("DB_NAME")
+
+drivers = [driver for driver in pyodbc.drivers() if "SQL Server" in driver]
+if not drivers:
+    raise RuntimeError("No SQL Server ODBC drivers found!")
+DB_DRIVER = sorted(drivers)[-1]
+
+
+SQLALCHEMY_DATABASE_URL = (
+    f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?driver={DB_DRIVER}"
 )
 
 

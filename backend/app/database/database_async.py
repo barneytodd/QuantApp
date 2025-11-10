@@ -1,16 +1,30 @@
+from dotenv import load_dotenv
 import os
+import pyodbc
 
 import aioodbc
 import asyncio
 
 # === Database connection string ===
-dsn = os.getenv(
-    "ODBC_DSN",
-    "Driver=ODBC Driver 18 for SQL Server;"
-    "Server=host.docker.internal\\SQLEXPRESS;"
-    "Database=QuantDB;"
-    "UID=quant_user;"
-    "PWD=QuantProject!25;"
+load_dotenv()  # load .env file
+
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT", "1433")
+DB_NAME = os.getenv("DB_NAME")
+
+drivers = [driver for driver in pyodbc.drivers() if "SQL Server" in driver]
+if not drivers:
+    raise RuntimeError("No SQL Server ODBC drivers found!")
+DB_DRIVER = sorted(drivers)[-1]
+
+dsn = (
+    f"Driver={DB_DRIVER};"
+    f"Server={DB_HOST},{DB_PORT};"
+    f"Database={DB_NAME};"
+    f"UID={DB_USER};"
+    f"PWD={DB_PASSWORD};"
     "TrustServerCertificate=yes;"
 )
 
