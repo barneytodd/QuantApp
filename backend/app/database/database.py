@@ -13,20 +13,24 @@ logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
 # Connection string for MS SQL Server
 load_dotenv()  # load .env file
 
+DB_ENV = os.getenv("DB_ENV", "local")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST")
+DB_HOST = os.getenv("DB_LOCAL_HOST") if DB_ENV == "local" else os.getenv("DB_DOCKER_HOST")
 DB_PORT = os.getenv("DB_PORT", "1433")
+DB_INSTANCE = os.getenv("DB_INSTANCE", "SQLEXPRESS")
 DB_NAME = os.getenv("DB_NAME")
 
-drivers = [driver for driver in pyodbc.drivers() if "SQL Server" in driver]
+drivers = [driver for driver in pyodbc.drivers() if "SQL Server" in driver and "ODBC" in driver]
 if not drivers:
     raise RuntimeError("No SQL Server ODBC drivers found!")
 DB_DRIVER = sorted(drivers)[-1]
 
+server = f"{DB_HOST}\\{DB_INSTANCE}" if DB_ENV == "local" else f"{DB_HOST},{DB_PORT}"
+
 
 SQLALCHEMY_DATABASE_URL = (
-    f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?driver={DB_DRIVER}"
+    f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD}@{server}/{DB_NAME}?driver={DB_DRIVER}"
 )
 
 
