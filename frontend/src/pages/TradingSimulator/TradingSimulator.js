@@ -8,10 +8,12 @@ import ParamCard from "../../components/ui/ParamCard";
 import MetricCard from "../../components/ui/MetricCard";
 import SingleSelect from "../../components/ui/SingleSelect";
 
-
 import OverviewTab from "../Backtesting/tabs/OverviewTab";
 import TradeAnalyticsTab from "../Backtesting/tabs/TradeAnalyticsTab";
 import RiskExposureTab from "../Backtesting/tabs/RiskExposureTab";
+
+const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
+const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
 
 export default function TradingSimulatorPage() {
   const [portfolio, setPortfolio] = useState({});
@@ -53,7 +55,7 @@ export default function TradingSimulatorPage() {
   }, [])
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/data/ohlcv/SPY?limit=500")
+    fetch(`${API_URL}/api/data/ohlcv/SPY?limit=500`)
       .then((res) => res.json())
       .then((data) => setBenchmarkData(data));
   }, [backtestResult])
@@ -119,7 +121,7 @@ export default function TradingSimulatorPage() {
         const symbols = [...syms.flatMap((sym) => sym.symbols), "SPY"];
 
         // Ingest data for this portfolio
-        const ingestRes = await fetch("http://localhost:8000/api/data/ohlcv/syncIngest/", {
+        const ingestRes = await fetch(`${API_URL}/api/data/ohlcv/syncIngest/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ symbols, start: p.testStart, end: p.testEnd }),

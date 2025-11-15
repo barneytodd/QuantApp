@@ -3,6 +3,9 @@ import { params } from "../params/strategySelectParams"
 import { useStrategyParams } from "../../Backtesting/hooks/useStrategyParams";
 import { strategies } from "../../Backtesting/parameters/strategyRegistry";
 
+const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
+const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
+
 export function useStrategySelect(prelimBacktestResults, startDate, endDate, setVisible) {
     const [paramValues, setParamValues] = useState({});
     const [filterResults, setFilterResults] = useState(null);
@@ -204,7 +207,7 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
 
         try {
             // 1️⃣ Sync ingest
-            const ingestRes = await fetch("http://localhost:8000/api/data/ohlcv/syncIngest/", {
+            const ingestRes = await fetch(`${API_URL}/api/data/ohlcv/syncIngest/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ symbols: allSymbols, start: startDate.value, end: todayStr }),
@@ -244,7 +247,7 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
             )
 
             // 2️⃣ Start walk-forward backtest task
-            const startRes = await fetch("http://localhost:8000/api/strategies/backtest/walkforward/start", {
+            const startRes = await fetch(`${API_URL}/api/strategies/backtest/walkforward/start`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ symbolItems, params }),
@@ -257,7 +260,7 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
 
             // 3️⃣ Stream progress via SSE
             await new Promise((resolve, reject) => {
-                const evtSource = new EventSource(`http://localhost:8000/api/strategies/backtest/walkforward/stream/${task_id}`);
+                const evtSource = new EventSource(`${API_URL}/api/strategies/backtest/walkforward/stream/${task_id}`);
                 evtSource.onmessage = (e) => {
                     const data = JSON.parse(e.data);
                     // You can store per-segment progress in state if needed
@@ -276,7 +279,7 @@ export function useStrategySelect(prelimBacktestResults, startDate, endDate, set
             });
 
             // 4️⃣ Fetch aggregated results once done
-            const aggRes = await fetch(`http://localhost:8000/api/strategies/backtest/walkforward/results/${task_id}`);
+            const aggRes = await fetch(`${API_URL}/api/strategies/backtest/walkforward/results/${task_id}`);
             if (!aggRes.ok) throw new Error("Failed to fetch aggregated results");
             const data = await aggRes.json();
             const symbolResults = data.aggregated_results

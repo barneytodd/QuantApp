@@ -1,5 +1,8 @@
 import { useState, useCallback } from "react";
 
+const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
+const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
+
 export function usePairs() {
   const [pairCandidates, setPairCandidates] = useState([]);
   const [selectedPairs, setSelectedPairs] = useState([]);
@@ -21,7 +24,7 @@ export function usePairs() {
 
     try {
       // 1️⃣ Start background task
-      const startRes = await fetch("http://localhost:8000/api/pairs/select/start", {
+      const startRes = await fetch(`${API_URL}/api/pairs/select/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ symbols, start, end, ...weights }),
@@ -34,7 +37,7 @@ export function usePairs() {
 
       // 2️⃣ Stream SSE progress
       await new Promise((resolve, reject) => {
-        const evtSource = new EventSource(`http://localhost:8000/api/pairs/select/stream/${task_id}`);
+        const evtSource = new EventSource(`${API_URL}/api/pairs/select/stream/${task_id}`);
 
         evtSource.onmessage = (e) => {
           try {
@@ -73,7 +76,7 @@ export function usePairs() {
       });
 
       // 3️⃣ Fetch final results
-      const resultsRes = await fetch(`http://localhost:8000/api/pairs/select/results/${task_id}`);
+      const resultsRes = await fetch(`${API_URL}/api/pairs/select/results/${task_id}`);
       if (!resultsRes.ok) throw new Error("Failed to fetch pair results");
       const data = await resultsRes.json();
 

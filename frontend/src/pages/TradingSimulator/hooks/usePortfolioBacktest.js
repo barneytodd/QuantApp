@@ -1,5 +1,8 @@
 import { useState } from "react";
 
+const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
+const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
+
 /**
  * Custom React hook to run backtests for trading strategies.
  *
@@ -19,7 +22,7 @@ export function usePortfolioBacktest() {
     setError(null);
 
     try {
-      const res = await fetch("http://localhost:8000/api/strategies/backtest/portfolios", {
+      const res = await fetch(`${API_URL}/api/strategies/backtest/portfolios`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(portfolios),

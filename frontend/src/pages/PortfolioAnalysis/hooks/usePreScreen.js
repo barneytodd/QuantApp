@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { filters } from "../params/preScreenFilters"
 
+const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
+const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
+
 export function usePreScreen(uniFilterResults, endDate, setVisible) {
     const [uploadComplete, setUploadComplete] = useState(true);
     const [testingComplete, setTestingComplete] = useState(true);
@@ -49,7 +52,7 @@ export function usePreScreen(uniFilterResults, endDate, setVisible) {
         const startStr = start.toISOString().split("T")[0].replace(/-/g, "-");
         try {
             // 1️⃣ Sync ingest
-            const ingestRes = await fetch("http://localhost:8000/api/data/ohlcv/syncIngest/", {
+            const ingestRes = await fetch(`${API_URL}/api/data/ohlcv/syncIngest/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ symbols, start: startStr, end: endDate.value }),
@@ -75,7 +78,7 @@ export function usePreScreen(uniFilterResults, endDate, setVisible) {
 
         try {
             // 2️⃣ Start pre-screen
-            const res = await fetch("http://localhost:8000/api/portfolio/runPreScreen/", {
+            const res = await fetch(`${API_URL}/api/portfolio/runPreScreen/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ symbols, start: startStr, end: endDate.value, filters: filterDict }),
@@ -83,13 +86,13 @@ export function usePreScreen(uniFilterResults, endDate, setVisible) {
             const { task_id } = await res.json();
 
             // 3️⃣ SSE for progress
-            const evtSource = new EventSource(`http://localhost:8000/api/portfolio/streamProgress/${task_id}`);
+            const evtSource = new EventSource(`${API_URL}/api/portfolio/streamProgress/${task_id}`);
             evtSource.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 setProgress(data);
                 if (data.completed >= data.total) {
                     // 4️⃣ Fetch final results
-                    fetch(`http://localhost:8000/api/portfolio/getPreScreenResults/${task_id}`)
+                    fetch(`${API_URL}/api/portfolio/getPreScreenResults/${task_id}`)
                         .then(res => res.json())
                         .then(results => {
                             const { symbols = {}, failed_count = {} } = results;

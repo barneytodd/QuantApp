@@ -6,6 +6,9 @@
   import MetricCard from "../../components/ui/MetricCard";
   import { Option, MenuList } from "../../components/ui/CustomSelectComponents"
 
+  const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
+  const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
+
   // create app dashboard
   function Dashboard() {
 
@@ -34,7 +37,7 @@
 
     // get available ticker symbols from backend
     useEffect(() => {
-      fetch("http://localhost:8000/api/symbols/db_symbols")
+      fetch(`${API_URL}/api/symbols/db_symbols`)
         .then(res => res.json())
         .then(data => {
           setSymbols(data.map(s => ({ value: s, label: s })));
@@ -46,20 +49,20 @@
     useEffect(() => {
       if (!selectedSymbol) return;
 
-      fetch(`http://localhost:8000/api/data/ohlcv/${selectedSymbol?.value}?limit=200`)
+      fetch(`${API_URL}/api/data/ohlcv/${selectedSymbol?.value}?limit=200`)
         .then(res => res.json())
         .then(data => { 
           setOhlcv(data || []); 
         });
 
-      fetch(`http://localhost:8000/api/metrics/${selectedSymbol?.value}`)
+      fetch(`${API_URL}/api/metrics/${selectedSymbol?.value}`)
         .then(res => res.json())
         .then(data => setMetrics(data));
     }, [selectedSymbol]);
 
     // get available ticker symbols to upload data
     useEffect(() => {
-      fetch("http://localhost:8000/api/symbols/fetch_symbols", {
+      fetch(`${API_URL}/api/symbols/fetch_symbols`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -85,7 +88,7 @@
       const symbolValues = selectedUploadSymbols.map(s => s.value);
 
       try {
-        const res = await fetch("http://localhost:8000/api/data/ohlcv/ingest/", {
+        const res = await fetch(`${API_URL}/api/data/ohlcv/ingest/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ symbols: symbolValues, period: uploadYears.value }),
