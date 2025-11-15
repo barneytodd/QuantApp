@@ -1,17 +1,30 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 
 from app.api import (
     backtest, pairs, param_optimiser,
     data, symbols, metrics, 
     portfolio_weights, save_portfolio, prescreen
 )
-from app.models import Base
+from app.data import portfolio_seed_data
+from app.models import Base, Portfolio
 from app.database import SessionLocal, engine, init_db_pool, close_db_pool
+
+def seed_portfolios(db: Session):
+    # Only seed if table is empty
+    if db.query(Portfolio).count() == 0:
+        for portfolio in portfolio_seed_data:
+            db.add(Portfolio(**portfolio))
+        db.commit()
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
+
+# Seed portfolios on first creation
+with SessionLocal() as db:
+    seed_portfolios(db)
 
 # Lifespan context manager replaces on_event startup/shutdown
 @asynccontextmanager
