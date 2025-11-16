@@ -1,13 +1,15 @@
-# Quantative Trading Platform
+# Quantitative Trading Platform
 ## Barney Todd
 ### Nov 2025
 # 📈 QuantApp  
-A full-stack quantitative research and trading platform integrating data ingestion, strategy development, backtesting, portfolio optimisation, and simulation into a unified analytical workflow.  
-The system combines statistical modelling, systematic trading concepts, and scalable software engineering to enable end-to-end quantitative research with a production-ready architecture.
+A full-stack quantitative research and trading platform integrating data ingestion, strategy development, backtesting, portfolio optimisation, and simulation into a unified analytical workflow. <br>
+The system combines statistical modelling, systematic trading concepts, and scalable software engineering to enable professional-grade quantitative research with production-ready architecture. <br>
+Designed to build, test and deploy systematic trading strategies efficiently, mimicking a professional quant workflow.
 
 ---
 
-## 🚀 Features
+<details>
+<summary><strong>🚀 Features</strong></summary>
 
 ### **📊 1. Market Data & Analytics**
 - Historical market data ingestion (yfinance)  
@@ -39,11 +41,14 @@ Includes:
 ### **💹 4. Trading Simulator**
 - Executes strategies over time  
 - Tracks trades, PnL, risk, and exposure  
-- Shares code paths with the backtester for consistency  
+- Shares code paths with the backtester for consistency
+
+</details>
 
 ---
 
-## 🧱 Tech Stack
+<details>
+<summary><strong>🧱 Tech Stack</strong></summary>
 
 ### **Backend**
 - FastAPI (Python)  
@@ -64,15 +69,52 @@ Includes:
 - Nginx frontend container  
 - Preconfigured backend + database services  
 
+</details>
+
 ---
 
-# 🐳 Run the Entire Application with Docker
+<details>
+<summary><strong>🐳 Run the Application with Docker</strong></summary>
 
 No local installation of Python, Node, or SQL Server needed.
+**Docker is required**. You can install it from [here](https://www.docker.com/get-started).
+
 
 ### **1. Clone the repository**
 ```bash
 git clone https://github.com/barneytodd/quantApp.git
 cd quantApp
+```
 
 
+### **2. Configure the environment**
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+
+
+### **3. Start all services**
+```bash
+docker compose up
+```
+
+- The **frontend** will be available at [http://localhost:3000](http://localhost:3000)  
+- The **backend Swagger documentation** can be accessed at [http://localhost:8001](http://localhost:8001/docs)  
+
+> **Tip:** To run the services in the background (detached mode), use:
+```bash
+docker compose up -d
+```
+
+> To stop all running containers:
+```bash
+docker compose down
+```
+
+> **Tip for development:** If you make changes to the code and need to rebuild the containers, use:
+```bash
+docker compose up --build
+```
+
+</details>
