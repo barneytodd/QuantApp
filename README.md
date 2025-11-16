@@ -5,7 +5,7 @@ A full-stack quantitative research and trading platform integrating data ingesti
 The system combines statistical modelling, systematic trading concepts, and scalable software engineering to enable professional-grade quantitative research with production-ready architecture. <br>
 Designed to build, test and deploy systematic trading strategies efficiently, mimicking a professional quant workflow.
 
-> A full in-depth analysis of the project, including methodology, implementation details, and results, is available in [ProjectWriteup.pdf](ProjectWriteup.pdf).
+> A full in-depth analysis of the project, including methodology, implementation details, and results, is available in [projectWriteup.pdf](projectWriteup.pdf).
 
 ---
 
@@ -148,4 +148,5 @@ docker compose up --build
 ```
 
 </details>
+
 
