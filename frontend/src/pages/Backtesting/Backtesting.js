@@ -5,6 +5,7 @@ import { useBacktest } from "./hooks/useBacktest";
 import { useOptimisation } from "./hooks/useOptimisation";
 import { useOptimisationParams } from "./hooks/useOptimisationParams";
 import { usePairs } from "./hooks/usePairs";
+import { getApiUrl } from "../../utils/apiUrl";
 
 import SingleSelect from "../../components/ui/SingleSelect";
 import SymbolSelector from "./components/SymbolSelector";
@@ -18,8 +19,12 @@ import OverviewTab from "./tabs/OverviewTab";
 import TradeAnalyticsTab from "./tabs/TradeAnalyticsTab";
 import RiskExposureTab from "./tabs/RiskExposureTab";
 
+
+
+
 export default function Backtesting() {
   const [selectedSymbols, setSelectedSymbols] = useState([]);
+  const [availableSymbols, setAvailableSymbols] = useState([]);
   const [showPairs, setShowPairs] = useState(false);
   const [showCustom, setShowCustom] = useState(false);
 
@@ -53,6 +58,28 @@ export default function Backtesting() {
     setAdvancedParams
   } = useStrategyParams(selectedSymbols, selectedPairs);
 
+
+  // get available ticker symbols to run backtest
+  useEffect(() => {
+    fetch(`${getApiUrl()}/api/symbols/fetch_symbols`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({filters:{}}), // empty payload
+    })
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to fetch symbols");
+        return res.json();
+      })
+      .then(data => {
+        setAvailableSymbols(data.map(s => ({ value: s, label: s })));
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Error fetching symbols");
+      });
+  }, []);
   
 
   // --- handlers ---
@@ -178,7 +205,13 @@ export default function Backtesting() {
         />
 
         <SymbolSelector
-          symbols={[{ label: "SPY", value: "SPY" }, ...symbols]}
+          symbols={[
+            ...Array.from(
+              new Map(
+                [...availableSymbols, ...symbols].map(item => [item.value, item])
+              ).values()
+            ).sort((a, b) => a.label.localeCompare(b.label))
+          ]}
           selectedSymbols={selectedSymbols}
           setSelectedSymbols={setSelectedSymbols}
         />

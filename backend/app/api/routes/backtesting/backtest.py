@@ -41,6 +41,9 @@ def run_standard_backtest(payload: StrategyRequest, db: Session = Depends(get_db
 
     data = fetch_price_data(db, all_symbols, params["startDate"], params["endDate"], lookback)
 
+    if not data:
+        raise HTTPException(status_code=400, detail="No price data available for the given symbols")
+
     print("Running standard backtest...")
     results = run_backtest(data, strategy_symbols, params)
     print("Completed.")

@@ -1,7 +1,5 @@
 import { useState } from "react";
-
-const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
-const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
+import { getApiUrl } from "../../../utils/apiUrl";
 
 /**
  * Custom React hook to run backtests for trading strategies.
@@ -30,6 +28,19 @@ export function useBacktest() {
   const runBacktest = async ({ symbolItems, basicParams, advancedParams }) => {
     setIsLoading(true);
     setError(null);
+    try {
+      const symbols = [...new Set(symbolItems.flatMap(item => item.symbols)), 'SPY']
+
+      const ingestRes = await fetch(`${getApiUrl()}/api/data/ohlcv/syncIngest/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ symbols, start: advancedParams.startDate.value, end: advancedParams.endDate.value }),
+        });
+        await ingestRes.json();
+    } catch (err) {
+      alert('Data ingestion failed')
+      console.error(err)
+    }
 
     try {
       const symbolItemsWithWeights = symbolItems
@@ -56,16 +67,26 @@ export function useBacktest() {
         ),
       };
 
-      const res = await fetch(`${API_URL}/api/strategies/backtest`, {
+      const res = await fetch(`${getApiUrl()}/api/strategies/backtest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        alert("Backtest failed");
-        return; 
+        let errMsg = "Unknown error";
+
+        try {
+          const body = await res.json();
+          errMsg = body.error || JSON.stringify(body);
+        } catch (e) {
+          errMsg = await res.text(); // fallback
+        }
+
+        alert("Backtest failed\n" + errMsg);
+        return;
       }
+
       const data = await res.json();
       setBacktestResult(data);
       return data;
