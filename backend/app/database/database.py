@@ -45,9 +45,6 @@ else:
         f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD}@{server}/{DB_NAME}?driver={DB_DRIVER}&TrustServerCertificate=yes&Encrypt=no"
     )
 
-    print("Connecting to...", SQLALCHEMY_DATABASE_URL)
-
-
     # Create SQLAlchemy engine
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,

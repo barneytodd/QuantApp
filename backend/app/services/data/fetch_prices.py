@@ -103,7 +103,6 @@ def ingest_missing_data_parallel(db, symbols, start, end, chunk_size=50, max_wor
     Returns:
         True if ingestion completes successfully
     """
-
     # --- Get existing date ranges for each symbol from DB ---
     ranges = get_symbol_date_ranges(db, symbols)
 

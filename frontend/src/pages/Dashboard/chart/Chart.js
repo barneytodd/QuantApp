@@ -166,10 +166,6 @@ function Chart({ data, shortSMAPeriod, longSMAPeriod, emaPeriod, bollingerPeriod
       color: showBollinger ? "#999999" : "transparent"
     });
 
-
-    // set price data
-    console.log(formattedData);
-    //candleRef.current.setData(formattedData);
     
     chartRef.current.timeScale().fitContent();
 
