@@ -114,7 +114,7 @@ def get_prices_light(db, symbols, start, end, lookback=0):
 
 
 # === Upsert prices in bulk ===
-def upsert_prices(db: Session, symbol: str, price_list: list, start, end, chunk_size: int = 500):
+def upsert_prices(db: Session, symbol: str, price_list: list, start=None, end=None, chunk_size: int = 500):
     """
     Efficient, atomic bulk upsert into dbo.prices using SQL Server MERGE.
     Handles duplicate (symbol, date) entries gracefully.

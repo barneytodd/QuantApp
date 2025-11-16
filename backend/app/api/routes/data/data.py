@@ -79,10 +79,13 @@ def _ingest_task(symbols: List[str], period: str, db: Session):
     Raises HTTPException if no data is fetched.
     """
     records = fetch_prices.fetch_historical(symbols, period, db=db)
+    
     if not records:
         raise HTTPException(status_code=404, detail="No data fetched")
-
-    crud.upsert_prices(db, [PriceIn(**r) for r in records])
+    
+    all_records = {symbol: [] for symbol in symbols}
+    for symbol in symbols: 
+        crud.upsert_prices(db, symbol, [PriceIn(**r) for r in records if r["symbol"] == symbol])
 
 
 # === Synchronous ingestion of missing OHLCV data ===
