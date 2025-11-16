@@ -1,6 +1,7 @@
 # 📈 Quantitative Trading Platform
 ## Barney Todd - Nov 2025
 
+### Project Overview
 A full-stack quantitative research and trading platform integrating data ingestion, strategy development, backtesting, portfolio optimisation, and simulation into a unified analytical workflow. <br>
 The system combines statistical modelling, systematic trading concepts, and scalable software engineering to enable professional-grade quantitative research with production-ready architecture. <br>
 Designed to build, test and deploy systematic trading strategies efficiently, mimicking a professional quant workflow.
@@ -151,4 +152,5 @@ docker compose up --build
 </details>
 
 ---
+
 
