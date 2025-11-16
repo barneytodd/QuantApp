@@ -153,4 +153,122 @@ docker compose up --build
 
 ---
 
+<details>
+<summary><strong>🧪 Run the Application Locally (Without Docker)</strong></summary>
 
+<br>
+
+You can run the backend, frontend, and SQL Server locally without using Docker. This setup is ideal for development and debugging.
+
+---
+
+### ⚡ Prerequisites
+
+- **Python 3.10+** (for backend)  
+- **Node.js 18+** (for frontend)  
+- **SQL Server** (local installation or remote connection)  
+
+### 🗄 1. Database Setup (SQL Server)
+
+1. **Create a new SQL Server database**, for example:
+   ```
+   quantDB
+   ```
+
+2. **Create a SQL Server login + user** with access to the new database:
+   - Username example: `quant_user`
+   - Password example: `your_password_here`
+
+3. **Copy the backend environment file**:
+   ```
+   cd backend
+   cp .env.example .env
+   ```
+
+4. **Edit `.env`** to:
+   - Use `local` as APP_ENV
+   - Fill in local DB username, password, and database name  
+
+   Example:
+   ```
+   DB_ENV=local
+   DB_LOCAL_USER=quant_user
+   DB_LOCAL_PASSWORD=your_password_here
+   DB_NAME=quantDB
+   ```
+
+---
+
+### ⚙️ 2. Backend Setup (FastAPI)
+
+#### Create and activate a virtual environment
+```
+cd backend
+python -m venv venv
+source venv/bin/activate
+```
+Windows:
+```
+venv\Scripts\activate
+```
+
+#### Install dependencies
+```
+pip install -r requirements.txt
+```
+
+#### Run the backend server
+```
+uvicorn app.main:app --reload --port 8000
+```
+
+Backend available at:
+```
+http://localhost:8000
+http://localhost:8000/docs
+```
+
+---
+
+### 💻 3. Frontend Setup (React)
+
+#### Copy environment variables
+```
+cd frontend
+cp .env.example .env
+```
+
+#### Update `.env`
+Ensure the backend URL is correct (port 8000 for local backend):
+```
+REACT_APP_BACKEND_PORT=8000
+```
+
+#### Install dependencies
+```
+npm install
+```
+
+#### Run the frontend
+```
+npm start
+```
+
+Frontend available at:
+```
+http://localhost:3000
+```
+
+---
+
+### ✅ Local Setup Complete
+
+All components should now be running locally:
+
+- SQL Server  
+- FastAPI backend (port 8000)  
+- React frontend (port 3000)
+
+</details>
+
+---
