@@ -106,6 +106,7 @@ Includes:
 <details>
 <summary><strong>🐳 Run the Application with Docker</strong></summary>
 
+<br>
 No local installation of Python, Node, or SQL Server needed.
 **Docker is required**. You can install it from [here](https://www.docker.com/get-started).
 
@@ -149,4 +150,5 @@ docker compose up --build
 
 </details>
 
+---
 
