@@ -3,9 +3,8 @@ import { filters } from "../params/prelimBacktestFilters"
 import { strategies } from "../../Backtesting/parameters/strategyRegistry";
 import { useStrategyParams } from "../../Backtesting/hooks/useStrategyParams";
 import { usePairs } from "../../Backtesting/hooks/usePairs"
+import { getApiUrl } from "../../../utils/apiUrl";
 
-const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
-const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
 
 export function usePrelimBacktest(preScreenResults, startDate, endDate, setVisible) {
     const [filterValues, setFilterValues] = useState({});
@@ -142,7 +141,7 @@ export function usePrelimBacktest(preScreenResults, startDate, endDate, setVisib
                     Object.entries(basicParams).map(([k, v]) => [k, { value: v.value, lookback: v.lookback ?? false }])
                 )
             )
-            const res = await fetch(`${API_URL}/api/strategies/backtest`, {
+            const res = await fetch(`${getApiUrl()}/api/strategies/backtest`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({symbolItems: symbolItems, params: params}),

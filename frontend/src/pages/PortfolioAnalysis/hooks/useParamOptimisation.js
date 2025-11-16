@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useOptimisation } from "../../Backtesting/hooks/useOptimisation";
 import { params } from "../params/paramOptimisationParams"
+import { getApiUrl } from "../../../utils/apiUrl";
 
-const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
-const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
+
 
 export function useParamOptimisation(strategySelectResults, metricRanges, startDate, endDate, setVisible) {
     const [optimisationParams, setOptimisationParams] = useState({});
@@ -100,7 +100,7 @@ export function useParamOptimisation(strategySelectResults, metricRanges, startD
         )
 
         evtSourceRef.current = new EventSource(
-            `${API_URL}/api/params/optimisation/stream`
+            `${getApiUrl()}/api/params/optimisation/stream`
         );
 
         evtSourceRef.current.onmessage = (event) => {

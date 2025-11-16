@@ -21,6 +21,7 @@ services:
       - ./backend/.env
     environment:
       - DB_ENGINE=mssql
+      - APP_ENV=docker
 
   frontend:
     image: barneytodd27/quantapp-frontend:latest
@@ -28,6 +29,10 @@ services:
     platform: linux/amd64
     ports:
       - "3000:3000"
+    env_file:
+      - ./frontend/.env
+    environment:
+      - REACT_APP_BACKEND_PORT=8001
     depends_on:
       - backend
 

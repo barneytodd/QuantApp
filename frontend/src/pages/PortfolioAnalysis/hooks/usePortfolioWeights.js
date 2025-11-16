@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { params } from "../params/portfolioWeightsParams"
+import { getApiUrl } from "../../../utils/apiUrl";
 
-const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
-const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
 
 export function usePortfolioWeights(paramOptimisationResults, setVisible) {
     const [portfolioWeightsParams, setPortfolioWeightsParams] = useState({});
@@ -84,7 +83,7 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
                 )
             )
 
-            const response = await fetch(`${API_URL}/api/portfolio/inputs`, {
+            const response = await fetch(`${getApiUrl()}/api/portfolio/inputs`, {
                 method: "POST",
                 headers: {
                 "Content-Type": "application/json"
@@ -115,7 +114,7 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
         try { 
             setLoadingHrp(true);
 
-            const response = await fetch(`${API_URL}:8000/api/portfolio/hrp`, {
+            const response = await fetch(`${getApiUrl()}:8000/api/portfolio/hrp`, {
                 method: "POST",
                 headers: {
                 "Content-Type": "application/json"
@@ -165,7 +164,7 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
                 "params": optimisationParams
             }
 
-            const response = await fetch(`${API_URL}/api/portfolio/optimise`, {
+            const response = await fetch(`${getApiUrl()}/api/portfolio/optimise`, {
                 method: "POST",
                 headers: {
                 "Content-Type": "application/json"
@@ -205,7 +204,7 @@ export function usePortfolioWeights(paramOptimisationResults, setVisible) {
         setSaving(true);
         setSaved(false);
         try {
-            const response = await fetch(`${API_URL}/api/portfolio/save`, {
+            const response = await fetch(`${getApiUrl()}/api/portfolio/save`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

@@ -5,9 +5,9 @@
   import Slider from "../../components/ui/Slider";
   import MetricCard from "../../components/ui/MetricCard";
   import { Option, MenuList } from "../../components/ui/CustomSelectComponents"
+  import { getApiUrl } from "../../utils/apiUrl";
 
-  const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
-  const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
+
 
   // create app dashboard
   function Dashboard() {
@@ -37,7 +37,7 @@
 
     // get available ticker symbols from backend
     useEffect(() => {
-      fetch(`${API_URL}/api/symbols/db_symbols`)
+      fetch(`${getApiUrl()}/api/symbols/db_symbols`)
         .then(res => res.json())
         .then(data => {
           setSymbols(data.map(s => ({ value: s, label: s })));
@@ -47,22 +47,22 @@
 
     // get price data and calculated metrics from backend
     useEffect(() => {
-      if (!selectedSymbol) return;
+      if (!selectedSymbol?.value) return;
 
-      fetch(`${API_URL}/api/data/ohlcv/${selectedSymbol?.value}?limit=200`)
+      fetch(`${getApiUrl()}/api/data/ohlcv/${selectedSymbol?.value}?limit=200`)
         .then(res => res.json())
         .then(data => { 
           setOhlcv(data || []); 
         });
 
-      fetch(`${API_URL}/api/metrics/${selectedSymbol?.value}`)
+      fetch(`${getApiUrl()}/api/metrics/${selectedSymbol?.value}`)
         .then(res => res.json())
         .then(data => setMetrics(data));
     }, [selectedSymbol]);
 
     // get available ticker symbols to upload data
     useEffect(() => {
-      fetch(`${API_URL}/api/symbols/fetch_symbols`, {
+      fetch(`${getApiUrl()}/api/symbols/fetch_symbols`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -88,7 +88,7 @@
       const symbolValues = selectedUploadSymbols.map(s => s.value);
 
       try {
-        const res = await fetch(`${API_URL}/api/data/ohlcv/ingest/`, {
+        const res = await fetch(`${getApiUrl()}/api/data/ohlcv/ingest/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ symbols: symbolValues, period: uploadYears.value }),

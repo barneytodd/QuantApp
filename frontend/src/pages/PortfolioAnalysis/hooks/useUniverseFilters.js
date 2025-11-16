@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { filters } from "../params/universeFilters";
 import { exchangeOptions, industryOptions } from "../params/uniFilterOptions"
+import { getApiUrl } from "../../../utils/apiUrl";
 
-const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
-const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
 
 export function useUniverseFilters() {
     const [filterValues, setFilterValues] = useState({});
@@ -73,7 +72,7 @@ export function useUniverseFilters() {
         setError(null);
         const payload = Object.fromEntries(Object.entries(filterValues).map(([name, filter]) => [name, filter.value]))
         try {
-            const res = await fetch(`${API_URL}/api/symbols/fetch_symbols`, {
+            const res = await fetch(`${getApiUrl()}/api/symbols/fetch_symbols`, {
                 method: "POST",
                 headers: {
                 "Content-Type": "application/json",

@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { strategies } from "../parameters/strategyRegistry";
 import { globalParams } from "../parameters/globalParams";
+import { getApiUrl } from "../../../utils/apiUrl";
 
-const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
-const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
 
 export function useOptimisation(startDate=null, endDate=null) {
   const [optimisationResult, setOptimisationResult] = useState(null);
@@ -94,7 +93,7 @@ export function useOptimisation(startDate=null, endDate=null) {
     };
 
     try {
-      const res = await fetch(`${API_URL}/api/params/optimise`, {
+      const res = await fetch(`${getApiUrl()}/api/params/optimise`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

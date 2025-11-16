@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
+import { getApiUrl } from "../../../utils/apiUrl";
 
-const server = process.env.REACT_APP_ENV === "local" ? "localhost" : "backend";
-const API_URL = `http://${server}:${process.env.REACT_APP_BACKEND_PORT}`;
 
 export function useLoadPortfolios() {
     const [availablePortfolios, setAvailablePortfolios] = useState([]);
@@ -11,7 +10,7 @@ export function useLoadPortfolios() {
     useEffect(() => {
         try {
             setGetPortfoliosLoading(true);
-            fetch(`${API_URL}/api/portfolio/list`)
+            fetch(`${getApiUrl()}/api/portfolio/list`)
                 .then((res) => res.json())
                 .then((data) => setAvailablePortfolios(
                     data.map(p => ({
