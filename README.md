@@ -1,10 +1,11 @@
-# Quantitative Trading Platform
-## Barney Todd
-### Nov 2025
-# 📈 QuantApp  
+# 📈 Quantitative Trading Platform
+## Barney Todd - Nov 2025
+
 A full-stack quantitative research and trading platform integrating data ingestion, strategy development, backtesting, portfolio optimisation, and simulation into a unified analytical workflow. <br>
 The system combines statistical modelling, systematic trading concepts, and scalable software engineering to enable professional-grade quantitative research with production-ready architecture. <br>
 Designed to build, test and deploy systematic trading strategies efficiently, mimicking a professional quant workflow.
+
+> A full in-depth analysis of the project, including methodology, implementation details, and results, is available in [ProjectWriteup.pdf](ProjectWriteup.pdf).
 
 ---
 
@@ -74,6 +75,35 @@ Includes:
 ---
 
 <details>
+<summary><strong>📊 Results & Current Limitations</strong></summary>
+
+### **Results**
+- **Risk reduction:** All model portfolios achieved substantially lower volatility and maximum drawdowns (~40-50%) compared with the S&P 500 benchmark, with stable performance across training and testing periods.  
+- **Performance consistency:** Portfolios showed smoother returns and greater resilience during market stress, notably outperforming the benchmark in the 2022 downturn.  
+- **Out-of-sample generalization:** Early test results closely matched training performance for most portfolios, suggesting effective avoidance of overfitting.  
+- **Portfolio optimization:** HRP-based weight optimization improved risk-adjusted performance in most portfolios, though concentrated or regime-shifting environments reduced effectiveness for some cases.  
+- **Combined portfolio:** Provided balanced risk-adjusted returns, lowering volatility and drawdowns while generally underperforming benchmarks in strong recovery years.
+
+### **Limitations**
+- **Backtesting assumptions:** Uses daily data only; intraday dynamics and high-frequency effects are not modeled.  
+- **Strategy scope:** Limited to basic long-only strategies and hyperparameters; complex portfolios not yet supported.  
+- **Market frictions:** Slippage and liquidity effects are simplified.  
+- **Optimization framework:** Currently classical mean-variance; advanced risk models (CVaR, Black-Litterman) not implemented.  
+- **Simulator constraints:** Operates in a controlled environment without live broker API integration.
+- **Generalisation during regime shifts:** Performance can deteriorate during rapid or extreme market regime changes.
+
+### Planned Improvements
+- Integrate regime-awareness into the optimizer using HMM or clustering-based classifiers.  
+- Enhance asset selection and expected return estimation for changing market conditions.  
+- Expand strategy scope, include advanced risk models, and support live trading integration.
+
+> These results demonstrate that the platform can generate robust, risk-adjusted portfolios and support quantitative research, while highlighting opportunities for further enhancements in realism, strategy complexity, and live execution.
+
+</details>
+
+---
+
+<details>
 <summary><strong>🐳 Run the Application with Docker</strong></summary>
 
 No local installation of Python, Node, or SQL Server needed.
@@ -118,3 +148,4 @@ docker compose up --build
 ```
 
 </details>
+
