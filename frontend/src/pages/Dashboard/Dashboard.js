@@ -100,6 +100,15 @@
         alert("Error uploading data");
       }
     };
+
+    const handleRefreshSymbols = async () => {
+      fetch(`${getApiUrl()}/api/symbols/db_symbols`)
+        .then(res => res.json())
+        .then(data => {
+          setSymbols(data.map(s => ({ value: s, label: s })));
+          setSelectedSymbol({ value: data[0], label: data[0] }); // default first symbol
+        });
+    }
     
     const periodOptions = [
       {"value": "1d", "label": "1 day"},
@@ -134,6 +143,10 @@
               menuPortalTarget={document.body}   
               styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
             />
+            <button
+              className="mt-2 w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleRefreshSymbols}
+            > Refresh Symbol List</button>
           </div>
 
           {/* Multi-symbol upload */}
