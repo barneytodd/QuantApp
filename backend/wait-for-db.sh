@@ -40,7 +40,6 @@ if [ "$DB_ENGINE" = "mssql" ]; then
         sleep 5
     done
 
-    echo "✅ Database '$TARGET_DB' created!"
 else
     echo "DB_ENGINE is '$DB_ENGINE'. Skipping wait-for-db (SQLite does not need it)."
 fi
