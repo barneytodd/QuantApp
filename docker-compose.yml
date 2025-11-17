@@ -10,7 +10,7 @@ services:
       - "14330:1433"
     volumes:
       - quantapp-mssql-data:/var/opt/mssql
-      - ./init-db.sql:/usr/config/init-db.sql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
 
   backend:
     image: barneytodd27/quantapp-backend:latest
@@ -22,6 +22,10 @@ services:
     environment:
       - DB_ENGINE=mssql
       - APP_ENV=docker
+    volumes:
+      - ./init-db.sql:/init-db.sql
+    depends_on:
+      - db
 
   frontend:
     image: barneytodd27/quantapp-frontend:latest

@@ -65,7 +65,7 @@ RUN chmod +x /wait-for-db.sh
 EXPOSE 8000
 
 # Use the wait-for-db script as entrypoint
-ENTRYPOINT ["/bin/bash", "-c", "echo 'Entrypoint started'; /wait-for-db.sh"]
+ENTRYPOINT ["/wait-for-db.sh"]
 
 # Default command to run uvicorn (executed after wait-for-db.sh finishes)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
